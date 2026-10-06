@@ -5,6 +5,10 @@
   "message": "Two of us at Casa Halcy for six nights from next Monday. The classic double, and we need to be able to cancel. No breakfast.",
   "replies": [
     {
+      "when": "price has (gone up|changed)|room now, on",
+      "press": "accept_new_price|continue at"
+    },
+    {
       "when": "adult|guest|how many (people|of you)|party",
       "press": "^2$|2 adult|two"
     },

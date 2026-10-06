@@ -12,6 +12,29 @@ import { cleanUrl } from "./serial.ts";
 
 const featureName = z.enum(FEATURES);
 const featureValue = z.union([z.string(), z.number(), z.boolean()]);
+
+const amount = (what: string) => z.number().describe(`${what}. A plain number such as 404 or 320.32: no currency, no text`);
+/**
+ * Facts about a candidate, each with its own type. A price recorded as text
+ * ("GBP 190.00 for the stay") cannot be scored or compared, so the schema
+ * does not allow it.
+ */
+export const factsSchema = z
+  .object({
+    room_name: z.string(),
+    rate_name: z.string(),
+    price_total: amount("The room charge for the whole stay as the rate line shows it, before any tax, levy or fee the page lists separately or calls not included"),
+    price_room: amount("The room line on the page that shows the charge, before taxes, fees and add-ons"),
+    price_now: amount("What is charged at booking"),
+    price_at_hotel: amount("What is paid at the hotel"),
+    currency: z.string().describe("The currency the hotel charges in, as the page writes it: a symbol or a code"),
+    cancellable: z.boolean(),
+    breakfast_included: z.boolean(),
+    view: z.string(),
+    sleeps: z.number(),
+    sold_out: z.boolean(),
+  })
+  .partial();
 // partialRecord, not record: in Zod 4 a record keyed by an enum requires every key.
 
 export const goalSchema = z.object({
@@ -84,7 +107,7 @@ export function candidateTools({ state, log }: StateToolDeps): RunnableTool[] {
     description: "Record one room-and-rate combination seen on the hotel site, with the facts the page states. Call once per combination; calling again with the same id merges new facts.",
     inputSchema: z.object({
       id: z.string().describe("Short stable id, e.g. river-flex"),
-      features: z.partialRecord(featureName, featureValue),
+      features: factsSchema,
       sourceUrl: z.string(),
     }),
     run: async ({ id, features, sourceUrl: rawUrl }) => {

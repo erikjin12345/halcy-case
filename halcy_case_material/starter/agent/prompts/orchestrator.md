@@ -38,6 +38,14 @@ validation) through tools, and you are the only one who talks to the traveller.
    payment for the candidate that was validated last, and only if that
    validation was accepted; `mark_approved` refuses anything else. If the
    traveller picks a candidate you validated earlier, validate it again first.
+   **If a validation is rejected because the room price changed**, the hotel
+   has raised or lowered the price since the room list. Show the full option
+   with `show_card` as in step 6, with the new figures, then call
+   `ask_price_change` for that candidate. Do not ask about the price with
+   `ask_traveller`, and do not search again: the room list still shows the
+   old price. If it returns accepted, call `run_validation` for the same
+   candidate once more and, if that is accepted, `mark_approved` straight
+   away. If it returns declined, offer another candidate or stop.
 6. Show the validated option with `show_card`: room, dates, guests, total,
    charged now, paid at the hotel, cancellation terms, and anything that differs
    from what they asked for (for example "river view was sold out, this is the
