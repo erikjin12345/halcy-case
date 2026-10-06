@@ -20,6 +20,11 @@ export interface PageElement {
   disabled: boolean;
   /** True for a field that cannot be typed into, e.g. a date field that opens a picker. */
   readOnly?: boolean;
+  /** The field's own attributes, which say what it is in any language: autocomplete, inputmode, name, id. */
+  autocomplete?: string | null;
+  inputMode?: string | null;
+  fieldName?: string | null;
+  fieldId?: string | null;
 }
 
 export interface Observation {
@@ -102,16 +107,24 @@ export async function observe(page: Page, maxText = 4000, canRead: (frameUrl: st
             const id = `${fi}:${n++}`;
             el.setAttribute("data-agent-id", id);
             const input = el as HTMLInputElement;
+            // A field whose attributes say it holds card data or a bank code is
+            // never read, filled or empty: its value does not leave the page.
+            const ac = (el.getAttribute("autocomplete") ?? "").toLowerCase();
+            const secret = /\bcc-|one-time-code/.test(ac) || input.type === "password";
             out.push({
               id,
               tag: el.tagName.toLowerCase(),
               role: el.getAttribute("role"),
               type: el.getAttribute("type"),
               name: nameOf(el),
-              value: "value" in el ? String(input.value ?? "") : null,
+              value: secret ? null : "value" in el ? String(input.value ?? "") : null,
               checked: input.type === "checkbox" || input.type === "radio" ? input.checked : null,
               disabled: input.disabled === true,
               readOnly: input.readOnly === true,
+              autocomplete: el.getAttribute("autocomplete"),
+              inputMode: el.getAttribute("inputmode"),
+              fieldName: el.getAttribute("name"),
+              fieldId: el.getAttribute("id"),
             });
           }
           return { text: (document.body?.innerText ?? "").trim().slice(0, maxText), elements: out };

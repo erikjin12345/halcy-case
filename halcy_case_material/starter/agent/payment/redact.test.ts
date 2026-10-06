@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import type { Observation, PageElement } from "../../browser.ts";
 import { PaymentBoundary } from "../tools/boundary.ts";
 import { BoundaryError, guardedDriver } from "../tools/guarded-driver.ts";
-import { redactObservation, redactText, WITHHELD } from "./redact.ts";
+import { isSensitiveField, redactObservation, redactText, WITHHELD } from "./redact.ts";
 import { fakeLog, fakeRaw, HOTEL } from "./testing.ts";
 
 const CARD = "4242 4242 4242 4242";
@@ -73,4 +73,35 @@ test("the guarded driver redacts every observation and refuses to act on a sensi
   assert.equal(f.calls.act, 0);
   await driver.act({ kind: "fill", id: "0:0", value: "a@b.c" });
   assert.equal(f.calls.act, 1, "ordinary fields can still be filled");
+});
+
+const f = (name: string, extra: Partial<PageElement> = {}): PageElement => ({ id: `0:${name.length}`, frameUrl: `${HOTEL}/pay`, tag: "input", role: null, type: "text", name, value: "", checked: null, disabled: false, ...extra });
+const sensitive = (els: PageElement[]) => els.filter(isSensitiveField).map((e) => e.name);
+
+test("card fields are recognised in other languages, empty or filled", () => {
+  // The unseen-hotel rehearsal's German form (Alpenblick).
+  const de = [f("Kartennummer"), f("Gültig bis (MM/JJ)", { value: "12/30" }), f("Karteninhaber", { value: "Maja Lind" }), f("Prüfnummer (CVC)"), f("Bestätigungscode")];
+  assert.deepEqual(sensitive(de), de.map((e) => e.name));
+  const fr = [f("Numéro de carte"), f("Date d'expiration"), f("Titulaire de la carte"), f("Cryptogramme visuel")];
+  assert.deepEqual(sensitive(fr), fr.map((e) => e.name));
+  const sv = [f("Kortnummer"), f("Utgångsdatum (MM/ÅÅ)"), f("Namn på kortet"), f("Säkerhetskod"), f("Engångskod från din bank")];
+  assert.deepEqual(sensitive(sv), sv.map((e) => e.name));
+  const rest = [f("Número de tarjeta"), f("Fecha de caducidad"), f("Número do cartão"), f("Validade"), f("Numero della carta"), f("Scadenza"), f("Kaartnummer"), f("Vervaldatum")];
+  assert.deepEqual(sensitive(rest), rest.map((e) => e.name));
+});
+
+test("a field is recognised by its attributes alone, with no label at all", () => {
+  for (const extra of [{ autocomplete: "cc-number" }, { autocomplete: "cc-exp" }, { autocomplete: "section-pay cc-csc" }, { autocomplete: "cc-name" }, { autocomplete: "one-time-code" }, { fieldName: "card_number" }, { fieldId: "cvv" }, { fieldName: "exp-month" }, { fieldName: "pan" }]) {
+    assert.ok(isSensitiveField(f("", extra)), JSON.stringify(extra));
+  }
+  const { seen, sensitive: ids } = redactObservation({ url: `${HOTEL}/pay`, title: "Zahlung", text: [], elements: [f("", { id: "0:9", autocomplete: "cc-exp", value: "12/30" })] });
+  assert.equal(seen.elements[0].value, WITHHELD);
+  assert.ok(ids.has("0:9"));
+});
+
+test("the guest-details forms of both mock hotels are untouched", () => {
+  const casa = [f("First name"), f("Last name"), f("Email", { type: "email" }), f("Mobile phone"), f("Estimated arrival", { tag: "select" }), f("Special requests (not guaranteed)", { tag: "textarea" })];
+  const villa = [f("Given name", { fieldName: "given" }), f("Family name", { fieldName: "family" }), f("E-mail", { fieldName: "mail" }), f("Mobile", { fieldName: "mobile" }), f("Expected arrival", { tag: "select", fieldName: "eta" })];
+  const other = [f("Name des Reiseteilnehmers"), f("Nombre del titular de la reserva"), f("Titulaire de la réservation"), f("Ankunftszeit"), f("Check-in date", { fieldName: "checkin" })];
+  assert.deepEqual(sensitive([...casa, ...villa, ...other]), []);
 });
