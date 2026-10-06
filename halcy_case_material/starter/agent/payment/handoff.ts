@@ -59,7 +59,29 @@ export function termsFrom(seen: Partial<Record<FeatureName, FeatureValue>>): Ter
 
 const notStarted = (reason: string): PaymentResult => ({ status: "not_started", retryable: true, reason });
 
+/**
+ * Never throws. A failure before the traveller was handed the page is
+ * `not_started`; a failure after is `unconfirmed`, because from then on
+ * nobody here can say that nothing was paid.
+ */
 export async function runHandoff(deps: HandoffDeps): Promise<PaymentResult> {
+  const { chat, log, hotel } = deps;
+  const progress = { handedOver: false };
+  try {
+    return await sequence(deps, progress);
+  } catch (e) {
+    log.event("payment.error", { handedOver: progress.handedOver, error: String(e).slice(0, 300) });
+    const result: PaymentResult = progress.handedOver
+      ? { status: "unconfirmed", retryable: false, reason: "something failed on Halcy's side during the hand-off" }
+      : notStarted("something failed on my side before I could hand it over");
+    const text = resultMessage(hotel, result);
+    chat.say(text);
+    log.event("payment.result", { ...result, said: text });
+    return result;
+  }
+}
+
+async function sequence(deps: HandoffDeps, progress: { handedOver: boolean }): Promise<PaymentResult> {
   const { driver, boundary, chat, log, hotel, terms } = deps;
   const timing = { ...TIMING, ...deps.timing };
   const say = (result: PaymentResult) => {
@@ -91,6 +113,7 @@ export async function runHandoff(deps: HandoffDeps): Promise<PaymentResult> {
 
     let signal: Signal | undefined;
     const endBlind = boundary.beginBlind("traveller takes over");
+    progress.handedOver = true;
     try {
       await driver.bringToFront();
       signal = await waitForSignal({

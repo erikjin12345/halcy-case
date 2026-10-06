@@ -108,7 +108,27 @@ test("a closed window, a cancel and a crash all close the blind interval", async
 
   const crashed = setup();
   crashed.f.raw.bringToFront = async () => Promise.reject(new Error("no window"));
-  await assert.rejects(runHandoff(crashed.deps), /no window/);
+  assert.equal((await runHandoff(crashed.deps)).status, "unconfirmed", "after the hand-off began, a failure is never 'nothing was paid'");
   assert.equal(crashed.boundary.blind, false);
   assert.deepEqual(crashed.l.events.find((e) => e.type === "handoff.blind.end")?.data.outcome, "aborted");
+  assert.match(crashed.c.said.at(-1) ?? "", /I can't see your card or your bank/);
+
+  const early = setup();
+  early.f.raw.observe = async () => Promise.reject(new Error("page crashed"));
+  assert.equal((await runHandoff(early.deps)).status, "not_started", "before it began, nothing was asked of the traveller");
+  assert.equal(early.l.types().includes("handoff.blind.start"), false);
+});
+
+test("without a model, code still recognises the hotel's confirmation, and nothing else", async () => {
+  const { f, deps } = setup(PAGES, { classify: async () => Promise.reject(new Error("credit balance is too low")) });
+  const running = runHandoff(deps);
+  await tick();
+  f.navigate(`${HOTEL}/confirmation/CH-123456`);
+  assert.deepEqual(await running, { status: "confirmed", reference: "CH-123456", amounts: { total: undefined, chargedNow: undefined, dueAtHotel: undefined }, retryable: false });
+
+  const declined = setup({ ...PAGES, "/payment": `${PAGES["/payment"]}\nYour card was declined by your bank.` }, { classify: async () => Promise.reject(new Error("down")) });
+  const second = runHandoff(declined.deps);
+  await tick();
+  declined.c.press("Over to you", "failed");
+  assert.equal((await second).status, "unconfirmed", "a decline is not guessed at");
 });

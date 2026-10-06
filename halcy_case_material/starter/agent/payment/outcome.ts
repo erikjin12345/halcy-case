@@ -48,6 +48,26 @@ export function decide({ proposal, text, signal, onPaymentPage }: DecideInput): 
   return { status: "unconfirmed", hotelMessage, retryable: false, holdSecondsLeft };
 }
 
+const REFERENCE_LABEL = /reference|confirmation (number|code|no\b)|booking (number|code|id|no\b)/i;
+const REFERENCE_TOKEN = /\b(?=[A-Z0-9-]*\d)[A-Z0-9][A-Z0-9-]{4,}\b/;
+const CONFIRMED_WORDS = /\bbooked\b|\bconfirmed\b|confirmation/i;
+
+/**
+ * What code alone can say when the model is unavailable: a reference-shaped
+ * token on or right after a line that labels it, on a page that talks about
+ * a confirmation. `decide` still applies every other rule.
+ */
+export function fallbackProposal(text: string): Proposal {
+  if (!CONFIRMED_WORDS.test(text)) return { status: "unconfirmed" };
+  const lines = text.split("\n");
+  for (const [i, line] of lines.entries()) {
+    if (!REFERENCE_LABEL.test(line)) continue;
+    const reference = (line.replace(REFERENCE_LABEL, "").match(REFERENCE_TOKEN) ?? lines[i + 1]?.match(REFERENCE_TOKEN))?.[0];
+    if (reference) return { status: "confirmed", reference };
+  }
+  return { status: "unconfirmed" };
+}
+
 export interface OutcomeDeps {
   driver: PageDriver;
   boundary: PaymentBoundary;
@@ -77,7 +97,7 @@ export async function readOutcome(deps: OutcomeDeps): Promise<PaymentResult> {
     proposal = await classify(text);
   } catch (e) {
     log.event("payment.classify.error", { error: String(e).slice(0, 300) });
-    proposal = { status: "unconfirmed" };
+    proposal = fallbackProposal(text);
   }
   const result = decide({ proposal, text, signal, onPaymentPage: at.path === paymentPath });
   log.event("payment.outcome", { where: at, proposed: proposal.status, ...result });
