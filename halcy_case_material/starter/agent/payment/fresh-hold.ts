@@ -7,10 +7,25 @@
 import { runHandoff, type HandoffDeps } from "./handoff.ts";
 import { changedTermsCard, freshHoldNote, notConfirmedAgain } from "./messages.ts";
 import { parseMoney } from "./page-facts.ts";
-import type { PaymentResult, Terms } from "./types.ts";
+import type { Candidate } from "../store.ts";
+import type { ValidationResult } from "../types.ts";
+import type { HoldReport, PaymentResult, Terms } from "./types.ts";
 
 /** Validates the approved candidate again on the live site. Undefined if it was not accepted. */
-export type Revalidate = () => Promise<Terms | undefined>;
+export type Revalidate = () => Promise<{ terms: Terms; holdReport?: HoldReport } | undefined>;
+
+/**
+ * The hold time validation read, with the moment it read it: the latest time
+ * validation wrote a fact into the candidate. Undefined if either is missing.
+ */
+export function holdReportFrom(validation: ValidationResult | undefined, candidate: Candidate | undefined): HoldReport | undefined {
+  if (validation?.holdSecondsLeft === undefined || !candidate) return undefined;
+  const times = Object.values(candidate.features)
+    .filter((f) => f.source === "validation")
+    .map((f) => Date.parse(f.observedAt))
+    .filter((t) => Number.isFinite(t));
+  return times.length > 0 ? { secondsLeft: validation.holdSecondsLeft, at: Math.max(...times) } : undefined;
+}
 
 const CURABLE: PaymentResult["cause"][] = ["hold_short", "hold_expired", "amounts_changed"];
 const FIGURES: [string, "total" | "chargedNow" | "dueAtHotel"][] = [
@@ -59,13 +74,14 @@ export async function runPayment(deps: HandoffDeps, revalidate: Revalidate, askT
     return result;
   };
 
-  let fresh: Terms | undefined;
+  let again: Awaited<ReturnType<Revalidate>>;
   try {
-    fresh = await revalidate();
+    again = await revalidate();
   } catch (e) {
     log.event("payment.fresh_hold.error", { error: String(e).slice(0, 300) });
   }
-  if (!fresh) return stop("not_confirmed_again", notConfirmedAgain(hotel));
+  if (!again) return stop("not_confirmed_again", notConfirmedAgain(hotel));
+  const fresh = again.terms;
 
   const changes = termChanges(deps.terms, fresh);
   if (fresh.cancellable !== undefined && deps.terms.cancellable !== undefined && fresh.cancellable !== deps.terms.cancellable) {
@@ -80,5 +96,5 @@ export async function runPayment(deps: HandoffDeps, revalidate: Revalidate, askT
     log.event("payment.fresh_hold.choice", { choice });
     if (choice !== "continue") return stop("change_declined", `Stopped. Nothing is booked and you have not been asked to pay.`);
   }
-  return runHandoff({ ...deps, terms: fresh });
+  return runHandoff({ ...deps, terms: fresh, holdReport: again.holdReport });
 }

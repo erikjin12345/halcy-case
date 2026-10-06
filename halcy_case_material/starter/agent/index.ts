@@ -9,7 +9,7 @@ import { runOrchestrator } from "./agents/orchestrator.ts";
 import { HEADLESS, hasCredential, loadDotEnv } from "./config.ts";
 import { modelClassifier } from "./payment/classify.ts";
 import { runValidation } from "./agents/validation.ts";
-import { revalidationNote, runPayment } from "./payment/fresh-hold.ts";
+import { holdReportFrom, revalidationNote, runPayment } from "./payment/fresh-hold.ts";
 import { termsFrom } from "./payment/handoff.ts";
 import { PaymentBoundary } from "./tools/boundary.ts";
 import { guardedDriver } from "./tools/guarded-driver.ts";
@@ -45,7 +45,7 @@ export const bookingAgent: Agent = async (message, chat, ctx) => {
       // Validation left the browser on the hotel's payment page. From here on
       // it is code, not a model: the traveller pays in the hotel's window.
       const validated = [...state.validations].reverse().find((v) => v.candidateId === approved && v.accepted);
-      const handoff = { driver, boundary, chat, log, hotel: state.goal?.hotel.name ?? "the hotel", terms: termsFrom(validated?.observed ?? {}), visible: !HEADLESS, classify: modelClassifier(log) };
+      const handoff = { driver, boundary, chat, log, hotel: state.goal?.hotel.name ?? "the hotel", terms: termsFrom(validated?.observed ?? {}), holdReport: holdReportFrom(validated, state.store.candidate(approved)), visible: !HEADLESS, classify: modelClassifier(log) };
       // If the hold ran down or the page changed while the traveller was
       // deciding, validate the same candidate once more for a fresh hold.
       await runPayment(handoff, async () => {
@@ -54,7 +54,7 @@ export const bookingAgent: Agent = async (message, chat, ctx) => {
         if (goal) goal.notes = [notes, revalidationNote(handoff.terms)].filter(Boolean).join(" ");
         try {
           const again = await runValidation(agents, { driver, boundary, candidateId: approved });
-          return again.accepted ? termsFrom(again.observed) : undefined;
+          return again.accepted ? { terms: termsFrom(again.observed), holdReport: holdReportFrom(again, state.store.candidate(approved)) } : undefined;
         } finally {
           if (goal) goal.notes = notes;
         }

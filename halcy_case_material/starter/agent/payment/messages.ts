@@ -18,11 +18,11 @@ const minutes = (seconds: number) => {
 };
 const shown = (v: string | number | undefined) => (v === undefined ? undefined : String(v));
 
-export function handoffCard(hotel: string, terms: Terms, holdSecondsLeft: number | undefined): Card & { buttons: Button[] } {
+export function handoffCard(hotel: string, terms: Terms, holdSecondsLeft: number | undefined, unknownHoldWait?: number): Card & { buttons: Button[] } {
   const now = shown(terms.chargedNow);
   const later = shown(terms.dueAtHotel);
   const lines = [
-    `${hotel}'s payment page is open in the browser window. You pay ${hotel} directly; Halcy never sees your card or your bank code.`,
+    `${hotel}'s booking page is open in the browser window. You pay ${hotel} directly; Halcy never sees your card or your bank code.`,
     terms.room ? `Room: ${terms.room}` : undefined,
     shown(terms.total) ? `Total: ${shown(terms.total)}` : undefined,
     now !== undefined ? `Charged now: ${now}` : undefined,
@@ -31,6 +31,7 @@ export function handoffCard(hotel: string, terms: Terms, holdSecondsLeft: number
     "In that window: enter your card, read and accept the hotel's booking conditions, and confirm with your bank.",
     now !== undefined ? `Your bank should ask you to approve ${now} to ${hotel}, or to save your card as a guarantee. If it shows anything else, stop.` : `Your bank should name ${hotel}. If it shows anything else, stop.`,
     holdSecondsLeft !== undefined ? `The hotel holds the room for about ${minutes(holdSecondsLeft)} more.` : undefined,
+    unknownHoldWait !== undefined ? `${hotel} is holding the room, but its page does not say for how long. I'll wait about ${minutes(unknownHoldWait)}; please don't leave it longer.` : undefined,
     "Come back here when you are done.",
   ].filter((l): l is string => Boolean(l));
   return { title: `Over to you: pay at ${hotel}`, lines, buttons: HANDOFF_BUTTONS };
