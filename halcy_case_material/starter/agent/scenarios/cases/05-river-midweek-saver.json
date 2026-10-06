@@ -1,0 +1,35 @@
+{
+  "id": "05-river-midweek-saver",
+  "title": "River view midweek, cheapest rate, will not cancel",
+  "why": "On Monday and Tuesday nights the river-view room is available, so the traveller should get exactly what they asked for. The Saver rate is cheapest and they said they will not cancel; that it is non-refundable still has to be said. Everything needed was in the message, so a follow-up question is friction.",
+  "message": "Two of us at Casa Halcy, Monday to Wednesday next week. It has to be the river view room. Cheapest rate, we won't cancel. No breakfast.",
+  "replies": [
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "press": "^2$|2 adult|two"
+    },
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "say": "Two adults."
+    }
+  ],
+  "expect": {
+    "outcome": "approved",
+    "room": "river",
+    "features": {
+      "cancellable": false,
+      "breakfast_included": false
+    },
+    "goal": {
+      "adults": 2,
+      "nights": 2,
+      "checkinWeekday": "Mon"
+    },
+    "says": [
+      "non-?refundable|not refundable|can(no|')t be (cancel|refund)|no refund"
+    ]
+  },
+  "prefer": {
+    "followUp": "forbidden"
+  }
+}

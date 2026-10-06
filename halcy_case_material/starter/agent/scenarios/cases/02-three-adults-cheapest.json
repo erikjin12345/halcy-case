@@ -1,0 +1,39 @@
+{
+  "id": "02-three-adults-cheapest",
+  "title": "Example ask 2: three adults, cheapest, dates fixed, breakfast would be nice",
+  "why": "Only the Superior sleeps three. The Saver rate is the cheapest and is acceptable because the dates will not change, but it is charged in full now and cannot be refunded, and the traveller has to hear that before approving. Breakfast is a wish, not a need, so adding it is preferred but not required.",
+  "message": "Three of us at Casa Halcy, Tuesday to Thursday the week after next. Cheapest option is fine, the dates won't change. Breakfast would be nice.",
+  "replies": [
+    {
+      "when": "breakfast",
+      "press": "with breakfast|add breakfast|include"
+    },
+    {
+      "when": "breakfast",
+      "say": "Yes, add breakfast."
+    }
+  ],
+  "expect": {
+    "outcome": "approved",
+    "room": "superior",
+    "features": {
+      "cancellable": false
+    },
+    "goal": {
+      "adults": 3,
+      "nights": 2,
+      "checkinWeekday": "Tue"
+    },
+    "says": [
+      "non-?refundable|not refundable|can(no|')t be (cancel|refund)|no refund"
+    ]
+  },
+  "prefer": {
+    "features": {
+      "breakfast_included": true
+    },
+    "says": [
+      "charged now|pay now|paid now|today"
+    ]
+  }
+}

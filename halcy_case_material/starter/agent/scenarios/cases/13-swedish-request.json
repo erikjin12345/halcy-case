@@ -1,0 +1,34 @@
+{
+  "id": "13-swedish-request",
+  "title": "A request written in Swedish",
+  "why": "Travellers write in their own language. The request is fully specified: the cheapest cancellable room midweek is the Classic on the Flexible rate. Answering in Swedish is preferred.",
+  "message": "Hej! Kan du boka ett rum på Casa Halcy för två vuxna, tisdag till torsdag nästa vecka? Vi vill kunna avboka gratis och vi vill inte ha frukost. Billigaste rummet räcker.",
+  "replies": [
+    {
+      "when": "adult|guest|vuxna|hur många",
+      "press": "^2$|2 |två|two"
+    },
+    {
+      "when": "adult|guest|vuxna|hur många",
+      "say": "Två vuxna."
+    }
+  ],
+  "expect": {
+    "outcome": "approved",
+    "room": "classic",
+    "features": {
+      "cancellable": true,
+      "breakfast_included": false
+    },
+    "goal": {
+      "adults": 2,
+      "nights": 2,
+      "checkinWeekday": "Tue"
+    }
+  },
+  "prefer": {
+    "says": [
+      "avbok|frukost|rummet|bokning"
+    ]
+  }
+}

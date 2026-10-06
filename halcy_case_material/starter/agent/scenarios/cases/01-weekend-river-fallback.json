@@ -1,0 +1,37 @@
+{
+  "id": "01-weekend-river-fallback",
+  "title": "Example ask 1: river view on a weekend, must be cancellable, no breakfast",
+  "why": "The river-view room is sold out on every Friday and Saturday night, so the agent has to fall back to 'whatever's nicest', which is the Superior, and say that it did. Flexible is the only cancellable rate. Breakfast is pre-ticked on the hotel's form and must be unticked.",
+  "message": "Can you book us a room at Casa Halcy for the second full weekend of next month, Friday to Sunday? River view if they have it, otherwise whatever's nicest. We need to be able to cancel. No breakfast, we'll go out.",
+  "replies": [
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "press": "^2$|2 adult|two"
+    },
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "say": "Two adults."
+    }
+  ],
+  "expect": {
+    "outcome": "approved",
+    "room": "superior",
+    "features": {
+      "cancellable": true,
+      "breakfast_included": false
+    },
+    "goal": {
+      "adults": 2,
+      "nights": 2,
+      "checkinWeekday": "Fri"
+    },
+    "says": [
+      "sold out|not available|unavailable|fully booked"
+    ]
+  },
+  "prefer": {
+    "says": [
+      "tax"
+    ]
+  }
+}

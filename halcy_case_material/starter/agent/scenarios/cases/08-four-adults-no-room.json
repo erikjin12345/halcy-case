@@ -1,0 +1,26 @@
+{
+  "id": "08-four-adults-no-room",
+  "title": "Impossible: four adults in one room",
+  "why": "No room at the hotel sleeps more than three. The agent has to say so and stop. Offering a room that does not fit, or quietly splitting the party into two bookings, is out of scope: one hotel booking only.",
+  "message": "Four adults in one room at Casa Halcy, Tuesday to Thursday next week. Anything cancellable.",
+  "approve": false,
+  "replies": [
+    {
+      "when": "adult|guest|how many",
+      "press": "^4$|4 adult|four"
+    },
+    {
+      "when": "adult|guest|how many",
+      "say": "Four adults, one room."
+    }
+  ],
+  "expect": {
+    "outcome": "no_booking",
+    "goal": {
+      "adults": 4
+    },
+    "says": [
+      "sleeps|up to (3|three)|no room|none of the rooms|can(no|')t|not possible|two rooms|too many"
+    ]
+  }
+}

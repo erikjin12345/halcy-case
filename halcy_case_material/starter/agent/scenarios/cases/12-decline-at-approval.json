@@ -1,0 +1,25 @@
+{
+  "id": "12-decline-at-approval",
+  "title": "The traveller says no at the approval card",
+  "why": "Declining must end the run cleanly. The traveller should be told that nothing is booked and nothing is charged.",
+  "message": "Book us Casa Halcy, Friday to Sunday on the second full weekend of next month, two adults, cancellable, no breakfast, the nicest room that is free.",
+  "approve": false,
+  "replies": [
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "press": "^2$|2 adult|two"
+    },
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "say": "Two adults."
+    }
+  ],
+  "expect": {
+    "outcome": "declined"
+  },
+  "prefer": {
+    "says": [
+      "nothing (has been|was|is|will be) (booked|charged)|no booking|not booked|haven't booked|have not booked|won't book"
+    ]
+  }
+}

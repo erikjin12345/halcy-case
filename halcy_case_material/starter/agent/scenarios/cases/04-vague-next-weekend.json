@@ -1,0 +1,59 @@
+{
+  "id": "04-vague-next-weekend",
+  "title": "Underspecified: 'book us something next weekend'",
+  "why": "Nothing is said about how many people, whether they need to cancel, which room or which nights. Picking silently risks a non-refundable booking nobody asked for, so at least one follow-up question is required here. With the scripted answers (two adults, cancellable, cheapest, no breakfast) the right room is the Classic on the Flexible rate.",
+  "message": "Can you book us something at Casa Halcy next weekend?",
+  "replies": [
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "press": "^2$|2 adult|two"
+    },
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "say": "Two adults."
+    },
+    {
+      "when": "cancel|refund|flexible",
+      "press": "flex|refundable|free cancel|^yes"
+    },
+    {
+      "when": "cancel|refund|flexible",
+      "say": "Yes, we need to be able to cancel."
+    },
+    {
+      "when": "breakfast",
+      "press": "^no|without|room only"
+    },
+    {
+      "when": "breakfast",
+      "say": "No breakfast."
+    },
+    {
+      "when": "night|friday|saturday|dates|arrive",
+      "press": "fri.*sun|friday|2 nights"
+    },
+    {
+      "when": "night|friday|saturday|dates|arrive",
+      "say": "Friday to Sunday."
+    },
+    {
+      "when": "budget|which room|prefer|view|kind of room",
+      "press": "cheap|classic|no preference|any"
+    },
+    {
+      "when": "budget|which room|prefer|view|kind of room",
+      "say": "Cheapest is fine."
+    }
+  ],
+  "expect": {
+    "outcome": "approved",
+    "followUp": "required"
+  },
+  "prefer": {
+    "room": "classic",
+    "features": {
+      "cancellable": true,
+      "breakfast_included": false
+    }
+  }
+}
