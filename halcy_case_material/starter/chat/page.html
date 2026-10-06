@@ -17,6 +17,9 @@
       .msg { max-width: 82%; padding: 9px 13px; border-radius: 16px; white-space: pre-wrap; word-wrap: break-word; }
       .agent { align-self: flex-start; background: #fff; border: 1px solid #e3e3e3; }
       .traveller { align-self: flex-end; background: #181818; color: #fff; }
+      .time { font-size: 11px; color: #8a8a8a; margin-top: -6px; }
+      .time.agent, .time.card-time { align-self: flex-start; padding-left: 4px; }
+      .time.traveller { align-self: flex-end; padding-right: 4px; background: none; color: #8a8a8a; }
       .card { align-self: flex-start; width: 88%; background: #fff; border: 1px solid #d6d6d6; border-radius: 14px; overflow: hidden; }
       .card img { display: block; width: 100%; border-bottom: 1px solid #eee; }
       .card .body { padding: 12px 14px; }
@@ -51,14 +54,24 @@
         fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body ?? {}) });
       const scroll = () => (log.scrollTop = log.scrollHeight);
 
-      function message(from, text) {
+      const clock = (at) => new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      function stamp(at, side) {
+        if (!at) return;
+        const t = document.createElement("div");
+        t.className = "time " + side;
+        t.textContent = clock(at);
+        log.appendChild(t);
+      }
+
+      function message(from, text, at) {
         const el = document.createElement("div");
         el.className = "msg " + from;
         el.textContent = text;
         log.appendChild(el);
+        stamp(at, from);
       }
 
-      function card(id, c) {
+      function card(id, c, at) {
         const el = document.createElement("div");
         el.className = "card";
         if (c.image) {
@@ -103,6 +116,7 @@
         }
         cards.set(id, el);
         log.appendChild(el);
+        stamp(at, "card-time");
       }
 
       function pressed(id, button) {
@@ -117,8 +131,8 @@
       const events = new EventSource("/events");
       events.onmessage = (m) => {
         const e = JSON.parse(m.data);
-        if (e.type === "message") message(e.from, e.text);
-        if (e.type === "card") card(e.id, e.card);
+        if (e.type === "message") message(e.from, e.text, e.at);
+        if (e.type === "card") card(e.id, e.card, e.at);
         if (e.type === "pressed") pressed(e.card, e.button);
         if (e.type === "busy") document.getElementById("busy").textContent = e.on ? "Halcy is working…" : "";
         if (e.type === "reset") { log.innerHTML = ""; cards.clear(); }
