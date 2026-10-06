@@ -3,3 +3,6 @@ runs/
 .env
 *.local
 .DS_Store
+
+# Run logs chosen for the submission (docs/runs/README.md)
+!docs/runs/
