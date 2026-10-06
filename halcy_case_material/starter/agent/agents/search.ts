@@ -30,17 +30,27 @@ export async function runSearch(a: AgentContext, deps: SearchDeps): Promise<stri
       `Must have: ${goal.mustHave.join("; ") || "nothing specific"}`,
       `Preferences: ${goal.preferences.join("; ") || "none"}`,
       `Today: ${a.ctx.today}`,
+      ...(a.state.searchHint ? ["", `Important, from the last attempt: ${a.state.searchHint}`] : []),
       "",
       "The browser is on the hotel's front page. Observe first. Record every room-and-rate combination with add_candidate, then call score_candidates and finish with a summary.",
     ].join("\n"),
     tools: [
-      ...browserTools({ driver: deps.driver, boundary: deps.boundary, log: a.log }),
+      ...browserTools({
+        driver: deps.driver,
+        boundary: deps.boundary,
+        log: a.log,
+        onObserved: (path, text) => {
+          a.state.pages[path] = text;
+          a.state.lastPage = text;
+        },
+      }),
       ...candidateTools({ state: a.state, log: a.log }),
       ...timeTools({ startedAt: Date.now(), budgetMs: objective.maxSearchMs }),
     ],
     log: a.log,
   });
 
+  a.state.searchHint = undefined;
   a.log.event("search.done", { candidates: a.state.store.candidates().length, text: result.text });
   return result.text;
 }

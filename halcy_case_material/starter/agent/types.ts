@@ -33,6 +33,7 @@ export const FEATURES = [
   "price_room",
   "fees_known",
   "currency",
+  "charge_currency",
   "cancellable",
   "breakfast_included",
   "view",
@@ -103,6 +104,13 @@ export interface RunState {
   /** Set by scoring when a price cap could not be applied because of the currency; the orchestrator must tell the traveller. */
   budgetNotApplied?: string;
   store: Store;
+  /** The currency the hotel says it charges in, once any page or validation has shown it. Prices in another currency are refused. */
+  chargeCurrency?: string;
+  /** Text of the pages the agents observed on the hotel's site, by path, newest kept; code checks recorded prices against it. */
+  pages: Record<string, string>;
+  lastPage?: string;
+  /** Set by the orchestrator's tools when a search must be repeated, e.g. after it recorded a guide currency. */
+  searchHint?: string;
   validations: ValidationResult[];
   /** Price rises the traveller accepted, newest last. */
   priceAcceptances: PriceAcceptance[];
@@ -111,7 +119,7 @@ export interface RunState {
 }
 
 export function newRunState(store: Store = memoryStore()): RunState {
-  return { store, validations: [], priceAcceptances: [], overLimitAcceptances: [] };
+  return { store, validations: [], priceAcceptances: [], overLimitAcceptances: [], pages: {} };
 }
 
 /** Everything an agent run needs besides its own tools. */

@@ -12,6 +12,7 @@ import { goalTools } from "../tools/scoring.ts";
 import { serialise } from "../tools/serial.ts";
 import type { AgentContext } from "../types.ts";
 import { approvalBlocker, overLimit } from "./approval.ts";
+import { sameCurrency } from "../scoring/currency.ts";
 import { runObjective } from "./objective.ts";
 import { overLimitTool, priceChangeTool } from "./price-change.ts";
 import { runSearch } from "./search.ts";
@@ -63,6 +64,15 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
         .then((r) => {
           // The limit is for everything the traveller will pay; tell the orchestrator before it tries to approve.
           const over = r.accepted ? overLimit(a.state, candidateId) : null;
+          // Search read a price in a currency the hotel does not charge in. That is Halcy's mistake to fix, not the traveller's question.
+          const charged = typeof r.observed.currency === "string" ? r.observed.currency : undefined;
+          const recorded = a.state.store.candidate(candidateId)?.features.currency?.value;
+          if (!r.accepted && charged && typeof recorded === "string" && !sameCurrency(charged, recorded)) {
+            a.state.chargeCurrency = charged;
+            a.state.searchHint = `the hotel charges in ${charged}; the previous search recorded prices in ${recorded}, a guide figure. Record prices in ${charged} only.`;
+            a.log.event("search.retry.currency", { candidateId, recorded, charged });
+            return JSON.stringify({ ...r, searchError: `Search recorded ${recorded} prices but the hotel charges in ${charged}. This is Halcy's error: call run_search once more now, without asking the traveller. Prices in ${recorded} are refused from here on.` }, null, 1);
+          }
           const overLimitNote = over ? `The total on the hotel's page, ${over.total}, is ${over.over} over the traveller's limit of ${over.limit}. Validate a cheaper candidate that fits, or call ask_over_limit. mark_approved is refused until then.` : undefined;
           return JSON.stringify({ ...r, ...(overLimitNote ? { overLimit: overLimitNote } : {}) }, null, 1);
         })
