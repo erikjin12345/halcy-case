@@ -4,7 +4,7 @@
 // money, and they quote the hotel.
 
 import type { Button, Card } from "../../types.ts";
-import { estimateText, type Rates } from "../scoring/fx.ts";
+import { estimateNote, shortEstimate, type Rates } from "../scoring/fx.ts";
 import type { PaymentResult, Terms } from "./types.ts";
 
 /** What the hand-off card needs to add estimates: the traveller's currency and today's rates. */
@@ -26,9 +26,9 @@ const minutes = (seconds: number) => {
 const shown = (v: string | number | undefined) => (v === undefined ? undefined : String(v));
 
 export function handoffCard(hotel: string, terms: Terms, holdSecondsLeft: number | undefined, unknownHoldWait?: number, fx?: Estimates): Card & { buttons: Button[] } {
-  const est = (v: string | number | undefined, atHotel = false) =>
-    typeof v === "number" && terms.currency && fx ? estimateText(v, terms.currency, fx.to, fx.rates, atHotel) : null;
-  const withEst = (v: string | number | undefined, atHotel = false) => (v === undefined ? undefined : [shown(v), est(v, atHotel)].filter(Boolean).join(" "));
+  const est = (v: string | number | undefined) => (typeof v === "number" && terms.currency && fx ? shortEstimate(v, terms.currency, fx.to, fx.rates) : null);
+  const withEst = (v: string | number | undefined) => (v === undefined ? undefined : [shown(v), est(v)].filter(Boolean).join(" "));
+  const anyEstimate = [terms.total, terms.chargedNow, terms.dueAtHotel].some((v) => est(v));
   const now = shown(terms.chargedNow);
   const later = shown(terms.dueAtHotel);
   const lines = [
@@ -36,13 +36,14 @@ export function handoffCard(hotel: string, terms: Terms, holdSecondsLeft: number
     terms.room ? `Room: ${terms.room}` : undefined,
     shown(terms.total) ? `Total: ${withEst(terms.total)}` : undefined,
     now !== undefined ? `Charged now: ${withEst(terms.chargedNow)}` : undefined,
-    later !== undefined ? `Paid at the hotel: ${withEst(terms.dueAtHotel, true)}` : undefined,
+    later !== undefined ? `Paid at the hotel: ${withEst(terms.dueAtHotel)}` : undefined,
     terms.cancellable === undefined ? undefined : terms.cancellable ? "Can be cancelled, on the hotel's conditions." : "Cannot be cancelled or refunded.",
     "In that window: enter your card, read and accept the hotel's booking conditions, and confirm with your bank.",
     now !== undefined ? `Your bank should ask you to approve ${now} to ${hotel}, or to save your card as a guarantee. If it shows anything else, stop.` : `Your bank should name ${hotel}. If it shows anything else, stop.`,
     holdSecondsLeft !== undefined ? `The hotel holds the room for about ${minutes(holdSecondsLeft)} more.` : undefined,
     unknownHoldWait !== undefined ? `${hotel} is holding the room, but its page does not say for how long. I'll wait about ${minutes(unknownHoldWait)}; please don't leave it longer.` : undefined,
     "Come back here when you are done.",
+    anyEstimate && fx?.rates ? estimateNote(fx.rates) : undefined,
   ].filter((l): l is string => Boolean(l));
   return { title: `Over to you: pay at ${hotel}`, lines, buttons: HANDOFF_BUTTONS };
 }
