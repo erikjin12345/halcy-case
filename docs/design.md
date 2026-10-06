@@ -126,7 +126,7 @@ flowchart TB
   PSP[Payment provider]
   BANK["Traveller's bank"]
   HOTEL[Hotel]
-  T -- "request; approves the amounts on a card" --> A
+  T -- "request, then approval of the amounts" --> A
   A -- "dates, room, guest details" --> HP
   T -- "card number, expiry, CVC, bank code" --> PF
   T -- "ticks the booking conditions" --> HP
