@@ -2,15 +2,15 @@
 // browser, and stops before anything that completes a booking.
 
 import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
-import type { Page } from "playwright";
 import { z } from "zod";
 import { runAgent } from "../llm/client.ts";
 import type { PaymentBoundary } from "../tools/boundary.ts";
+import { showLocation, type PageDriver } from "../tools/driver.ts";
 import { browserTools } from "../tools/browser.ts";
 import { FEATURES, type AgentContext, type ValidationResult } from "../types.ts";
 
 export interface ValidationDeps {
-  page: Page;
+  driver: PageDriver;
   boundary: PaymentBoundary;
   candidateId: string;
 }
@@ -44,9 +44,9 @@ export async function runValidation(a: AgentContext, deps: ValidationDeps): Prom
       `Candidate ${candidate.id}:\n${JSON.stringify(facts, null, 1)}`,
       `Goal:\n${JSON.stringify(goal, null, 1)}`,
       `Traveller (use only if the page asks for guest details): ${t.first} ${t.last}, ${t.email}, ${t.phone}`,
-      `The browser is at ${deps.page.url()}. Start with observe; use goto to the candidate's source_url if needed.`,
+      `The browser is at ${showLocation(deps.driver.location())}. Start with observe; use goto to the candidate's source_url if needed.`,
     ].join("\n\n"),
-    tools: [...browserTools({ page: deps.page, boundary: deps.boundary, log: a.log }), report],
+    tools: [...browserTools({ driver: deps.driver, boundary: deps.boundary, log: a.log }), report],
     log: a.log,
   });
 

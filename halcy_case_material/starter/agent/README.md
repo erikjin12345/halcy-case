@@ -17,7 +17,10 @@ is the code. Conventions: `../../../agent/CLAUDE.md`.
 | `llm/structured.ts`      | `extract`: one-shot Zod-typed extraction, optional screenshot input                 |
 | `llm/model.ts`           | The starter's `Model` seam implemented for Claude                                   |
 | `tools/boundary.ts`      | `PaymentBoundary`: origin allowlist and blind mode, asked by every browser tool     |
-| `tools/browser.ts`       | `observe`, `act`, `goto`, `screenshot` as tools, boundary-checked, iframes masked   |
+| `tools/driver.ts`        | `PageDriver`: the seam between the agents and whatever holds the hotel page          |
+| `tools/playwright-driver.ts` | The raw driver over a Playwright page; reads every frame, never given to an agent |
+| `tools/guarded-driver.ts` | The boundary applied to a driver: nothing reaches the page while blind, foreign frames emptied |
+| `tools/browser.ts`       | `observe`, `act`, `goto`, `screenshot` as tools on a guarded driver, iframes masked  |
 | `tools/chat.ts`          | `say`, `show_card`, `ask_traveller`, `wait_for_reply`, with timeouts                |
 | `tools/scoring.ts`       | `set_goal`, `set_objective`, `add_candidate`, `score_candidates`                    |
 | `tools/time.ts`          | `check_time` against a search budget and an optional hard deadline                  |

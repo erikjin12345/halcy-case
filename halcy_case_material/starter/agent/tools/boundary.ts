@@ -24,14 +24,18 @@ export class PaymentBoundary {
     }
   }
 
-  /** True if a frame at this URL may be read and acted on. */
-  allows(url: string): boolean {
-    if (this.blind) return false;
+  /** True if this URL is on an allowed origin, blind or not. Says where we are, grants nothing. */
+  known(url: string): boolean {
     try {
       return this.origins.has(new URL(url).origin);
     } catch {
       return false;
     }
+  }
+
+  /** True if a frame at this URL may be read and acted on. */
+  allows(url: string): boolean {
+    return !this.blind && this.known(url);
   }
 
   get blind(): boolean {

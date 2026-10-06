@@ -8,6 +8,8 @@ import type { Agent } from "../types.ts";
 import { runOrchestrator } from "./agents/orchestrator.ts";
 import { HEADLESS, hasCredential, loadDotEnv } from "./config.ts";
 import { PaymentBoundary } from "./tools/boundary.ts";
+import { guardedDriver } from "./tools/guarded-driver.ts";
+import { playwrightDriver } from "./tools/playwright-driver.ts";
 import { newRunState } from "./types.ts";
 
 export const bookingAgent: Agent = async (message, chat, ctx) => {
@@ -23,12 +25,15 @@ export const bookingAgent: Agent = async (message, chat, ctx) => {
 
   // The hotel is given by name; the orchestrator resolves it, but the boundary
   // needs an origin before any browser tool runs. Allow every known hotel site.
-  const { browser, page } = await openBrowser({ headless: HEADLESS });
+  const { page } = await openBrowser({ headless: HEADLESS });
   const boundary = new PaymentBoundary(Object.values(ctx.hotels)[0] ?? "http://localhost", log);
   for (const url of Object.values(ctx.hotels)) boundary.allow(url);
+  // The raw driver never enters a frame outside the hotel's site, and only the
+  // guarded one leaves this function.
+  const driver = guardedDriver(playwrightDriver(page, (url) => boundary.known(url)), boundary);
 
   try {
-    const approved = await runOrchestrator({ chat, ctx, log, state: newRunState() }, message, { page, boundary });
+    const approved = await runOrchestrator({ chat, ctx, log, state: newRunState() }, message, { driver, boundary });
     log.event("orchestrator.done", { approved });
     if (approved) {
       // TODO: payment hand-off (agent/payment in the planning folder). Until it
@@ -40,7 +45,7 @@ export const bookingAgent: Agent = async (message, chat, ctx) => {
     // The detail goes to the run log, never to the traveller.
     chat.say("Something went wrong on my side and I had to stop. I had not started the payment step, so nothing has been booked or charged.");
   } finally {
-    await browser.close();
+    await driver.close();
     log.event("done", { dir: log.dir });
   }
 };

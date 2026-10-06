@@ -49,13 +49,23 @@ export async function openBrowser(opts: { headless?: boolean } = {}): Promise<{ 
 
 const frames = new WeakMap<Page, Frame[]>();
 
-export async function observe(page: Page, maxText = 4000): Promise<Observation> {
+/**
+ * `canRead` decides per frame address whether the frame is entered at all. A
+ * frame that fails it is listed with empty text and nothing is run inside it,
+ * so its fields are never read and its DOM is never touched. Frame indexes
+ * stay the same either way.
+ */
+export async function observe(page: Page, maxText = 4000, canRead: (frameUrl: string) => boolean = () => true): Promise<Observation> {
   const all = page.frames();
   frames.set(page, all);
   const text: Observation["text"] = [];
   const elements: PageElement[] = [];
 
   for (const [fi, frame] of all.entries()) {
+    if (!canRead(frame.url())) {
+      text.push({ frameUrl: frame.url(), text: "" });
+      continue;
+    }
     try {
       const found = await frame.evaluate(
         ({ fi, maxText }) => {
@@ -100,6 +110,11 @@ export async function observe(page: Page, maxText = 4000): Promise<Observation> 
         },
         { fi, maxText },
       );
+      // The frame may have navigated while we were reading it.
+      if (!canRead(frame.url())) {
+        text.push({ frameUrl: frame.url(), text: "" });
+        continue;
+      }
       text.push({ frameUrl: frame.url(), text: found.text });
       for (const e of found.elements) elements.push({ ...e, frameUrl: frame.url() });
     } catch (e) {
@@ -108,6 +123,12 @@ export async function observe(page: Page, maxText = 4000): Promise<Observation> 
     }
   }
   return { url: page.url(), title: await page.title(), text, elements };
+}
+
+/** Address of the frame an element id points at, from the same frame list `act` uses. */
+export function frameUrlOf(page: Page, id: string): string | null {
+  const frame = frames.get(page)?.[Number(id.split(":")[0])];
+  return frame ? frame.url() : null;
 }
 
 export async function act(page: Page, action: Action): Promise<void> {
