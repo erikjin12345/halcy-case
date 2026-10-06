@@ -11,10 +11,13 @@
     "chat": "tsx starter/chat/server.ts",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test \"starter/**/*.test.ts\"",
-    "setup": "playwright install chromium"
+    "setup": "playwright install chromium",
+    "agent:check": "tsx starter/agent/check.ts"
   },
   "dependencies": {
-    "playwright": "^1.63.0"
+    "@anthropic-ai/sdk": "^0.131.0",
+    "playwright": "^1.63.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/node": "^22.20.4",
