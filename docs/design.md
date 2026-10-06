@@ -1,21 +1,20 @@
 # Halcy agentic checkout: design
 
 How Halcy turns a chat message into a hotel booking by driving the hotel's own
-website, with the traveller paying the hotel directly. It answers the three
-questions in `halcy_case_material/BRIEF.md`. Longer material is linked.
+website, while the traveller pays the hotel directly. It answers the three
+questions in `halcy_case_material/BRIEF.md`.
 
-**State on 2026-10-06.** The prototype takes the three example asks on the
-mock hotel to the approval card, repeatedly, and has completed one full
-booking through payment, and the payment failure paths, with a script
-standing in for the traveller. A second mock hotel has had its first runs. No
+**State on 2026-10-06.** Built and run on two mock hotels with different
+layouts. All 13 scenario cases have met a real run; one full booking and every
+payment failure path have run with a script standing in for the traveller. No
 person has yet paid in the window, and nothing has run on a real hotel site.
-What is and is not shown is listed in `limitations/`.
+What is and is not shown is in `limitations/`.
 
 ## 1. Architecture
 
-One Node process holds the chat server, four model-driven roles, a scorer in
-code, the payment hand-off and one Chromium browser. The mock hotel and its
-payment provider run as a second local process on two origins.
+One Node process holds the chat server, four model-driven roles, scoring in
+code, the payment hand-off and one Chromium browser. Code is under
+`halcy_case_material/starter/agent/`.
 
 ```mermaid
 flowchart LR
@@ -35,88 +34,78 @@ flowchart LR
   B -.- P["Payment provider's frame<br/>never read"]
 ```
 
-Code is under `halcy_case_material/starter/agent/`. Scoring is code, not a
-model, so a ranking can be explained and repeated. Every read and action goes
-through a guarded driver: an origin allowlist, a blind mode, and no entry
-into frames outside the hotel's site.
-
 **One booking, step by step.**
 
-1. The traveller writes in the chat. A card number typed by mistake is removed
-   before anything reads the message.
+1. The traveller writes. A card number typed by mistake is removed before
+   anything reads the message.
 2. The orchestrator resolves the dates, asks one question if something
-   essential is missing, and records a structured goal.
-3. The objective role sets weights and hard constraints. Search opens the
-   hotel's site, clears the cookie banner, drives the date picker and guest
-   counter, and records each room-and-rate combination. Code scores them.
-4. The orchestrator validates one candidate: it selects it, declines the
-   upsell, unticks add-ons the traveller did not ask for, fills the
-   traveller's own details, and stops on the payment page. That page is the
-   first to show tourist tax and the charged-now split, so its figures are
-   the ones the traveller is shown.
-5. The traveller sees one card and presses "Continue to payment" or not.
-6. Code checks that the browser is on the candidate validated last, that the
-   validation was accepted, that at least 5 minutes of the hotel's hold remain
-   and that the agreed amounts are still on the page. Then it goes blind: no
-   read, action or screenshot until the traveller is done.
-7. The traveller types the card, ticks the hotel's conditions and confirms
-   with their bank, in the hotel's page.
+   essential is missing, and records a goal.
+3. The objective role sets weights and hard constraints. Search drives the
+   hotel's site (cookie banner, date picker, guest counter) and records each
+   room and rate as typed facts: prices are numbers in the hotel's currency.
+   Code scores them.
+4. The orchestrator validates one candidate on the live page: selects it,
+   declines the upsell, unticks add-ons nobody asked for, fills the
+   traveller's details and stops on the payment page, the first page that
+   shows taxes and the charged-now split.
+5. The traveller approves one card. Code refuses approval unless the browser
+   is on the candidate validated last, that validation was accepted, any
+   changed price was accepted by the traveller, and the total is within their
+   limit or that total was accepted.
+6. Code checks the hotel's hold (however the page states it) and that the
+   agreed amounts are still on the page. If not, it says why, asks the hotel
+   to hold the same room again once, and re-checks. Then it goes blind: no
+   read, action or screenshot.
+7. The traveller types the card, ticks the conditions and confirms with their
+   bank in the hotel's page.
 8. The wait ends when the tab is back on the hotel's site on another page, a
-   chat button is pressed, the window closes or the deadline passes. A bank
-   check that takes over the whole tab is not an outcome. Code then reads the
-   hotel's page once, with card fields and the last four digits redacted, and
-   decides a status.
-9. The traveller gets a templated message: booked with a reference, declined
-   in the hotel's words, or "I can't see a booking".
+   chat button is pressed, the window closes or the deadline passes. Code
+   reads the hotel's page once, with card fields redacted, and decides a
+   status.
+9. The traveller gets a templated message: booked with the hotel's reference,
+   declined in the hotel's words, or "I can't see a booking".
 
 Production layout, not deployed: the same roles in a Cloud Run worker and the
-hotel's site in a WebView inside the Halcy app, so the hotel session is the
+hotel's site in a WebView in the Halcy app, so the hotel session is the
 phone's own (`infrastructure.md`, `../agent/WEBVIEW-PLAN.md`).
 
 ## 2. Question 1: model selection
 
-**Rule: a heavy model where an error is expensive and the volume low; a
+**Rule: a heavy model where an error is expensive and the volume is low; a
 cheaper one where the volume is high and the error is caught downstream.**
 
 | Role | Model | Why | When it is wrong |
 | --- | --- | --- | --- |
-| Orchestrator | Opus 5.5, medium effort | Its words go straight to the traveller; nobody checks them after | Approval needs a button press and is refused in code for a candidate that was not validated last and accepted; delegated browser agents are queued in code |
-| Objective | Opus 5.5, low effort | A need scored as a wish wastes a search; it is one short call, so a cheaper model saves a fraction of a cent | Validation checks the candidate against the goal |
-| Search | Sonnet 5.5, medium effort | The largest role, about 40% of cost, and validation re-checks its result on the live page | The candidate is rejected and the traveller is told why |
-| Validation | Opus 5.5, low effort | It reads the price the traveller approves | Code overrules an acceptance when the page is on a different rate; the hand-off re-checks the amounts on the page |
-| Scoring | No model | Must be explainable and repeatable | n/a |
-| Hand-off | Code, plus one extraction call (Opus 5.5) on redacted text after blind mode has ended | No model context exists while the card is typed | Code overrules the proposal: no "confirmed" without a reference found on the page |
+| Orchestrator | Opus 5.5, medium | Its words go straight to the traveller | Approval is refused in code unless the rules in step 5 hold |
+| Objective | Opus 5.5, low | A need scored as a wish wastes a search; one short call | Validation checks the candidate against the goal |
+| Search | Sonnet 5.5, medium | Largest role, about 40% of cost; validation re-checks its result | The candidate is rejected, the traveller told why |
+| Validation | Opus 5.5, low | It reads the price the traveller approves | Code overrules it on the wrong rate or currency; the hand-off re-checks the amounts |
+| Scoring | none | Must be explainable and repeatable | n/a |
+| Hand-off | code, plus one extraction after blind mode | No model context exists while the card is typed | No "confirmed" without a reference found on the page |
 
-Measured on the three example asks with a scripted traveller, cost and wall
-time from message to approval card (`../agent/MODELS.md` section 5):
+Measured on the three example asks, message to approval card
+(`../agent/MODELS.md` section 5):
 
-| Ask | Every role on Opus 5.5 | Sonnet 5.5 on search, run 1 | Run 2 |
+| Ask | All Opus 5.5 | Sonnet on search, run 1 | Run 2 |
 | --- | --- | --- | --- |
 | 1 | $0.31, 116 s | $0.22, 85 s | $0.27, 96 s |
 | 2 | $0.47, 181 s | $0.41, 176 s | $0.38, 166 s |
 | 3 | $0.40, 123 s | $0.27, 125 s | $0.28, 108 s |
 
-Sonnet on search reached the card 6 of 6, and in the first run of each
-set-up both recorded the same candidates at the mock's exact prices. The Opus
-figure for ask 3 is a re-run: the first time, two validations ran at once on
-the one browser and the traveller was wrongly told the flexible rate could
-not be booked. That was our harness, not a model, and is why browser agents
-are now queued in code. Prompt caching carries the cost: 85% of input tokens
-are cache reads.
+Sonnet on search reached the card 6 of 6 with the same candidates and prices.
+Prompt caching carries the cost: 85% of input tokens are cache reads.
 
-**What we would measure:** bookings that reach the approval card; right room
-and rate per case; validation rejections and failed actions; turns and wall
-time, since the hold is 15 minutes; cost per completed booking, not per
-request; and all of it on a hotel never seen. The bar for a cheaper model is
-"no worse": about $0.10 per booking is at stake and one failed booking
-outweighs many of those. Today's evidence is one or two runs per cell on one
-hotel. `MODEL_SEARCH=claude-opus-5-5` reverts the choice.
+**What we measure:** bookings that reach the card; right room and rate;
+validation rejections and failed actions; turns and time (the hold is
+minutes); cost per completed booking; all of it on sites never seen. The bar
+for a cheaper model is "no worse": about $0.10 a booking is at stake and one
+failed booking outweighs many of those. Evidence is one or two runs per cell.
 
 ## 3. Question 2: staying out of payments
 
 **The rule: no model and no Halcy log receives payment data. A model is told
-the payment status, nothing else.** The payment step is therefore code, not an
-agent, and Halcy never holds, moves or collects money.
+a payment status, nothing else.** The payment step is code, not an agent, and
+Halcy never holds, moves or collects money.
 
 ```mermaid
 flowchart TB
@@ -143,148 +132,122 @@ flowchart TB
   A -- "chat and hotel page text, redacted, never card data" --> M[Model provider]
 ```
 
-A model is told a payment status and nothing else. The model provider does
-receive the chat, the traveller's name, email and phone, and the text of the
-hotel's own pages.
-
-| Party | Card number, CVC | Bank code | Money | Proof the traveller agreed |
+| Party | Card, CVC | Bank code | Money | Proof the traveller agreed |
 | --- | --- | --- | --- | --- |
-| Traveller | types it | receives and types it | pays | ticks the conditions, passes the bank check |
-| Payment provider | receives it | no | processes the charge | no |
-| Traveller's bank | already has it | issues and checks it | approves | record of the bank check |
-| Hotel | provider's token | no | receives it, now or at the desk | conditions accepted, booking record |
-| Halcy code | never | never | never | the approval card: what was shown, when, which button |
-| Halcy models | never | never | never | none |
+| Traveller | types it | receives, types | pays | ticks the conditions, passes the bank check |
+| Payment provider | receives it | no | processes it | no |
+| Bank | has it | issues, checks | approves | record of the bank check |
+| Hotel | a token | no | receives it, now or at the desk | conditions accepted, booking |
+| Halcy | never | never | never | approval card, price acceptances, all logged |
 
 **Who holds the money and when.** On a pay-now rate the bank moves it to the
-hotel through the hotel's provider at booking. On a pay-at-the-hotel rate
-nothing moves; the card is a guarantee held by the hotel. Halcy is in neither
-path. The traveller's contract is with the hotel, and every message says so.
+hotel through the hotel's provider at booking. On a pay-at-hotel rate nothing
+moves; the card is a guarantee the hotel holds. Halcy is in neither path, and
+every message names the hotel as the seller.
 
-**Why the design keeps Halcy out, in layers.** The driver never enters a frame
-outside the hotel's site. During the hand-off nothing is observed, acted on
-or screenshotted. Card-like fields on the hotel's own page are redacted by
-field. The run log refuses page events inside the blind interval and scrubs
-card-like numbers, and an audit fails any run log that breaks this. Only a
-status returns to a model, and "booked" is said only when code finds the
-reference verbatim on a hotel page that is not the payment page. The
-traveller ticks the conditions; the agent does not.
+**Why Halcy stays out, in layers.** The driver never enters a frame outside
+the hotel's site. During the hand-off nothing is observed, acted on or
+screenshotted. Card-like fields on the hotel's own page are redacted by
+field. The run log refuses page events while blind and scrubs card-like
+numbers, and an audit fails any log that breaks this. "Booked" is said only
+when code finds the reference verbatim on a hotel page. The traveller ticks
+the conditions; the agent does not.
 
-**The honest limit.** In the prototype the boundary is "does not", not
-"cannot": the browser process could read every frame, and it is code, tests
-and the audit that stop it (`limitations/limitations.md` L15). Terms and pay
-buttons are kept from the agent by a prompt, not yet by code (L17).
+**The honest limit.** The boundary is "does not", not "cannot": the browser
+process could read every frame, and code, tests and the audit stop it (L15).
 
-**What would pull Halcy in.** Collecting the money and paying the hotel (the
-clear licence case). Relaying keystrokes or streaming the payment page to the
-traveller, which is why the live-view hand-off was rejected. Storing a card
-for reuse. Typing a card the traveller sent in the chat. Ticking the hotel's
-conditions for the traveller. Booking through an intermediary that becomes
-the seller.
+**What would pull Halcy in.** Collecting the money and paying the hotel.
+Relaying keystrokes or streaming the payment page (why a live view was
+rejected). Storing a card. Using a card typed into the chat. Ticking the
+hotel's conditions for the traveller. Booking through an intermediary that
+becomes the seller.
 
-**Where we are unsure** (`limitations/not-verified.md` N17 to N21). Whether
-operating the browser a card is typed into counts as handling card data.
-Whether holding money and touching card data are, as we assume, separate
-questions with separate answers. Whether a script in a WebView's main frame
-is truly unable to read a provider's frame on both phone platforms. Whether
-wallets and saved cards work in an embedded view. Whether a given hotel's
-terms allow automated form filling. Each needs someone who would know.
+**Where we are unsure** (`limitations/not-verified.md` N17 to N21): whether
+operating the browser a card is typed into counts as handling card data;
+whether holding money and touching card data are separate questions, as we
+assume; whether a WebView script truly cannot read a provider's frame on both
+phone platforms; wallets in an embedded view; hotels' terms on automation.
 
 ## 4. Question 3: the user journey
 
-The traveller does four things: writes the request, answers at most a
-question or two, approves one card, and pays in the hotel's page.
+The traveller writes a request, answers a question or two, approves one card
+and pays in the hotel's page. The approval card shows room, dates, "Room
+€404.00", "Tourist tax, paid at the hotel: €16.00", "Total €420.00",
+"Charged now: €0.00", "Paid at the hotel, to Casa Halcy: €420.00", the
+cancellation terms, what differs from the request, what the site does not
+say, and that their bank sets the exchange rate. The result reads "You're
+booked with Casa Halcy. Booking reference CH-711228. ... Your booking and
+your contract are with Casa Halcy."
 
-| Step | What the traveller sees |
-| --- | --- |
-| Clarify | "Quick check before I search: how many adults are staying?" with buttons |
-| Progress | "The River-View Double is sold out for those dates. Next best is the Superior Double on the Flexible rate. I'm checking it on the live site now." |
-| Approval card | Room, dates, "Room €404.00", "Tourist tax, paid at the hotel: €16.00", "Total €420.00", "Charged now: €0.00", "Paid at the hotel, to Casa Halcy: €420.00", cancellation terms, what differs from the request, what the site does not say, and that their bank sets the exchange rate |
-| Hand-off card | "Over to you: pay at Casa Halcy." The amounts as the hotel writes them, what the bank should ask them to approve ("if it shows anything else, stop"), minutes left on the hold |
-| Result | "You're booked with Casa Halcy. Booking reference CH-711228. ... Your booking and your contract are with Casa Halcy." |
+| Case | What happens and what the traveller sees | Run |
+| --- | --- | --- |
+| Room gone | Recorded as sold out; the fallback they named is taken, or they are asked. On the second hotel a room taken on reserving was reported in the hotel's words | Every run of ask 1; second hotel |
+| Price moved | Taxes added later are new lines. A changed room price is a rejection; code asks "Room when I found it: €928.00 / Room now, on Casa Halcy's own payment page: €1000.00" and logs the answer. Before the fix (PR #29), accepting led to a dead end; now the room is validated again at the accepted price and booked | Scenario 07, before and after |
+| Over their limit | A limit means everything they pay. Code compares the final total with it and asks before approval | Once, with €296 found and €312 all-in (via a new limit, not the dedicated question) |
+| Card declined | "The payment did not go through. Casa Halcy's page says: 'Your card was declined by your bank.' Nothing is booked", then "Try another card?" | Mock, stand-in: decline, then a second card confirmed |
+| Bank confirms | Inside the provider's frame; Halcy never sees it. A wrong code is answered there; three wrong codes reach the hotel's page as a decline | Mock, stand-in |
+| They go quiet | Before approval: "I've stopped because I didn't hear back. Nothing is booked and nothing has been charged." During payment: reminders, a stop 60 s before the hold ends, and "I can't see a booking on Casa Halcy's site" | Before approval once; during payment on a 1-minute hold |
 
-**When things go wrong.** All five have been run; the last column says how.
-
-| Case | What happens | What the traveller sees | Run |
-| --- | --- | --- | --- |
-| The room is gone | Recorded as sold out and rejected with that reason. A fallback the traveller named is taken; otherwise they are asked | "River view is sold out for those dates", then the next best or a question | Every run of ask 1 |
-| The price moved | A tax or fee on a later page is a new line and a new total. A changed room price is a rejection, and the traveller is asked again with both figures. Before the hand-off, code refuses if an agreed amount is no longer on the page _[pending: holding the room again once and re-checking is in review]_ | "The hotel's payment page says the room 'was €928.00 and is now €1000.00'. ... Do you want this at the new price?" with Yes and No | Tax: every run. Room price: scenario 07 |
-| The card is declined | Halcy cannot see the provider's frame; it reads the hotel's page afterwards. Up to three attempts | "The payment did not go through. Casa Halcy's page says: 'Your card was declined by your bank.' Nothing is booked", then "Try another card?" | Mock, stand-in: declined, then a second card confirmed |
-| The bank wants to confirm | Inside the provider's frame, in the same window. Halcy is blind and never sees the code; the hand-off card said beforehand what the bank should show. Only after three wrong codes does the hotel's own page show an error | The bank's own screen. After three wrong codes: "... 'Too many wrong codes. The payment was cancelled.' Nothing is booked" | Mock, stand-in: confirmed; three wrong codes, then a retry |
-| They go quiet | Before approval the wait ends after 10 minutes. During payment: a reminder at half time, a last one 3 minutes before the deadline, a stop 60 seconds before the hold ends | "I've stopped because I didn't hear back. Nothing is booked and nothing has been charged." During payment: "I didn't hear back in time ... I can't see a booking on Casa Halcy's site" | Before approval: once, at the first question. During payment: mock with a 1-minute hold |
-
-Two rules shape the wording. After the hand-over Halcy never says "nothing was
-charged", because it did not watch. And a status it cannot establish is
-reported as unknown, with a question, not guessed.
+After the hand-over Halcy never says "nothing was charged", because it did
+not watch; a status it cannot establish is reported as unknown, with a
+question.
 
 ## 5. Failure modes of the system
 
-| What can go wrong | How it is detected | What the traveller sees |
+| What goes wrong | Detected by | Traveller sees |
 | --- | --- | --- |
-| Validation ends on the wrong rate | Code: a pay-at-hotel candidate is not accepted on a page that charges now, nor a refundable one on a non-refundable page | The candidate is not offered for payment |
-| The payment page charges in another currency than the room list | The currency is recorded as written, re-read by validation, compared in code | Not offered; both currencies stated. Unit-tested, not seen live |
-| Too little of the hold left, or the page changed while the card was read | Hold clock and agreed amounts re-read before going blind | "I haven't handed you Casa Halcy's payment page: ..." with the reason |
-| The hold runs out during payment and the bank still approves | The hotel's page says the room was released | "Casa Halcy has released the room ... If you confirmed a payment or entered a bank code, check with Casa Halcy." Halcy cannot prevent this; the 5-minute floor, the reminders and the early stop lower the odds |
-| The hotel confirms in a way we do not recognise | No reference found verbatim | "I can't see a confirmation on Casa Halcy's site. Did a confirmation email arrive?" |
-| The window is closed, or still on another site when the wait ends | Driver events | "I lost the booking window", check with the hotel |
-| The model provider fails or declines | Typed API errors, the refusal stop reason | "Something went wrong on my side", nothing booked. During payment a code-only reader still recognises a confirmation |
-| A hotel page carries instructions for the agent | Page text reaches models as tool results or quoted data; card fields and the provider's frame cannot be acted on | Nothing. Not tested with a hostile page |
-| A site unlike any we have seen | Search stops after three failed attempts at a step | Told the site could not be driven; nothing booked |
+| Validation ends on the wrong rate or currency | Code compares page and candidate | Not offered; the reason |
+| Hold short or released, or the page changed after approval | Hold and amounts re-read before going blind | The reason, one re-hold, then old and new price if different |
+| Hold runs out while the bank approves | The hotel's page says the room was released | "Casa Halcy has released the room ... check with Casa Halcy" |
+| Confirmation we do not recognise | No reference found verbatim | "I can't see a confirmation. Did an email arrive?" |
+| Window closed or left on another site | Driver events | "I lost the booking window" |
+| Model provider fails | Typed errors, refusal stop reason | "Something went wrong on my side", nothing booked |
+| Hostile page text | Page text reaches models as data; payment fields cannot be acted on | Nothing; not tested |
+| A site we cannot drive | Search stops after three failed attempts | Told so, nothing booked |
 
-**Exchange rates.** The hotel charges in its own currency and the traveller's
-bank converts on the day of each charge, so the part paid at the hotel later
-can differ in the traveller's currency. Halcy shows the hotel's amounts and
-converts nothing. A limit given in another currency is not compared with the
-hotel's prices: asked for "not more than 3000 kronor", the agent answered
-"Casa Halcy prices in euros, not kronor, so I couldn't check your 3,000 SEK
-limit" and asked for one in euros. An offer to "pay in your own currency"
-inside the provider's frame is something Halcy never sees.
+**Exchange rates.** The hotel charges in its own currency and the bank
+converts on the day of each charge, so the part paid at the hotel later can
+differ. Halcy converts nothing. A limit in another currency is not compared:
+asked for "not more than 3000 kronor", the agent said "Casa Halcy prices in
+euros, not kronor, so I couldn't check your 3,000 SEK limit" and asked for
+one in euros. A "pay in your own currency" offer inside the provider's frame
+is never seen. Choosing the charge currency over a guide price is the search
+model's doing, not code's.
 
 ## 6. How we would know it works before launch
 
-**What exists.** 13 scenario cases with a scripted traveller and a grader that
-reads the run log. Every case must pass the payment-boundary audit, log no
-error and never have two agents on the browser at once, plus its own checks.
-About 110 unit tests. CI runs typecheck, tests and the run-log audit; live
-model runs are started by hand because they cost money.
+**What exists.** 13 scenario cases with a scripted traveller and a grader
+that reads the run log; every case must pass the payment-boundary audit, log
+no error and never have two agents on the browser. About 135 unit tests. CI
+runs typecheck, tests and the audit; live runs are started by hand.
 
-**Results so far.** All 13 cases have met at least one real run on the mock;
-twelve pass as graded, among them a budget cap, four adults in one room and
-an unknown hotel (no booking in either), a card number typed into the chat
-(refused, audit clean), "can I pay Halcy" (refused: the hotel is the seller)
-and a request in Swedish. Case 07 failed on the script, not the agent; the
-re-run is pending. The runner stops at the approval card. The payment step
-has one full booking behind the real orchestrator (151 s, a stand-in paying)
-and, against the mock with a stand-in, every failure path in section 4 plus a
-pay-now rate, Cancel, a closed tab and an expired hold. Every run log passes
-the audit.
+**Results.** All 13 cases have met a real run; twelve pass, and 07 now passes
+after PR #29. The payment step has one full booking behind the orchestrator
+and, with a stand-in, every failure path in section 4 plus a pay-now rate,
+Cancel, a closed tab and an expired hold. Every run log passes the audit.
 
-**A second hotel.** A second mock with different markup, a native date field,
-rates as radio buttons, prices per night, a fee that first appears on the
-review page and payment by redirect. In its first version two of three asks
-reached approval with the right room and rate in about 90 seconds each, on a
-site the agent had not seen. _[pending: the third ask, and the version that
-charges in another currency.]_
+**A second hotel found what the first could not.** Different markup,
+per-night prices, a fee shown late, a pre-ticked insurance, a hold stated as
+"until 15:47", payment by redirect. The euro version reached the card 3 of 3
+in about 90 s. The pound version exposed a price recorded as text, a levy
+counted into the price, a dead end after a mismatch, and a hold format the
+hand-off could not read; all four are now fixed (PRs #29, #31). That is the
+argument for testing on many sites.
 
-**What a pass is worth.** The grader has been wrong once: it passed a run in
-which the traveller ended on the wrong rate, because the case did not check
-the rate. And up to the approval card it reads what the agents recorded, not
-what the hotel would charge. The mock keeps its own record of bookings, which
-a test harness, unlike the agent, may read; comparing the two comes first.
+**What a pass is worth.** The grader has been wrong once, passing a run that
+ended on the wrong rate. Up to the card it reads what agents recorded; the
+mock's own booking record, which a harness may read, should be compared first.
 
-**Still missing.** A person paying in the visible window. Silence at the
-approval card, when the hotel is already holding the room. Repeats, to tell a
-difference from noise. Real hotel sites.
+**Still missing.** A person paying in the window. The over-limit question and
+the payment redirect live. Repeats. Real hotel sites.
 
-**Launch gates**, on at least five hotel sites not used in development: the
-amount on the approval card equals the amount the hotel recorded, per
-booking, which is "never surprised" as a number; bookings that reach the card
-with the right room and rate; questions asked per booking; no run log failing
-the boundary audit; no "confirmed" without a reference the hotel can find; a
-known rate of "unconfirmed", each with a follow-up; time to the card well
-inside the shortest hold; cost per completed booking. Then a supervised
-period in which a person reads every run log.
+**Launch gates**, on at least five unseen sites: the amount on the card
+equals what the hotel recorded; right room and rate; questions per booking;
+no audit failures; no "confirmed" without a reference; a known rate of
+"unconfirmed", each followed up; time to the card well inside the shortest
+hold; cost per completed booking. Then a supervised period with every log
+read by a person.
 
-Further reading: `limitations/` (limitations, trade-offs, not verified),
-`../agent/payment/TRAPS.md`, `../agent/payment/DESIGN.md`,
+Further reading: `closing-note.md`, `limitations/`,
+`../agent/payment/DESIGN.md`, `../agent/payment/TRAPS.md`,
 `../agent/MODELS.md`.
