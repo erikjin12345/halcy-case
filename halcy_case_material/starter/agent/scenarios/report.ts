@@ -10,7 +10,7 @@ const mark = (c: Check) => (c.pass ? "pass" : c.level === "must" ? "**FAIL**" : 
 const cell = (v: unknown) => String(v ?? "").replace(/\|/g, "/").replace(/\n/g, " ");
 const quote = (text: string) => text.split("\n").map((l) => `> ${l}`).join("\n");
 
-export function renderReport(s: Scenario, o: Outcome, checks: Check[], runDir: string): string {
+export function renderReport(s: Scenario, o: Outcome, checks: Check[], runDir: string, unscripted: string[] = []): string {
   const out: string[] = [];
   out.push(`# ${s.id}: ${passed(checks) ? "PASS" : "FAIL"}`, "", s.title, "", `**Why this case:** ${s.why}`, "", "**The traveller wrote:**", "", quote(s.message), "");
 
@@ -26,6 +26,11 @@ export function renderReport(s: Scenario, o: Outcome, checks: Check[], runDir: s
     out.push(`- ${q.approval ? "**Approval card.**" : "**Follow-up.**"} ${cell(q.question)}`);
     if (q.buttons.length) out.push(`  - Buttons: ${q.buttons.map(cell).join(" / ")}`);
     out.push(`  - Traveller answered: ${cell(q.answer) || "(nothing)"}`);
+  }
+
+  if (unscripted.length) {
+    out.push("", "**The script had no rule for these, so the traveller's answer was the fallback. Read them before trusting the verdict:**", "");
+    for (const q of unscripted) out.push(`- ${cell(q)}`);
   }
 
   out.push("", "## Candidates", "");

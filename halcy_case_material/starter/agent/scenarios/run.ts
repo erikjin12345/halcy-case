@@ -23,7 +23,7 @@ const read = (p: string) => JSON.parse(readFileSync(new URL(p, import.meta.url),
 const runDirs = () => (existsSync("runs") ? readdirSync("runs").filter((d) => existsSync(join("runs", d, "events.jsonl"))) : []);
 
 /** Runs one scenario and returns the folder the agent logged to. */
-export async function runScenario(agent: Agent, s: Scenario, ctx: Context): Promise<{ runDir: string; unscripted: number }> {
+export async function runScenario(agent: Agent, s: Scenario, ctx: Context): Promise<{ runDir: string; unscripted: string[] }> {
   const before = new Set(runDirs());
   const { chat, asked } = scriptedChat(s);
   // The chat server removes card numbers from what the traveller types before
@@ -32,7 +32,7 @@ export async function runScenario(agent: Agent, s: Scenario, ctx: Context): Prom
   await agent(message, chat, { ...ctx, today: s.today ?? ctx.today });
   const created = runDirs().filter((d) => !before.has(d)).sort();
   if (!created.length) throw new Error(`${s.id}: the agent wrote no run log`);
-  return { runDir: join("runs", created[created.length - 1]), unscripted: asked.filter((a) => !a.scripted).length };
+  return { runDir: join("runs", created[created.length - 1]), unscripted: asked.filter((a) => !a.scripted).map((a) => `${a.question} -> ${a.answer}`) };
 }
 
 function judge(s: Scenario, runDir: string): { outcome: Outcome; checks: Check[] } {
@@ -47,11 +47,12 @@ async function main(args: string[]): Promise<number> {
   }
   const outDir = join("runs", "scenarios", new Date().toISOString().replace(/[:.]/g, "-"));
   const rows: { scenario: Scenario; outcome: Outcome; checks: Check[] }[] = [];
-  const finish = (s: Scenario, runDir: string, note = "") => {
+  const finish = (s: Scenario, runDir: string, unscripted: string[] = []) => {
+    const note = unscripted.length ? `  (${unscripted.length} question(s) answered by the fallback)` : "";
     const { outcome, checks } = judge(s, runDir);
     rows.push({ scenario: s, outcome, checks });
     mkdirSync(outDir, { recursive: true });
-    writeFileSync(join(outDir, `${s.id}.md`), renderReport(s, outcome, checks, runDir));
+    writeFileSync(join(outDir, `${s.id}.md`), renderReport(s, outcome, checks, runDir, unscripted));
     console.log(`${passed(checks) ? "PASS" : "FAIL"}  ${s.id}  ${outcome.kind}${outcome.approvedId ? ` ${outcome.approvedId}` : ""}${note}`);
     for (const c of checks.filter((c) => !c.pass)) console.log(`      ${c.level}: ${c.name} (${c.detail})`);
   };
@@ -70,7 +71,7 @@ async function main(args: string[]): Promise<number> {
     for (const s of scenarios) {
       console.log(`...   ${s.id}`);
       const { runDir, unscripted } = await runScenario(bookingAgent, s, ctx);
-      finish(s, runDir, unscripted ? `  (${unscripted} question(s) answered by the fallback)` : "");
+      finish(s, runDir, unscripted);
     }
   }
   writeFileSync(join(outDir, "summary.md"), renderSummary(rows));

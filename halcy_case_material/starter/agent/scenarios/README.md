@@ -55,9 +55,10 @@ run and a scripted run are judged by the same code.
 
 - `expect` holds the `must` checks. One failure fails the case.
 - `prefer` holds the `should` checks. A miss is shown and does not fail it.
-- Two `must` checks run on every case whatever it says: the run log passes
-  the payment-boundary audit (`../evidence/audit.ts`), and the agent logged
-  no error.
+- Three `must` checks run on every case whatever it says: the run log passes
+  the payment-boundary audit (`../evidence/audit.ts`), the agent logged no
+  error, and no search or validation agent was started while another was
+  still driving the one shared page.
 
 Fields of `expect` and `prefer` (`types.ts`): `outcome` (approved, declined,
 no_booking), `room` and `notRoom` (substring of the approved room name),
@@ -71,9 +72,11 @@ agent said or showed).
 `replies` is a list of rules; the first match wins. `when` is matched against
 the question, `press` against a button's id or label, `say` is the answer to a
 free-text question. At the approval card it presses approve unless the case
-says `"approve": false`. A question no rule covers gets the first button, or
-"use your best judgement" for free text, and is counted as unscripted in the
-console output so you can see that the script needs a rule.
+says `"approve": false`. A question no rule covers never commits the
+traveller: it gets the way out (stop, not now) if the card has one, otherwise
+the first button, or "use your best judgement" for free text. Unscripted
+questions are counted in the console output and listed in the report, so you
+can see that the script needs a rule and read the verdict with that in mind.
 
 ## The cases
 
@@ -101,6 +104,11 @@ console output so you can see that the script needs a rule.
 - **Features come from what the agents recorded**, not from the hotel's
   booking list. The agent may not read `/__admin/bookings`, and neither does
   the grader.
+- **A pass is only as good as the case.** Case 03 once passed a run in which
+  the agent wrongly said the Flexible rate could not be booked and the
+  scripted traveller pressed "book the Saver rate anyway". The case did not
+  check the rate and the fallback pressed the first button. Both are fixed;
+  expect more of the same in cases that have not met many runs.
 - **One run is one sample.** Models vary between runs; a case that passes
   once has not been shown to pass every time.
 - **Dates are relative to today** unless a case pins `today`.

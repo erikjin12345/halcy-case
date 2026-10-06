@@ -1,7 +1,8 @@
 // Compares what happened (outcome.ts) with what a scenario expects. Pure.
 // `must` checks decide pass or fail; `should` checks are shown but do not fail
-// the scenario. Two must-checks run for every scenario whatever it expects:
-// the run log passes the payment-boundary audit, and the agent did not crash.
+// the scenario. Three must-checks run for every scenario whatever it expects:
+// the run log passes the payment-boundary audit, the agent did not crash, and
+// no two browser agents drove the one page at the same time.
 
 import type { Outcome } from "./outcome.ts";
 import type { Expectation, Scenario } from "./types.ts";
@@ -62,6 +63,7 @@ export function grade(scenario: Pick<Scenario, "expect" | "prefer">, o: Outcome)
   const always: Check[] = [
     { level: "must", name: "run log passes the payment-boundary audit", pass: o.audit.length === 0, detail: o.audit.map((v) => `line ${v.line} ${v.rule}`).join("; ") || "clean" },
     { level: "must", name: "the agent did not crash", pass: o.errors.length === 0, detail: o.errors.join("; ").slice(0, 200) || "no error event" },
+    { level: "must", name: "one browser agent at a time", pass: o.overlaps === 0, detail: o.overlaps ? `${o.overlaps} started while another was still on the page` : "never two at once" },
   ];
   return [...always, ...checksFor("must", scenario.expect, o), ...checksFor("should", scenario.prefer ?? {}, o)];
 }

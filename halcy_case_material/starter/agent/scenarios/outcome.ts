@@ -32,6 +32,8 @@ export interface Outcome {
   outputTokens: number;
   wallSeconds: number;
   audit: Violation[];
+  /** Times a browser agent (search or validation) was started while another was still running on the one page. */
+  overlaps: number;
 }
 
 const str = (v: unknown): string => (typeof v === "string" ? v : "");
@@ -63,6 +65,15 @@ export function readOutcome(raw: string): Outcome {
     if (e.type === "chat.reply") questions.push({ kind: "text", question: said.at(-1) ?? "", buttons: [], answer: str(e.text), approval: false });
   }
 
+  // One browser, one page: a second search or validation started before the first finished is driving the same page.
+  let running = 0;
+  let overlaps = 0;
+  for (const e of events) {
+    if (e.role !== "search" && e.role !== "validation") continue;
+    if (e.type === "llm.start" && running++ > 0) overlaps++;
+    if (e.type === "llm.done") running = Math.max(0, running - 1);
+  }
+
   const snapshot = last("state.snapshot") as { candidates?: { id: string; features: unknown }[]; rejected?: { candidateId: string; reason: string }[] } | undefined;
   const rejected = new Map((snapshot?.rejected ?? []).map((r) => [r.candidateId, r.reason]));
   const fromSnapshot = (snapshot?.candidates ?? []).map((c) => ({ id: c.id, features: flat(c.features), rejected: rejected.get(c.id) }));
@@ -89,5 +100,6 @@ export function readOutcome(raw: string): Outcome {
     outputTokens: of("llm.done").reduce((n, e) => n + Number(e.outputTokens ?? 0), 0),
     wallSeconds: Number.isFinite(end - first) ? Math.round((end - first) / 1000) : 0,
     audit: auditEvents(raw.split("\n")),
+    overlaps,
   };
 }
