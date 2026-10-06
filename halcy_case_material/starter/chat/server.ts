@@ -8,12 +8,15 @@
 
 import http from "node:http";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { randomBytes } from "node:crypto";
 import { agent as starterAgent } from "../agent.ts";
 import { bookingAgent } from "../agent/index.ts";
 import { redactCardNumbers } from "../agent/evidence/card-number.ts";
 import type { Card, Chat, Context } from "../types.ts";
 import { Waits } from "./waits.ts";
+import { loadCases } from "./cases.ts";
+import { forPage } from "./visibility.ts";
 
 const PORT = Number(process.env.CHAT_PORT ?? 4200);
 // AGENT=booking runs the real agent (starter/agent/); anything else keeps the starter's one-look agent.
@@ -28,17 +31,18 @@ type Event = (
   | { type: "pressed"; card: string; button: string }
   | { type: "busy"; on: boolean }
   | { type: "reset" }
-  | { type: "trace"; step: { who: string; text: string; detail?: string; at?: number } }
+  | { type: "trace"; step: { who: string; text: string; detail?: string; at?: number; kind?: string } }
   | { type: "trace.run" }
 ) & { at?: number };
 
 let history: Event[] = [];
-const listeners = new Set<http.ServerResponse>();
+/** Each open page, and whether it asked for test mode (`/events?test=1`). */
+const listeners = new Map<http.ServerResponse, boolean>();
 function emit(e: Event) {
   // Stamped once on the server, so a reload shows when each line was sent, not when it was redrawn.
   const stamped: Event = { ...e, at: Date.now() };
   if (e.type !== "busy" && e.type !== "reset") history.push(stamped);
-  for (const res of listeners) res.write(`data: ${JSON.stringify(stamped)}\n\n`);
+  for (const [res, test] of listeners) if (forPage(stamped, test)) res.write(`data: ${JSON.stringify(stamped)}\n\n`);
 }
 
 let running = false;
@@ -123,11 +127,18 @@ http
       res.writeHead(200, { "content-type": "application/json" });
       return res.end(EXAMPLES);
     }
+    if (req.method === "GET" && path === "/cases") {
+      const base = new URL("../", import.meta.url).pathname;
+      const groups = loadCases([join(base, "agent/scenarios/cases"), join(base, "../test-hotels/cases")], Object.keys(context().hotels));
+      res.writeHead(200, { "content-type": "application/json" });
+      return res.end(JSON.stringify(groups));
+    }
     if (req.method === "GET" && path === "/events") {
+      const test = new URL(req.url ?? "/", `http://localhost:${PORT}`).searchParams.get("test") === "1";
       res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-store", connection: "keep-alive" });
-      for (const e of history) res.write(`data: ${JSON.stringify(e)}\n\n`);
+      for (const e of history) if (forPage(e, test)) res.write(`data: ${JSON.stringify(e)}\n\n`);
       res.write(`data: ${JSON.stringify({ type: "busy", on: running })}\n\n`);
-      listeners.add(res);
+      listeners.set(res, test);
       req.on("close", () => listeners.delete(res));
       return;
     }
