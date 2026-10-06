@@ -25,9 +25,9 @@ only with a run log, a test or a source to point at. State as of 2026-10-06
 
 | #   | Claim | Sample | Source |
 | --- | ----- | ------ | ------ |
-| N13 | $0.22 to $0.41 and 85 to 176 s per booking up to the approval card, with search on Sonnet 5.5 (the default) | One scripted run per example ask, on the mock, on commit 6f5dd69, before PR #16 | `agent/MODELS.md` section 5 |
+| N13 | $0.22 to $0.41 and 85 to 176 s per booking up to the approval card, with search on Sonnet 5.5 (the default) | Two scripted runs per example ask, on the mock: one on 6f5dd69, one on main after PR #16 and #19 | `agent/MODELS.md` section 5; `runs/scenarios/2026-10-06T05-14-58-249Z` and `2026-10-06T07-10-23-704Z` |
 | N14 | 151 s from message to confirmed booking | One run, stand-in paying in 6 s | `runs/2026-10-06T04-56-27-570Z-booking-full-standin` |
-| N15 | Sonnet 5.5 is good enough for search, which is now the default | Measured once per example ask on the mock: same candidates, same prices, 3 of 3 to the approval card. Not repeated, not run on a second hotel, and not run at all since PR #16 | `agent/MODELS.md` sections 5 and 6 |
+| N15 | Sonnet 5.5 is good enough for search, which is now the default | Two scripted runs per example ask on the mock, 3 of 3 to the approval card both times, the second on main after PR #16 with the corrected grader. Compared with Opus once per ask: same candidates, same prices. Not run on a second hotel | `agent/MODELS.md` sections 5 and 6 |
 | N16 | The 5 minute and 60 second hold thresholds are right | Never tuned | Runs with a slow traveller |
 
 ## Not checked by someone who would know
