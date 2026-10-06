@@ -33,3 +33,13 @@ test("facts the agent did not report are not held against the candidate", () => 
   assert.deepEqual(contradictions(flex, { price_total: 456 }), []);
   assert.deepEqual(contradictions({}, { price_now: 390.72, cancellable: false }), []);
 });
+
+test("a payment page that charges in another currency than the room list is caught", () => {
+  const found = contradictions({ ...flex, currency: "€" }, { price_total: 4990, price_now: 0, cancellable: true, currency: "SEK" });
+  assert.deepEqual(found, ["the candidate was priced in €, but the page charges in SEK"]);
+});
+
+test("the same currency written two ways does not contradict", () => {
+  assert.deepEqual(contradictions({ ...flex, currency: "€" }, { price_now: 0, cancellable: true, currency: "EUR" }), []);
+  assert.deepEqual(contradictions({ ...flex, currency: "EUR" }, { price_now: 0, cancellable: true }), []);
+});

@@ -45,7 +45,8 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
         const ranking = objectiveHash ? store.ranked(objectiveHash) : [];
         const threshold = objective?.threshold ?? 0;
         const passing = ranking.filter((e) => e.feasible && e.score >= threshold).length;
-        return JSON.stringify({ summary, threshold, passing, ranking, rejected: store.rejected() }, null, 1);
+        const budgetNotApplied = a.state.budgetNotApplied;
+        return JSON.stringify({ summary, threshold, passing, ranking, rejected: store.rejected(), ...(budgetNotApplied ? { budgetNotApplied } : {}) }, null, 1);
       } catch (e) {
         return errorText(e);
       }

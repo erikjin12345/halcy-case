@@ -39,6 +39,9 @@ would notice. State as of 2026-10-06; code under
 | L24 | Every hotel in `hotels.json` is allowed for reading, not only the one being booked | Nothing in the mock | Allow the goal's hotel only |
 | L25 | One conversation, one traveller, one run at a time | No group chat, no two bookings at once | Sessions in the chat server |
 | L26 | The traveller's name, email and phone are sent to the model provider and written to the run log | Nothing in the mock; a policy question in production | Minimise and document |
+| L30 | Halcy shows prices only in the hotel's currency and converts nothing | A traveller who thinks in another currency gets the hotel's amounts and one line saying their bank sets the rate on the day of each charge | A rate source we could cite, shown as a labelled approximation next to the price |
+| L31 | Currencies are recognised from a short list of symbols, codes and words; "$" and "kr" each stand for several currencies and are treated as compatible with all of them | A room list in "$" and a payment page in CAD are not flagged as different | Read the currency code from the page's markup where it exists |
+| L32 | An offer to "pay in your own currency" made inside the payment provider's frame is never seen | Halcy cannot warn about the provider's own exchange rate; the hand-off card only says what the bank should show | Nothing, by design (trade-off T13) |
 
 ## Infrastructure
 
