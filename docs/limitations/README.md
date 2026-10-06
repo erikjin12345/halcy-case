@@ -9,6 +9,7 @@ from it, and so a reviewer can find the weak points without reading the code.
 | `trade-offs.md`   | Where we had a choice: what we picked, what we gave up, what it costs |
 | `limitations.md`  | What the thing we built does not do, and what the traveller would notice |
 | `not-verified.md` | What we believe but have not run, measured or had checked        |
+| `unseen-hotel-rehearsal.md` | How the agent did on a hotel built blind, before anything was fixed |
 
 How this differs from `../concerns.md`: that file is the running register of
 everything flagged, with a status per line. This folder is the settled
