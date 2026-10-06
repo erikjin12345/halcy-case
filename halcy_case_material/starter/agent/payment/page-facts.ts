@@ -55,6 +55,19 @@ export function missingAmounts(text: string, values: (string | number | undefine
   });
 }
 
+const MONEY = /(?:[€$£¥]|\b[A-Z]{3}\b)\s?\d[\d.,]*\d|(?:[€$£¥]|\b[A-Z]{3}\b)\s?\d|\d[\d.,]*\s?(?:[€$£¥]|\b[A-Z]{3}\b)/g;
+
+/** The amount as the hotel's page writes it, currency included ("€420.00" for 420). Undefined if the page has no such figure. */
+export function shownAs(text: string, value: string | number | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  const want = typeof value === "number" ? value : parseMoney(value);
+  if (want === undefined) return undefined;
+  return text.match(MONEY)?.find((token) => {
+    const n = parseMoney(token);
+    return n !== undefined && Math.abs(n - want) < 0.005;
+  });
+}
+
 /** True if `quote` appears on the page, ignoring differences in whitespace. */
 export function appearsOnPage(text: string, quote: string): boolean {
   const squash = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();

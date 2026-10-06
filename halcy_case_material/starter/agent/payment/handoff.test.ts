@@ -32,6 +32,8 @@ test("happy path: one look before, none while the traveller pays, one look after
   assert.deepEqual(f.calls, { observe: 1, act: 0, goto: 0, screenshot: 0, front: 1 }, "the window was brought forward after a single read");
   assert.match(c.cards[0].title, /pay at Casa Halcy/);
   assert.ok(c.cards[0].lines?.some((line) => line.includes("Halcy never sees your card")));
+  assert.ok(c.cards[0].lines?.includes("Total: €420.00") && c.cards[0].lines?.includes("Charged now: €0.00"), "amounts are shown the way the hotel writes them");
+  assert.ok(c.cards[0].lines?.some((line) => line.startsWith("Your bank should ask you to approve €0.00 to Casa Halcy")));
 
   f.navigate("https://bank.example/3ds?token=secret"); // a bank check takes over the tab: not an outcome
   f.navigate(PAYMENT); // back on the payment page: not an outcome either
