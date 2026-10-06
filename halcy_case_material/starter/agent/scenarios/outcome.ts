@@ -32,7 +32,7 @@ export interface Outcome {
   outputTokens: number;
   wallSeconds: number;
   audit: Violation[];
-  /** Times a browser agent (search or validation) was started while another was still running on the one page. */
+  /** Times a browser agent was started while another was still driving the same browser. */
   overlaps: number;
 }
 
@@ -65,13 +65,21 @@ export function readOutcome(raw: string): Outcome {
     if (e.type === "chat.reply") questions.push({ kind: "text", question: said.at(-1) ?? "", buttons: [], answer: str(e.text), approval: false });
   }
 
-  // One browser, one page: a second search or validation started before the first finished is driving the same page.
-  let running = 0;
+  // Which browser an agent drives. Since parallel search (PR #47) each hotel's
+  // search has its own headless browser and logs its hotel; validation, and a
+  // search in an older log that names no hotel, use the run's one browser.
+  const browserOf = (e: Event) => (e.role === "search" && typeof e.hotel === "string" ? `search:${e.hotel}` : "main");
+  const running = new Map<string, number>();
   let overlaps = 0;
   for (const e of events) {
     if (e.role !== "search" && e.role !== "validation") continue;
-    if (e.type === "llm.start" && running++ > 0) overlaps++;
-    if (e.type === "llm.done") running = Math.max(0, running - 1);
+    const key = browserOf(e);
+    const n = running.get(key) ?? 0;
+    if (e.type === "llm.start") {
+      if (n > 0) overlaps++;
+      running.set(key, n + 1);
+    }
+    if (e.type === "llm.done") running.set(key, Math.max(0, n - 1));
   }
 
   const snapshot = last("state.snapshot") as { candidates?: { id: string; features: unknown }[]; rejected?: { candidateId: string; reason: string }[] } | undefined;
