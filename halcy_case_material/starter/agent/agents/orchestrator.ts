@@ -3,10 +3,10 @@
 // one browser session.
 
 import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
-import type { Page } from "playwright";
 import { z } from "zod";
 import { runAgent } from "../llm/client.ts";
 import type { PaymentBoundary } from "../tools/boundary.ts";
+import type { PageDriver } from "../tools/driver.ts";
 import { chatTools } from "../tools/chat.ts";
 import { goalTools } from "../tools/scoring.ts";
 import type { AgentContext } from "../types.ts";
@@ -15,7 +15,7 @@ import { runSearch } from "./search.ts";
 import { runValidation } from "./validation.ts";
 
 export interface OrchestratorDeps {
-  page: Page;
+  driver: PageDriver;
   boundary: PaymentBoundary;
 }
 

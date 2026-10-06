@@ -1,17 +1,18 @@
-// Browser tools for the search and validation agents, bound to one Playwright
-// page and one PaymentBoundary. They wrap the starter's observe/act/screenshot
-// and add the boundary check, logging and a compact text rendering.
+// Browser tools for the search and validation agents, bound to one PageDriver
+// and one PaymentBoundary. They add the boundary check, logging and a compact
+// text rendering. The driver they get is already guarded (guarded-driver.ts);
+// the checks here give the model a clear refusal and log it.
 
 import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
-import type { Page } from "playwright";
 import { z } from "zod";
-import { act, observe, type Observation } from "../../browser.ts";
+import type { Observation } from "../../browser.ts";
 import type { RunLog } from "../../log.ts";
 import type { RunnableTool } from "../llm/client.ts";
 import type { PaymentBoundary } from "./boundary.ts";
+import { originOf, showLocation, type PageDriver } from "./driver.ts";
 
 export interface BrowserToolDeps {
-  page: Page;
+  driver: PageDriver;
   boundary: PaymentBoundary;
   log: RunLog;
 }
@@ -39,7 +40,7 @@ export function renderObservation(seen: Observation, boundary: PaymentBoundary):
 }
 
 export function browserTools(deps: BrowserToolDeps): RunnableTool[] {
-  const { page, boundary, log } = deps;
+  const { driver, boundary, log } = deps;
 
   const observeTool = betaZodTool({
     name: "observe",
@@ -48,9 +49,9 @@ export function browserTools(deps: BrowserToolDeps): RunnableTool[] {
     inputSchema: z.object({}),
     run: async () => {
       if (boundary.blind) return "Blind mode: the traveller is in control, nothing is observed.";
-      const seen = await observe(page);
+      const seen = await driver.observe();
       const text = renderObservation(seen, boundary);
-      log.event("observe", { url: seen.url, title: seen.title, elements: seen.elements.length, hidden: seen.text.filter((f) => !boundary.allows(f.frameUrl)).length });
+      log.event("observe", { url: showLocation(driver.location()), title: seen.title, elements: seen.elements.length, hidden: seen.text.filter((f) => !boundary.allows(f.frameUrl)).length });
       return text;
     },
   });
@@ -67,18 +68,19 @@ export function browserTools(deps: BrowserToolDeps): RunnableTool[] {
     }),
     run: async (input) => {
       if (boundary.blind) return "Blind mode: refused.";
-      const frameUrl = frameUrlOf(page, input.id);
+      const frameUrl = driver.frameUrlOf(input.id);
       if (frameUrl && !boundary.allows(frameUrl)) {
-        log.event("act.refused", { ...input, frameUrl });
+        log.event("act.refused", { ...input, frame: originOf(frameUrl) });
         return `Refused: element ${input.id} is in a frame outside the hotel's site.`;
       }
       try {
-        if (input.kind === "click") await act(page, { kind: "click", id: input.id });
-        else if (input.kind === "fill") await act(page, { kind: "fill", id: input.id, value: input.value ?? "" });
-        else if (input.kind === "select") await act(page, { kind: "select", id: input.id, value: input.value ?? "" });
-        else await act(page, { kind: "check", id: input.id, checked: input.checked ?? true });
-        log.event("act", { ...input, url: page.url() });
-        return `Done. Page is now ${page.url()}. Observe to see the result.`;
+        if (input.kind === "click") await driver.act({ kind: "click", id: input.id });
+        else if (input.kind === "fill") await driver.act({ kind: "fill", id: input.id, value: input.value ?? "" });
+        else if (input.kind === "select") await driver.act({ kind: "select", id: input.id, value: input.value ?? "" });
+        else await driver.act({ kind: "check", id: input.id, checked: input.checked ?? true });
+        const where = showLocation(driver.location());
+        log.event("act", { ...input, url: where });
+        return `Done. Page is now ${where}. Observe to see the result.`;
       } catch (e) {
         log.event("act.error", { ...input, error: String(e).slice(0, 300) });
         return `Failed: ${String(e).slice(0, 300)}`;
@@ -92,9 +94,9 @@ export function browserTools(deps: BrowserToolDeps): RunnableTool[] {
     inputSchema: z.object({ url: z.string() }),
     run: async ({ url }) => {
       if (!boundary.allows(url)) return `Refused: ${url} is not on the hotel's site.`;
-      await page.goto(url);
+      await driver.goto(url);
       log.event("goto", { url });
-      return `Now at ${page.url()}.`;
+      return `Now at ${showLocation(driver.location())}.`;
     },
   });
 
@@ -104,18 +106,11 @@ export function browserTools(deps: BrowserToolDeps): RunnableTool[] {
     inputSchema: z.object({ label: z.string().optional() }),
     run: async ({ label }) => {
       if (boundary.blind) return "Blind mode: refused.";
-      const png = await page.screenshot({ mask: [page.locator("iframe")] });
+      const png = await driver.screenshot();
       const file = log.screenshot(png, label ?? "");
       return `Saved ${file}.`;
     },
   });
 
   return [observeTool, actTool, gotoTool, screenshotTool];
-}
-
-/** Resolves which frame an observe id points at, using the same index scheme as browser.ts. */
-function frameUrlOf(page: Page, id: string): string | null {
-  const [fi] = id.split(":");
-  const frame = page.frames()[Number(fi)];
-  return frame ? frame.url() : null;
 }
