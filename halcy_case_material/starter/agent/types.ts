@@ -30,6 +30,8 @@ export const FEATURES = [
   "price_total",
   "price_now",
   "price_at_hotel",
+  "price_room",
+  "currency",
   "cancellable",
   "breakfast_included",
   "view",
@@ -47,6 +49,8 @@ export interface Objective {
   hard: Partial<Record<FeatureName, FeatureValue>>;
   /** Wanted substring for string features, e.g. { view: "river" }. */
   wants: Partial<Record<FeatureName, string>>;
+  /** The currency the traveller's price caps in `hard` are in, as they wrote it. A cap is only applied to prices in this currency. */
+  currency?: string;
   /** A candidate at or above this score is "good enough". */
   threshold: number;
   maxSearchMs: number;
@@ -66,18 +70,35 @@ export interface ValidationResult {
   holdSecondsLeft?: number;
 }
 
+/** A room price the traveller agreed to after the hotel changed it. Logged with both figures. */
+export interface PriceAcceptance {
+  candidateId: string;
+  /** The room price when the candidate was found. */
+  was: number;
+  /** The room price the hotel's page showed when the traveller was asked, and which they accepted. */
+  now: number;
+  /** The all-in total on that page, if it showed one. */
+  total?: number;
+  currency?: string;
+  at: string;
+}
+
 /** In-process state for one booking run. Facts and scores are in `store`. */
 export interface RunState {
   goal?: SearchGoal;
   objective?: Objective;
   /** Hash of the current objective; evaluations are keyed by it. */
   objectiveHash?: string;
+  /** Set by scoring when a price cap could not be applied because of the currency; the orchestrator must tell the traveller. */
+  budgetNotApplied?: string;
   store: Store;
   validations: ValidationResult[];
+  /** Price rises the traveller accepted, newest last. */
+  priceAcceptances: PriceAcceptance[];
 }
 
 export function newRunState(store: Store = memoryStore()): RunState {
-  return { store, validations: [] };
+  return { store, validations: [], priceAcceptances: [] };
 }
 
 /** Everything an agent run needs besides its own tools. */

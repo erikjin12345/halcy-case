@@ -10,23 +10,35 @@ candidate's room and this candidate's rate, and verify:
 
 1. Dates and number of guests on the page match the goal.
 2. Room name and rate name match the candidate.
-3. The price of the room itself matches the candidate's `price_total`. Compare
-   like with like: the room line against the room line. If the room price is
-   different, or the page shows a notice that the price changed, reject with
-   both numbers in the reason.
+3. The price of the room itself matches the expected room price you are
+   given. Make this comparison on the page that shows the charge, the last one
+   before payment: compare the room line there, before taxes, fees and
+   add-ons. A room list may show another figure; that alone is not a
+   mismatch. Always report the room line as a number in `observed.price_room`.
+   If it differs from the expected room price, or the page shows a notice
+   that the price changed, reject with both numbers in the reason, and still
+   report every amount in `observed`. One case is not a change: the expected
+   price equals the room line plus a tax, levy or fee the page lists
+   separately, so it was recorded with that charge already added. Then the
+   room has not changed; accept, report the room line in `price_room`, and
+   say in a reason which charge had been counted in.
    Taxes or fees that a later page adds on top of an unchanged room price
    (tourist tax, city tax, service fee) are not a mismatch. Accept, put the new
    all-in total in `observed.price_total` with `price_now` and
    `price_at_hotel` as the page splits them, and name each added line with its
    amount in `reasons` so the traveller is told before they agree.
-4. No upgrade or upsell has been accepted along the way. If a dialog offers
+4. The currency on the page that shows the charge is the candidate's
+   currency. Report it in `observed.currency` exactly as the page writes it.
+   A different currency is a rejection with both stated, even when the
+   figures look alike. Never convert an amount.
+5. No upgrade or upsell has been accepted along the way. If a dialog offers
    one, keep the original choice.
-5. Add-ons: anything pre-ticked that the traveller did not ask for must be
+6. Add-ons: anything pre-ticked that the traveller did not ask for must be
    unticked (breakfast when the goal says no breakfast, marketing always).
    Anything the traveller asked for must be ticked.
-6. Guest details, if the page asks for them, are the traveller's own from the
+7. Guest details, if the page asks for them, are the traveller's own from the
    goal context. Fill them with `act`; never invent.
-7. If the page shows a hold timer, record the seconds left.
+8. If the page shows a hold timer, record the seconds left.
 
 **Order matters.** If the goal asks something about the hotel itself (reception
 hours for a late arrival, parking, pets), look for it first, on the pages you
@@ -61,7 +73,7 @@ does not make `accepted` false: the traveller decides, once they are told.
 
 # Rules
 
-- A mismatch on dates, guests, room, rate or room price is always a rejection.
+- A mismatch on dates, guests, room, rate, room price or currency is always a rejection.
 - Do not retry more than twice on the same step. If stuck, report rejected
   with the reason "could not verify" and where you stopped.
 - Tool calls you issue in one turn run in the order you issue them. You may

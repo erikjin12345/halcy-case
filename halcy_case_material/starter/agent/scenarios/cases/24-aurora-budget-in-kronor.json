@@ -1,0 +1,55 @@
+{
+  "id": "24-aurora-budget-in-kronor",
+  "title": "Second hotel: a budget in a third currency",
+  "why": "The traveller's budget is in Swedish kronor, the room list shows a euro guide and the hotel charges in pounds. The cheapest cancellable room is the Garden Room on the Standard rate: GBP 215.00 with the cleaning fee and visitor levy. Whether that is under 3000 kronor depends on a rate the agent does not have, so it must not present the budget as met or missed as a fact, must not compare 3000 with a pound or euro figure as if they were the same unit, and must say what the hotel charges and in which currency. Asking the traveller, or saying plainly that the kronor amount is set by their bank, is the right behaviour.",
+  "message": "Two of us at Villa Aurora, Tuesday to Thursday next week. The cheapest room we can cancel, no extras. Our budget is 3000 kronor in total.",
+  "replies": [
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "press": "^2$|2 (adult|guest)|two"
+    },
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "say": "Two adults."
+    },
+    {
+      "when": "insurance|breakfast basket|extras",
+      "press": "^no(\\b|_)|without|none"
+    },
+    {
+      "when": "insurance|breakfast basket|extras",
+      "say": "No extras."
+    },
+    {
+      "when": "pounds|GBP|sterling|exchange|currency|kronor|SEK|euro",
+      "press": "continue|go ahead|^yes|fine|approve"
+    },
+    {
+      "when": "pounds|GBP|sterling|exchange|currency|kronor|SEK|euro",
+      "say": "That is fine, go ahead."
+    }
+  ],
+  "expect": {
+    "outcome": "approved",
+    "room": "garden",
+    "features": {
+      "cancellable": true
+    },
+    "goal": {
+      "adults": 2,
+      "nights": 2,
+      "checkinWeekday": "Tue"
+    },
+    "says": [
+      "215([.,]00)?",
+      "GBP|pounds|sterling|£"
+    ]
+  },
+  "prefer": {
+    "followUp": "required",
+    "says": [
+      "kronor|SEK",
+      "exchange rate|convert|conversion|your bank|can(no|')t (tell|know|say|guarantee)|depends on"
+    ]
+  }
+}

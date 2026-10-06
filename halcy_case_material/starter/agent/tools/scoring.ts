@@ -6,12 +6,35 @@ import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 import type { RunLog } from "../../log.ts";
 import type { RunnableTool } from "../llm/client.ts";
-import { maxScore, objectiveHash, scoreCandidates } from "../scoring/objective.ts";
+import { budgetNote, maxScore, objectiveHash, scoreCandidates } from "../scoring/objective.ts";
 import { FEATURES, type RunState } from "../types.ts";
 import { cleanUrl } from "./serial.ts";
 
 const featureName = z.enum(FEATURES);
 const featureValue = z.union([z.string(), z.number(), z.boolean()]);
+
+const amount = (what: string) => z.number().describe(`${what}. A plain number such as 404 or 320.32: no currency, no text`);
+/**
+ * Facts about a candidate, each with its own type. A price recorded as text
+ * ("GBP 190.00 for the stay") cannot be scored or compared, so the schema
+ * does not allow it.
+ */
+export const factsSchema = z
+  .object({
+    room_name: z.string(),
+    rate_name: z.string(),
+    price_total: amount("The room charge for the whole stay as the rate line shows it, before any tax, levy or fee the page lists separately or calls not included"),
+    price_room: amount("The room line on the page that shows the charge, before taxes, fees and add-ons"),
+    price_now: amount("What is charged at booking"),
+    price_at_hotel: amount("What is paid at the hotel"),
+    currency: z.string().describe("The currency the hotel charges in, as the page writes it: a symbol or a code"),
+    cancellable: z.boolean(),
+    breakfast_included: z.boolean(),
+    view: z.string(),
+    sleeps: z.number(),
+    sold_out: z.boolean(),
+  })
+  .partial();
 // partialRecord, not record: in Zod 4 a record keyed by an enum requires every key.
 
 export const goalSchema = z.object({
@@ -29,6 +52,7 @@ export const objectiveSchema = z.object({
   weights: z.partialRecord(featureName, z.number()),
   hard: z.partialRecord(featureName, featureValue),
   wants: z.partialRecord(featureName, z.string()).optional().describe("Wanted substring for string features, e.g. view: river"),
+  currency: z.string().optional().describe("The currency the traveller gave a budget or price cap in, e.g. SEK or EUR. Required whenever hard contains a price"),
   threshold: z.number(),
   maxSearchMs: z.number().int().default(180000),
   extraAfterPassMs: z.number().int().default(20000),
@@ -60,8 +84,9 @@ export function objectiveTools({ state, log }: StateToolDeps): RunnableTool[] {
     name: "set_objective",
     description: "Record the scoring objective derived from the goal.",
     inputSchema: objectiveSchema,
-    run: async ({ explanation, notes, wants, ...rest }) => {
-      state.objective = { ...rest, wants: wants ?? {} };
+    run: async ({ explanation, notes, wants, currency, ...rest }) => {
+      // The budget's currency comes from the goal if the objective agent left it out: a cap must never be unit-less.
+      state.objective = { ...rest, wants: wants ?? {}, currency: currency ?? state.goal?.budget?.currency };
       state.objectiveHash = objectiveHash(state.objective);
       // A relaxed hard constraint re-admits whatever it had rejected; re-scoring re-rejects the rest.
       const stillHard = new Set(Object.keys(state.objective.hard));
@@ -82,7 +107,7 @@ export function candidateTools({ state, log }: StateToolDeps): RunnableTool[] {
     description: "Record one room-and-rate combination seen on the hotel site, with the facts the page states. Call once per combination; calling again with the same id merges new facts.",
     inputSchema: z.object({
       id: z.string().describe("Short stable id, e.g. river-flex"),
-      features: z.partialRecord(featureName, featureValue),
+      features: factsSchema,
       sourceUrl: z.string(),
     }),
     run: async ({ id, features, sourceUrl: rawUrl }) => {
@@ -101,12 +126,15 @@ export function candidateTools({ state, log }: StateToolDeps): RunnableTool[] {
       const o = state.objective;
       if (!o || !state.objectiveHash) return "No objective set yet.";
       const all = [...state.store.candidates(), ...state.store.rejected().map((r) => state.store.candidate(r.candidateId)!).filter(Boolean)];
-      for (const { evaluation, failures } of scoreCandidates(all, o)) {
+      const scored = scoreCandidates(all, o);
+      for (const { evaluation, failures } of scored) {
         state.store.evaluate(evaluation);
         // One rejection per candidate, under its most telling constraint, with every reason kept.
         if (failures.length) state.store.reject(evaluation.candidateId, failures[0].constraint, failures.map((f) => f.reason).join("; "));
       }
-      const out = { threshold: o.threshold, max: maxScore(o), ranking: state.store.ranked(state.objectiveHash), rejected: state.store.rejected() };
+      const budgetNotApplied = budgetNote(scored);
+      state.budgetNotApplied = budgetNotApplied ?? undefined;
+      const out = { threshold: o.threshold, max: maxScore(o), ranking: state.store.ranked(state.objectiveHash), rejected: state.store.rejected(), ...(budgetNotApplied ? { budgetNotApplied } : {}) };
       log.event("candidates.scored", out);
       return JSON.stringify(out, null, 1);
     },

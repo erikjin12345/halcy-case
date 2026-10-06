@@ -35,8 +35,9 @@ test("happy path: one look before, none while the traveller pays, one look after
   assert.ok(c.cards[0].lines?.includes("Total: €420.00") && c.cards[0].lines?.includes("Charged now: €0.00"), "amounts are shown the way the hotel writes them");
   assert.ok(c.cards[0].lines?.some((line) => line.startsWith("Your bank should ask you to approve €0.00 to Casa Halcy")));
 
+  f.navigate(PAYMENT); // a reload of the payment page: not an outcome
   f.navigate("https://bank.example/3ds?token=secret"); // a bank check takes over the tab: not an outcome
-  f.navigate(PAYMENT); // back on the payment page: not an outcome either
+  f.navigate("https://bank.example/3ds/step2"); // still away
   await tick();
   assert.equal(boundary.blind, true);
   assert.equal(f.calls.observe, 1, "still nothing read");
@@ -51,6 +52,19 @@ test("happy path: one look before, none while the traveller pays, one look after
   const dump = JSON.stringify(l.events);
   assert.equal(dump.includes("secret") || dump.includes("hold=h1"), false, "no query string reaches the log");
   assert.equal(dump.includes("4242"), false, "the last four digits never reach the log");
+});
+
+test("a hotel that sends the whole tab to its provider and back to the same page with an error is read on return", async () => {
+  const { f, c, boundary, deps } = setup({ ...PAGES, "/payment": `${PAGES["/payment"]}\nYour card was declined by your bank. Nothing has been charged.` });
+  const running = runHandoff(deps);
+  await tick();
+  f.navigate("https://pay.example/checkout/abc");
+  f.navigate(`${HOTEL}/payment?declined=1`); // back where it started: only an outcome because the tab had been away
+  await tick();
+  assert.equal(boundary.blind, false);
+  assert.match(c.said.at(-1) ?? "", /did not go through\. Casa Halcy's page says: "Your card was declined by your bank\."/);
+  c.press("Try another card", "stop");
+  assert.equal((await running).status, "declined");
 });
 
 test("a declined card can be retried, and the retry reloads the page", async () => {
@@ -71,17 +85,62 @@ test("a declined card can be retried, and the retry reloads the page", async () 
 
 test("the traveller is never handed a page that changed or a hold that is about to run out", async () => {
   const short = setup({ "/payment": PAGES["/payment"].replace("14:20", "3:10") });
-  assert.equal((await runHandoff(short.deps)).status, "not_started");
+  const tooShort = await runHandoff(short.deps);
+  assert.deepEqual([tooShort.status, tooShort.cause], ["not_started", "hold_short"]);
+  assert.match(tooShort.reason ?? "", /^3 minutes are left on Casa Halcy's hold/);
+
+  const gone = setup({ "/payment": PAGES["/payment"].replace("We're holding this room for you for 14:20", "Your hold has expired") });
+  const expired = await runHandoff(gone.deps);
+  assert.deepEqual([expired.status, expired.cause], ["not_started", "hold_expired"], "an expired hold is not mistaken for a page without a clock");
+  assert.match(expired.reason ?? "", /no longer holding the room\. Its page says: "Your hold has expired"/);
+
   const moved = setup({ "/payment": PAGES["/payment"].replaceAll("420", "470") });
   const result = await runHandoff(moved.deps);
-  assert.match(result.reason ?? "", /no longer shows the amounts you agreed to \(420, 420\)/);
+  assert.equal(result.cause, "amounts_changed");
+  assert.equal(result.reason, "the page no longer matches what you agreed to. Total: you agreed to 420, the page now shows €470.00; Paid at the hotel: you agreed to 420, the page now shows €470.00");
+
   const headless = setup(PAGES, { visible: false });
-  assert.equal((await runHandoff(headless.deps)).status, "not_started");
-  for (const s of [short, moved, headless]) {
+  assert.deepEqual([(await runHandoff(headless.deps)).status, (await runHandoff(headless.deps)).cause], ["not_started", "no_window"]);
+  for (const s of [short, gone, moved, headless]) {
     assert.equal(s.l.types().includes("handoff.blind.start"), false, "blind mode never started");
     assert.equal(s.f.calls.front, 0);
     assert.match(s.c.said[0], /Nothing is booked and you have not been asked to pay/);
   }
+});
+
+test("without a clock on the page the hold comes from validation, and an unknown hold never gets the long default", async () => {
+  const worded = PAGES["/payment"].replace("We're holding this room for you for 14:20", "We are holding your room for 10 minutes");
+  const start = (s: ReturnType<typeof setup>) => s.l.events.find((e) => e.type === "handoff.start")?.data;
+
+  // Validation read 9 minutes, 3 minutes ago: 6 minutes are left, the wait ends a minute before that.
+  /** Starts a hand-off, lets it reach the wait, and returns a way to end it so no timer outlives the test. */
+  const begin = async (s: ReturnType<typeof setup>) => {
+    const running = runHandoff(s.deps);
+    await tick();
+    return async () => (s.c.press("Over to you", "cancel"), void (await running));
+  };
+  const reported = setup({ ...PAGES, "/payment": worded }, { holdReport: { secondsLeft: 540, at: Date.now() - 180_000 } });
+  const endReported = await begin(reported);
+  assert.deepEqual([start(reported)?.holdSecondsLeft, start(reported)?.waitSeconds, start(reported)?.holdFromPage], [360, 300, false]);
+  assert.ok(reported.c.cards[0].lines?.includes("The hotel holds the room for about 6 minutes more."));
+  await endReported();
+
+  // The stated length caps a report that is too generous, and too little time is still a refusal.
+  const stale = setup({ ...PAGES, "/payment": worded }, { holdReport: { secondsLeft: 900, at: Date.now() - 480_000 } });
+  assert.equal((await runHandoff(stale.deps)).cause, "hold_short");
+
+  // Nobody could put a number on it: 5 minutes, not 10, and the traveller is told why.
+  const unknown = setup({ ...PAGES, "/payment": PAGES["/payment"].replace("We're holding this room for you for 14:20", "We're holding this room for you") });
+  const endUnknown = await begin(unknown);
+  assert.deepEqual([start(unknown)?.holdUnknown, start(unknown)?.waitSeconds], [true, 300]);
+  assert.ok(unknown.c.cards[0].lines?.some((line) => line.startsWith("Casa Halcy is holding the room, but its page does not say for how long. I'll wait about 5 minutes")));
+  await endUnknown();
+
+  // A page that says nothing about a hold keeps the long default.
+  const none = setup({ ...PAGES, "/payment": PAGES["/payment"].replace("We're holding this room for you for 14:20\n", "") });
+  const endNone = await begin(none);
+  assert.deepEqual([start(none)?.holdUnknown, start(none)?.waitSeconds], [false, 600]);
+  await endNone();
 });
 
 test("silence ends at the deadline, with reminders, and claims nothing about money", async () => {

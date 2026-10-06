@@ -2,9 +2,10 @@
 
 Planning folder for the payment module: the part of the agent that takes over
 once the booking has reached the payment step on the hotel's site, and that
-makes sure Halcy never touches the card or the money. No code yet, planning
-only. Conventions are in `../CLAUDE.md`, the agent design is in
-`../ARCHITECTURE.md`.
+makes sure Halcy never touches the card or the money. The code is in
+`halcy_case_material/starter/agent/payment/`; this folder holds the analysis
+and the design behind it. Conventions are in `../CLAUDE.md`, the agent design
+is in `../ARCHITECTURE.md`.
 
 ## Goals of the module
 

@@ -67,3 +67,4 @@ Times in HKT. "Started" is what the two-hour rule counts from.
 | Date       | Started | Session        | Result |
 | ---------- | ------- | -------------- | ------ |
 | 2026-10-06 | 13:30   | halcy-case-fc  | Routine created together with `docs/limitations/`. Baseline, not a full review: only `agent/payment/DESIGN.md`, `docs/concerns.md` and the limitations folder were brought up to date |
+| 2026-10-06 | 15:35   | halcy-case-fc  | Payment documents only, at the orchestrator session's request, without asking the other sessions: `docs/limitations/` after the failure-path runs (N3, N4, N5, N7 moved out with run folders; L33 to L36, N24, N25 added), `agent/payment/README.md` and the code README no longer say the hand-off is unbuilt, `docs/README.md` deliverables, `docs/concerns.md` A4. Not reviewed: `ARCHITECTURE.md`, `MODELS.md`, `infrastructure.md`, `WEBVIEW-PLAN.md`, `scenarios/README.md` |

@@ -22,6 +22,7 @@ is the code. Conventions: `../../../agent/CLAUDE.md`.
 | `tools/guarded-driver.ts` | The boundary applied to a driver: nothing reaches the page while blind, foreign frames emptied |
 | `tools/browser.ts`       | `observe`, `act`, `goto`, `screenshot` as tools on a guarded driver, iframes masked  |
 | `payment/handoff.ts`     | The payment step as a fixed sequence in code: last look, blind mode, wait, outcome, report |
+| `payment/fresh-hold.ts`  | When the hold ran down or the page changed before the hand-over: validate once more, ask on a changed price |
 | `payment/signals.ts`     | The wait while blind: main-tab navigation, chat buttons, tab closed, deadline, reminders |
 | `payment/outcome.ts`     | One redacted read after blind mode; `decide` turns a proposal into a `PaymentResult`  |
 | `payment/classify.ts`    | The one model call in the payment step: propose a status from the hotel's page text   |
@@ -62,11 +63,11 @@ Plain `npm run chat` still runs the starter's one-look agent. Each run writes
 The reasoning (which model for which role, cost per booking, what to measure)
 is in `../../../agent/MODELS.md`. This section only says how the code behaves.
 
-Every role defaults to `claude-opus-5-5` with effort `medium` (orchestrator,
-search) or `low` (objective, validation). Override per role with
-`MODEL_<ROLE>` and `EFFORT_<ROLE>`. Moving a role to a cheaper model is a
-measured decision for the design document: run the same requests with, say,
-`MODEL_SEARCH=claude-sonnet-5-5` and compare the run logs.
+Search defaults to `claude-sonnet-5-5`; orchestrator, objective and validation
+default to `claude-opus-5-5`. Effort is `medium` for orchestrator and search,
+`low` for objective and validation. Override per role with `MODEL_<ROLE>` and
+`EFFORT_<ROLE>`: `MODEL_SEARCH=claude-opus-5-5` puts search back on Opus, which
+is the comparison the scenario runs were made against.
 
 `capabilities()` in `config.ts` decides what each request may carry, so an
 override cannot break the call:
@@ -89,7 +90,7 @@ cacheable minimum, so caching only starts once the history has grown.
 
 ## What is not here yet
 
-- The payment hand-off (blind mode exists in `tools/boundary.ts`, the flow does not).
 - Mid-run goal updates from the traveller (the chat server delivers them only
   through `wait_for_reply`).
-- Any test against the mock beyond `check.ts`.
+- A run with a person paying in the visible window, and anything on a hotel
+  other than the mock. The full list is in `../../../docs/limitations/`.

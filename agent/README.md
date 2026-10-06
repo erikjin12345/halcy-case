@@ -46,6 +46,13 @@ One line per decision, with a date. Open questions live in
 - 2026-10-06: Model choices written up in `MODELS.md`. Defaults stay on
   `claude-opus-5-5` for every role. Proposed: search moves to a cheaper model
   once measured against Opus on the example asks; the other three stay.
+- 2026-10-06, 15:10 HKT: Split model decided by the user. Search runs on
+  `claude-sonnet-5-5`; orchestrator, objective and validation stay on
+  `claude-opus-5-5`. Basis: the three example asks on the mock, one scripted
+  run each per configuration: same candidates, same prices, 3 of 3 reaching
+  the approval card, search role at about half the cost (`MODELS.md` section
+  5). Known gaps: one run per cell, one hotel, no unseen site. Going back is
+  `MODEL_SEARCH=claude-opus-5-5` in `.env`.
 - 2026-10-06: `PageDriver` seam between the agents and the browser (phase 0
   of `WEBVIEW-PLAN.md`), PR #7. Agreed with the sessions owning `tools/`,
   `agents/` and the boundary tests. Agents only ever get a guarded driver.
