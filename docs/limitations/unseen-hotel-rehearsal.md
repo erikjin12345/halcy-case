@@ -74,3 +74,42 @@ first attempt to pick a day in the arrival dropdown timed out, then worked.
 4. **Field redaction needs labels in other languages,** or a rule that does
    not depend on labels (autocomplete attributes such as `cc-number`, or
    every input on a page that takes a card).
+
+## After the fixes
+
+Re-run at 20:58 HKT on `test/unseen-hotels` `1b7b022`, which has the
+redaction fix (#62), the concise chat (#64) and the rate and room-type fixes
+(#65). Same three asks, same settings, headless. Reports under
+`runs/scenarios/2026-10-06T12-58-39-459Z`.
+
+| Ask | Before | After | Time | Cost |
+| --- | --- | --- | --- | --- |
+| Cheapest room for two | Agent fault: approved the dearer rate | **Still a fault, a different one** | 91 s to 75 s | $0.24 to $0.17 |
+| A single room, must be cancellable | Agent fault: "single" matched no room | **Pass**: Einzelzimmer, Flexibel, CHF 373.50 with Kurtaxe, service charge unticked | 57 s to 71 s | $0.13 to $0.19 |
+| Three people, budget 3000 kronor | Pass | **Pass**, unchanged | 64 s to 52 s | $0.14 to $0.12 |
+
+No failed browser action in any after-run; before, each run lost one select
+on the day dropdown.
+
+**What is left on "cheapest for two".** Search again recorded one price per
+room, but this time with the rate name "Standard", which the site never
+uses. A made-up rate name passes the new `ratesMissing` check, which only
+looks for a missing one. The orchestrator still found both rates and asked
+"Spartarif CHF 316.80 / Flexibel CHF 360.00". When the traveller chose the
+Spartarif it could not continue: it offered "Search again in a few minutes,
+when the saved list has expired" or "I'll book it myself" on the hotel's
+site. So the cheaper rate is now shown, but booking it dead-ends on the
+cached search. Two separate faults: search inventing a rate name, and no
+way to search again for a rate the traveller picked.
+
+**Hand-off, run with the stand-in harness** (a raw Playwright script stands
+in for validation and for the traveller; the real hand-off code and
+classifier run): **confirmed**, reference AB-43606, CHF 0.00 now and CHF
+378.00 at the hotel, 8 s. The four card fields reached the agent as
+"[withheld]". The run log (`runs/2026-10-06T13-02-22-681Z-handoff-alpenblick`)
+passes `npm run audit:runs`, and neither the card number, the expiry nor the
+cardholder's name appears in it. The blind interval lasted 3 s and ended on
+navigation. Not covered: the agent's own validation reaching the payment
+page, the Spartarif, a declined card.
+
+All after-run logs pass the audit; the test card's digits appear in none.
