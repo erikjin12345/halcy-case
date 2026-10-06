@@ -16,7 +16,9 @@ import { sameCurrency } from "../scoring/currency.ts";
 import { runObjective } from "./objective.ts";
 import { searchProgress } from "./progress.ts";
 import { overLimitTool, priceChangeTool } from "./price-change.ts";
-import { runSearch } from "./search.ts";
+import { runSearches } from "./search-parallel.ts";
+import { cachedSearch, rememberSearch } from "./search-cache.ts";
+import { scoreAll } from "../tools/scoring.ts";
 import { runValidation } from "./validation.ts";
 import { fxTools, travellerCurrency } from "./fx-tools.ts";
 import { loadRates } from "../scoring/fx.ts";
@@ -41,23 +43,40 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
 
   const runSearchTool = betaZodTool({
     name: "run_search",
-    description: "Search the hotel site for rooms and rates matching the goal and score them. Returns the search agent's summary plus the ranking and the rejected candidates. The traveller has already been told the best match at this hotel; do not repeat it.",
-    inputSchema: z.object({}),
-    run: async () => {
+    description:
+      "Search hotel sites for rooms and rates matching the goal and score them. Pass `hotels` (names) to search several in one call; leave it out for the goal's hotel. A hotel searched for the same dates and party in the last minutes is not searched again: its rooms are re-scored against the current objective. Returns the ranking and the rejected candidates. The traveller has already been told the best match at each hotel; do not repeat it.",
+    inputSchema: z.object({ hotels: z.array(z.string()).optional() }),
+    run: async ({ hotels }) => {
       try {
-        const summary = await runSearch(a, deps);
-        // A visible step for the traveller, from code, without a model turn.
-        const progress = searchProgress(a.state, { to: travellerCurrency(a), rates: await loadRates() });
-        if (progress) {
-          a.chat.say(progress);
-          a.log.event("chat.say", { text: progress, from: "code" });
+        const base = a.state.goal;
+        if (!base || !a.state.objective) return "Error: set_goal and run_objective first.";
+        const names = hotels?.length ? hotels : [base.hotel.name];
+        const unknown = names.filter((n) => !a.ctx.hotels[n]);
+        if (unknown.length) return `Error: not in the places database: ${unknown.join(", ")}.`;
+        const goals = names.map((n) => ({ ...base, hotel: { name: n, url: a.ctx.hotels[n] } }));
+        const fresh = goals.filter((g) => cachedSearch(a.state, g));
+        const todo = goals.filter((g) => !cachedSearch(a.state, g));
+        for (const g of fresh) a.log.event("search.cached", { hotel: g.hotel.name });
+        const summaries = [...fresh.map((g) => ({ hotel: g.hotel.name, summary: `(from this session's earlier search) ${cachedSearch(a.state, g)!.summary}` }))];
+        const results = todo.length ? await runSearches(a, todo) : [];
+        const rates = await loadRates();
+        for (const r of results) {
+          const g = todo.find((t) => t.hotel.name === r.hotel)!;
+          if (!r.error) rememberSearch(a.state, g, r.summary);
+          summaries.push(r);
+          // A visible step for the traveller, from code, without a model turn.
+          a.state.goal = g;
+          const progress = r.error ? `${r.hotel}: I could not search the site this time.` : searchProgress(a.state, { to: travellerCurrency(a), rates });
+          if (progress) {
+            a.chat.say(progress);
+            a.log.event("chat.say", { text: progress, from: "code" });
+          }
         }
-        const { store, objective, objectiveHash } = a.state;
-        const ranking = objectiveHash ? store.ranked(objectiveHash) : [];
-        const threshold = objective?.threshold ?? 0;
-        const passing = ranking.filter((e) => e.feasible && e.score >= threshold).length;
-        const { budgetNotApplied, notStated } = a.state;
-        return JSON.stringify({ summary, threshold, passing, ranking, rejected: store.rejected(), ...(budgetNotApplied ? { budgetNotApplied } : {}), ...(notStated ? { notStated } : {}) }, null, 1);
+        a.state.goal = goals[goals.length - 1];
+        // Cached or new, every stored room is ranked against the current objective, in code.
+        const scored = JSON.parse(await scoreAll(a.state, a.log));
+        const passing = (scored.ranking ?? []).filter((e: { feasible: boolean; score: number }) => e.feasible && e.score >= (scored.threshold ?? 0)).length;
+        return JSON.stringify({ searched: todo.map((g) => g.hotel.name), reused: fresh.map((g) => g.hotel.name), summaries, passing, ...scored }, null, 1);
       } catch (e) {
         return errorText(e);
       }
@@ -68,8 +87,11 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
     name: "run_validation",
     description: "Verify one candidate on the live site. Returns accepted or rejected with reasons and what the page showed. There is one browser: calls run one after another, and the browser ends on the candidate validated last.",
     inputSchema: z.object({ candidateId: z.string() }),
-    run: async ({ candidateId }) =>
-      runValidation(a, { ...deps, candidateId })
+    run: async ({ candidateId }) => {
+      // With several hotels searched, the goal must name the hotel of the candidate being checked.
+      const hotel = a.state.store.candidate(candidateId)?.hotel;
+      if (a.state.goal && hotel && a.ctx.hotels[hotel] && a.state.goal.hotel.name !== hotel) a.state.goal = { ...a.state.goal, hotel: { name: hotel, url: a.ctx.hotels[hotel] } };
+      return runValidation(a, { ...deps, candidateId })
         .then((r) => {
           // The limit is for everything the traveller will pay; tell the orchestrator before it tries to approve.
           const over = r.accepted ? overLimit(a.state, candidateId) : null;
@@ -85,7 +107,8 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
           const overLimitNote = over ? `The total on the hotel's page, ${over.total}, is ${over.over} over the traveller's limit of ${over.limit}. Validate a cheaper candidate that fits, or call ask_over_limit. mark_approved is refused until then.` : undefined;
           return JSON.stringify({ ...r, ...(overLimitNote ? { overLimit: overLimitNote } : {}) }, null, 1);
         })
-        .catch(errorText),
+        .catch(errorText);
+    },
   });
 
   // One browser, one agent at a time: two validations issued in the same turn

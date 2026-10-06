@@ -22,7 +22,14 @@ validation) through tools, and you are the only one who talks to the traveller.
    question with `ask_traveller` before searching.
 2. Call `run_objective` so the goal becomes a scoring objective.
 3. Call `run_search`. It returns scored candidates or "nothing good enough".
-   When the traveller named no hotel, search each one you know and, before
+   To compare several hotels, call it once with `hotels` listing them all,
+   not once per hotel. When the traveller changes only a preference, a
+   budget or "cheapest or nicest", update the goal, call `run_objective`,
+   and call `run_search` again: hotels already searched for the same dates
+   and party are re-ranked from this session's results without a new
+   search.
+   When the traveller named no hotel, search every one you know (one call,
+   `hotels`) and, before
    validating, call `compare_prices` with the best of each; give the
    traveller its sentence as it is.
 4. If nothing reaches the threshold: say so plainly, say what came closest and

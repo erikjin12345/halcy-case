@@ -165,7 +165,14 @@ export function candidateTools({ state, log }: StateToolDeps): RunnableTool[] {
     name: "score_candidates",
     description: "Score every recorded candidate against the current objective. Returns the ranking with components, and the candidates rejected by a hard constraint with the reason.",
     inputSchema: z.object({}),
-    run: async () => {
+    run: async () => scoreAll(state, log),
+  });
+
+  return [addCandidate, score];
+}
+
+/** Score every stored candidate against the current objective, in code. Also used to re-rank cached candidates without a new search. */
+export async function scoreAll(state: RunState, log: StateToolDeps["log"]): Promise<string> {
       const o = state.objective;
       if (!o || !state.objectiveHash) return "No objective set yet.";
       // Anything recorded before the charge currency was known, in another currency, is not a price.
@@ -192,8 +199,4 @@ export function candidateTools({ state, log }: StateToolDeps): RunnableTool[] {
       const out = { threshold: o.threshold, max: maxScore(o), ranking: state.store.ranked(state.objectiveHash), rejected: state.store.rejected(), ...(budgetNotApplied ? { budgetNotApplied } : {}), ...(notStated ? { notStated } : {}) };
       log.event("candidates.scored", out);
       return JSON.stringify(out, null, 1);
-    },
-  });
-
-  return [addCandidate, score];
 }
