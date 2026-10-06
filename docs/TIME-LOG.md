@@ -26,5 +26,6 @@ The case is capped at **8 hours**. The debrief will ask where the hours went.
 | 12:25      | 1:33    | WebView plan for the mobile path (`agent/WEBVIEW-PLAN.md`): what to build, phases, risks |
 | 12:35      | 1:43    | Phase 0 of the WebView plan: `PageDriver` seam with a guarded driver, 6 tests, PR #7 |
 | 12:52      | 2:00    | Review fixes on PR #7; payment hand-off sequence built and run against the mock (confirmed and declined), PR #11 |
+| 12:59      | 2:07    | Merged #9 into #7 and #11 ahead of time; review fixes; first full run behind the orchestrator: chat message to confirmed booking in 151 s |
 
 Add a row whenever a phase ends. Keep it honest; it is part of the submission.

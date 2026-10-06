@@ -121,12 +121,13 @@ approved candidate
 | Blind mode (`tools/boundary.ts`)        | any observe, act, goto, screenshot during the hand-off | built |
 | `GuardedLog` + Luhn (`evidence/log.ts`) | card numbers on disk, observations logged while blind  | built |
 | `audit:runs` (`evidence/audit.ts`)      | a run that broke the above going unnoticed             | built |
-| Sensitive-field redaction               | card fields on the hotel's own origin (P1, P2, P11)    | to add |
-| Read-only agent on a payment surface    | the agent ticking terms or pressing pay                | to add |
-| Inbound chat scrub                      | card or bank code typed into the chat (P6)             | to add |
+| Sensitive-field redaction (`payment/redact.ts`) | card fields on the hotel's own origin (P1, P2, P11) | built |
+| Read-only agent on a payment surface    | the agent ticking terms or pressing pay                | partly: card, code and password fields cannot be acted on; terms and pay buttons are held back by the validation prompt only |
+| Inbound chat scrub (`chat/server.ts`)   | card or bank code typed into the chat (P6)             | built for card numbers; a bank code typed into the chat is not caught |
 | No recorders                            | trace, HAR, video, request listeners (P5)              | to add |
-| `beginBlind()` returns the only release | any tool or model ending blind mode                    | to add |
-| `PaymentResult` as the only return type | a model receiving more than a status                   | to add |
+| `beginBlind()` returns the only release | any tool or model ending blind mode                    | built |
+| `PaymentResult` as the only return type | a model receiving more than a status                   | built |
+| Raw driver stays out of foreign frames (`tools/playwright-driver.ts`) | the process reading the provider's fields at all, also after a declined card | built |
 
 ## 5. Traps not covered in `TRAPS.md`
 
@@ -221,21 +222,23 @@ merely operating the cloud browser the card is typed into counts as handling
 card data. Holding money (payments licence) and touching card data (card
 industry security rules) are separate regimes; ask a specialist.
 
-## 7. Files (planned, `starter/agent/payment/`, each under 200 lines)
+## 7. Files (`starter/agent/payment/`, each under 200 lines)
 
-| File          | Job                                                           |
-| ------------- | ------------------------------------------------------------- |
-| `types.ts`    | `PaymentStatus`, `PaymentResult`, `ApprovalSnapshot`          |
-| `surface.ts`  | detect a payment surface, redact sensitive fields (pure)      |
-| `approval.ts` | snapshot from the payment page, diff, verbatim amount check   |
-| `signals.ts`  | wait on navigation, chat button, tab close, deadline          |
-| `handoff.ts`  | the sequence in section 3; the only caller of `beginBlind`    |
-| `outcome.ts`  | redacted read after blind mode, classification, downgrade rule |
-| `messages.ts` | one traveller-facing template per status                      |
+| File            | Job                                                             |
+| --------------- | --------------------------------------------------------------- |
+| `types.ts`      | `PaymentStatus`, `PaymentResult`, `Signal`, `Terms`             |
+| `redact.ts`     | sensitive fields and last-four digits removed from every observation (pure) |
+| `page-facts.ts` | hold clock, amounts still on the page, amounts as the hotel writes them (pure) |
+| `signals.ts`    | wait on navigation, chat button, tab close, deadline; reminders |
+| `handoff.ts`    | the sequence in section 3; the only caller of `beginBlind`      |
+| `outcome.ts`    | redacted read after blind mode, `decide`, model-free fallback   |
+| `classify.ts`   | the one model call: propose a status from the hotel's page text |
+| `messages.ts`   | one traveller-facing template per status                        |
 
-Each gets a test file. `surface.ts` and `outcome.ts` are tested against
-fixtures: the mock's payment page, a page with inline card fields, a hosted
-payment redirect.
+Tested with fakes for the driver, the chat and the log, and one test over the
+real Playwright driver with a fake page for the declined-card path. Not yet
+tested against fixtures of other hotels: a page with inline card fields in a
+real browser, a hosted payment redirect.
 
 ## 8. Open decisions
 
@@ -249,8 +252,18 @@ payment redirect.
 5. `beginBlind()` returning the only function that ends blind mode:
    **decided and built 2026-10-06** (PR #11). A second `beginBlind()` throws.
 
-Built so far (PR #11, `starter/agent/payment/`): sections 2 and 3, the field
-redaction (P1, P2, P11), P3, P4, P8, P9 and the retry reload. Not built: the
-chat scrub (P6), the recorder test (P5), the follow-up for `unconfirmed`
-beyond the question in the message, and reopening the page after
-`session_lost` (P10).
+Built so far (PR #7 and #11, merged): sections 2 and 3, the field redaction
+(P1, P2, P11), P3, P4, P8, P9, the retry reload, an error path of its own
+(`not_started` before the hand-over, `unconfirmed` after), and a fallback that
+recognises a labelled booking reference when the model call fails. The chat
+scrub for card numbers (P6) is in PR #9.
+
+Run against the mock (2026-10-06): the hand-off alone with a stand-in
+traveller, confirmed and declined; and one full run behind the orchestrator,
+chat message to confirmed booking in 151 s. All run logs pass `audit:runs`.
+Not yet run with a person paying in the visible window.
+
+Not built: the recorder test (P5), reopening the page after `session_lost`
+(P10), the follow-up for `unconfirmed` beyond the question in the message, a
+bank code typed into the chat, and attaching to no stray tabs (a
+`target=_blank` link opened before the hand-off leaves a second tab).
