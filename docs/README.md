@@ -15,6 +15,8 @@ Everything to be submitted besides the code, per
 | `TIME-LOG.md`      | Session start, deadline and where the hours went                                          | started     |
 | `infrastructure.md` | Where the agents run: local for the prototype, GCP layout for the design document        | done        |
 | `concerns.md`      | Register of everything flagged so far, with status; feeds the closing note                | ongoing     |
+| `limitations/`     | Trade-offs we chose, limitations of what is built, and claims not yet verified            | ongoing     |
+| `DOCS-REVIEW.md`   | The routine that keeps every document current: every two hours and on `/docs-review`      | ongoing     |
 | `research/`        | Source documents brought in by the developer, kept verbatim                               | reference   |
 
 ## The design document must cover

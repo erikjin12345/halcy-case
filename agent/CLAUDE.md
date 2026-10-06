@@ -52,6 +52,12 @@ it (planned location: `halcy_case_material/starter/agent/`).
   documents live in `../docs/`.
 - When a decision in `ARCHITECTURE.md` or `payment/TRAPS.md` is made, record
   it in the "Decisions" section of `README.md` with a date.
+- A limitation, a trade-off or a claim nobody has checked goes in
+  `../docs/limitations/`, in the same pull request as the change that causes
+  it.
+- Documents are reviewed against the repository about every two hours and on
+  request (`/docs-review`). The rule is in the root `CLAUDE.md`, the procedure
+  in `../docs/DOCS-REVIEW.md`.
 
 ## Time budget
 
