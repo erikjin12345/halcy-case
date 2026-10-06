@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test \"starter/**/*.test.ts\"",
     "audit:runs": "tsx starter/agent/evidence/audit-cli.ts",
+    "traps": "tsx starter/agent/evidence/traps-cli.ts",
     "scenarios": "tsx starter/agent/scenarios/run.ts",
     "setup": "playwright install chromium",
     "agent:check": "tsx starter/agent/check.ts",
