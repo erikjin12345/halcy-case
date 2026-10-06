@@ -5,7 +5,7 @@
 import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 import type { RunLog } from "../../log.ts";
-import type { Chat } from "../../types.ts";
+import type { Answer, Button, Card, Chat } from "../../types.ts";
 import type { RunnableTool } from "../llm/client.ts";
 
 export interface ChatToolDeps {
@@ -17,8 +17,29 @@ export interface ChatToolDeps {
 
 const TIMEOUT = "__timeout__";
 
+/** The timer is cleared as soon as `p` settles, so a finished wait cannot keep the process alive. */
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | typeof TIMEOUT> {
-  return Promise.race([p, new Promise<typeof TIMEOUT>((r) => setTimeout(() => r(TIMEOUT), ms))]);
+  let timer: NodeJS.Timeout | undefined;
+  const quiet = new Promise<typeof TIMEOUT>((r) => (timer = setTimeout(() => r(TIMEOUT), ms)));
+  return Promise.race([p, quiet]).finally(() => clearTimeout(timer));
+}
+
+/**
+ * Show a card with buttons and wait for a press or a typed message, whichever
+ * comes first. A chat without `ask` (a test double, the starter's own) can
+ * only be answered by a press.
+ */
+export async function askOrType(chat: Chat, card: Card & { buttons: Button[] }, timeoutMs: number): Promise<Answer> {
+  if (chat.ask) return chat.ask(card, timeoutMs);
+  const pressed = await withTimeout(chat.choose(card), timeoutMs);
+  return pressed === TIMEOUT ? { kind: "timeout" } : { kind: "pressed", button: pressed };
+}
+
+/** What a tool returns to the model for an answer: the button id, "typed: <text>", or "timeout". */
+export function answerText(a: Answer): string {
+  if (a.kind === "pressed") return a.button;
+  if (a.kind === "timeout") return "timeout";
+  return a.early ? `typed before this question: ${a.text}` : `typed: ${a.text}`;
 }
 
 export function chatTools(deps: ChatToolDeps): RunnableTool[] {
@@ -54,7 +75,7 @@ export function chatTools(deps: ChatToolDeps): RunnableTool[] {
 
   const askTraveller = betaZodTool({
     name: "ask_traveller",
-    description: "Show a card with buttons and wait for the traveller to press one. Returns the pressed button id, or 'timeout' if they went quiet.",
+    description: "Show a card with buttons and wait for the traveller to press one or type an answer. Returns the pressed button id, 'typed: <their message>' if they wrote instead, or 'timeout' if they went quiet. A typed answer is an answer: act on it.",
     inputSchema: z.object({
       title: z.string(),
       lines: z.array(z.string()).max(12),
@@ -62,20 +83,21 @@ export function chatTools(deps: ChatToolDeps): RunnableTool[] {
     }),
     run: async (card) => {
       log.event("chat.ask", card);
-      const pressed = await withTimeout(chat.choose(card), timeoutMs);
-      log.event("chat.answer", { title: card.title, pressed });
-      return pressed === TIMEOUT ? "timeout" : pressed;
+      const answer = await askOrType(chat, card, timeoutMs);
+      log.event("chat.answer", answer.kind === "typed" ? { title: card.title, typed: answer.text } : { title: card.title, pressed: answer.kind === "pressed" ? answer.button : "__timeout__" });
+      return answerText(answer);
     },
   });
 
   const waitForReply = betaZodTool({
     name: "wait_for_reply",
-    description: "Wait for the traveller's next free-text message. Returns the text, or 'timeout' if they went quiet.",
+    description: "Wait for the traveller's next free-text message. Returns 'typed: <text>', 'typed before this question: <text>' for a message they sent before you asked (it may answer something else), or 'timeout'.",
     inputSchema: z.object({}),
     run: async () => {
-      const text = await withTimeout(chat.reply(), timeoutMs);
-      log.event("chat.reply", { text });
-      return text === TIMEOUT ? "timeout" : text;
+      // Without `next` (a test double) a timed-out reply would leave a wait behind; with it, nothing is left over.
+      const answer: Answer = chat.next ? await chat.next(timeoutMs) : await withTimeout(chat.reply(), timeoutMs).then((t) => (t === TIMEOUT ? { kind: "timeout" } : { kind: "typed", text: t }));
+      log.event("chat.reply", answer.kind === "typed" ? { text: answer.text, early: answer.early ?? false } : { text: "timeout" });
+      return answerText(answer);
     },
   });
 

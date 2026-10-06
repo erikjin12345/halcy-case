@@ -13,6 +13,7 @@ import { agent as starterAgent } from "../agent.ts";
 import { bookingAgent } from "../agent/index.ts";
 import { redactCardNumbers } from "../agent/evidence/card-number.ts";
 import type { Card, Chat, Context } from "../types.ts";
+import { Waits } from "./waits.ts";
 
 const PORT = Number(process.env.CHAT_PORT ?? 4200);
 // AGENT=booking runs the real agent (starter/agent/); anything else keeps the starter's one-look agent.
@@ -36,9 +37,7 @@ function emit(e: Event) {
 }
 
 let running = false;
-const inbox: string[] = [];
-let waitingReply: ((text: string) => void) | null = null;
-const waitingPress = new Map<string, (button: string) => void>();
+const waits = new Waits();
 
 const chat: Chat = {
   say(text) {
@@ -51,13 +50,16 @@ const chat: Chat = {
     return id;
   },
   choose(card) {
-    const id = chat.card(card);
-    return new Promise((resolve) => waitingPress.set(id, resolve));
+    return waits.press(chat.card(card));
   },
   reply() {
-    const queued = inbox.shift();
-    if (queued !== undefined) return Promise.resolve(queued);
-    return new Promise((resolve) => (waitingReply = resolve));
+    return waits.text();
+  },
+  ask(card, timeoutMs) {
+    return waits.either(chat.card(card), timeoutMs);
+  },
+  next(timeoutMs) {
+    return waits.next(timeoutMs);
   },
 };
 
@@ -79,8 +81,7 @@ async function run(text: string) {
     chat.say(`Something went wrong on my side: ${String(e).slice(0, 300)}`);
   } finally {
     running = false;
-    waitingReply = null;
-    inbox.length = 0;
+    waits.clear();
     emit({ type: "busy", on: false });
   }
 }
@@ -93,11 +94,7 @@ function travellerSays(raw: string) {
     chat.say("I removed a card number from your message before anything read it. Please don't send card details here: you type them yourself on the hotel's own page.");
   }
   if (!running) return void run(text);
-  if (waitingReply) {
-    const r = waitingReply;
-    waitingReply = null;
-    r(text);
-  } else inbox.push(text);
+  waits.typed(text);
 }
 
 async function body(req: http.IncomingMessage): Promise<any> {
@@ -133,12 +130,7 @@ http
     }
     if (req.method === "POST" && path === "/press") {
       const { card, button } = await body(req);
-      const resolve = waitingPress.get(card);
-      if (resolve) {
-        waitingPress.delete(card);
-        emit({ type: "pressed", card, button });
-        resolve(button);
-      }
+      if (waits.pressed(card, button)) emit({ type: "pressed", card, button });
       res.writeHead(204);
       return res.end();
     }

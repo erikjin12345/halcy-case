@@ -24,6 +24,13 @@ export interface Card {
   buttons?: Button[];
 }
 
+/** How the traveller answered a question with buttons. */
+export type Answer =
+  | { kind: "pressed"; button: string }
+  /** `early`: typed before this question was asked, so it may answer something else. */
+  | { kind: "typed"; text: string; early?: boolean }
+  | { kind: "timeout" };
+
 export interface Chat {
   /** Send a text message to the traveller. */
   say(text: string): void;
@@ -33,6 +40,10 @@ export interface Chat {
   choose(card: Card & { buttons: Button[] }): Promise<string>;
   /** Wait for the traveller's next message. */
   reply(): Promise<string>;
+  /** Show a card with buttons and wait for a press or a typed message, whichever comes first, or the timeout. */
+  ask?(card: Card & { buttons: Button[] }, timeoutMs: number): Promise<Answer>;
+  /** Wait for the next message, or the timeout. A message typed before the wait began is marked `early`. */
+  next?(timeoutMs: number): Promise<Answer>;
 }
 
 export interface Context {

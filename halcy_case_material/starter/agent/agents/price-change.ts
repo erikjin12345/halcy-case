@@ -7,6 +7,7 @@
 import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 import type { RunnableTool } from "../llm/client.ts";
+import { askOrType } from "../tools/chat.ts";
 import type { Button, Card } from "../../types.ts";
 import type { AgentContext } from "../types.ts";
 import { overLimit, priceChangeOffer, type OverLimit, type PriceChangeOffer } from "./approval.ts";
@@ -57,11 +58,12 @@ export function priceChangeTool(a: AgentContext): RunnableTool {
       const hotel = a.state.goal?.hotel.name ?? "the hotel";
       const card = priceChangeCard(hotel, offer);
       a.log.event("price.ask", { candidateId, ...offer, title: card.title, lines: card.lines });
-      // The timer is cleared once the traveller answers, so it cannot keep the process alive.
-      let timer: NodeJS.Timeout | undefined;
-      const quiet = new Promise<string>((r) => (timer = setTimeout(() => r("timeout"), timeoutMs)));
-      const pressed = await Promise.race([a.chat.choose(card), quiet]);
-      clearTimeout(timer);
+      const answer = await askOrType(a.chat, card, timeoutMs);
+      if (answer.kind === "typed") {
+        a.log.event("price.typed", { candidateId, text: answer.text });
+        return `typed: ${answer.text}. The traveller wrote instead of pressing; nothing is accepted. Answer them, then call ask_price_change again if they want to go on.`;
+      }
+      const pressed = answer.kind === "pressed" ? answer.button : "timeout";
       if (pressed !== ACCEPT) {
         a.log.event(pressed === "timeout" ? "price.timeout" : "price.declined", { candidateId, was: offer.was, now: offer.now });
         return pressed === "timeout" ? "timeout" : "declined: the traveller does not want the new price. Offer another candidate or stop. Nothing is booked.";
@@ -111,10 +113,12 @@ export function overLimitTool(a: AgentContext): RunnableTool {
       const hotel = a.state.goal?.hotel.name ?? "the hotel";
       const card = overLimitCard(hotel, over);
       a.log.event("limit.ask", { candidateId, ...over, title: card.title, lines: card.lines });
-      let timer: NodeJS.Timeout | undefined;
-      const quiet = new Promise<string>((r) => (timer = setTimeout(() => r("timeout"), timeoutMs)));
-      const pressed = await Promise.race([a.chat.choose(card), quiet]);
-      clearTimeout(timer);
+      const answer = await askOrType(a.chat, card, timeoutMs);
+      if (answer.kind === "typed") {
+        a.log.event("limit.typed", { candidateId, text: answer.text });
+        return `typed: ${answer.text}. The traveller wrote instead of pressing; nothing is accepted. Answer them, then call ask_over_limit again if they want to go on.`;
+      }
+      const pressed = answer.kind === "pressed" ? answer.button : "timeout";
       if (pressed !== ACCEPT_OVER) {
         a.log.event(pressed === "timeout" ? "limit.timeout" : "limit.declined", { candidateId, total: over.total, limit: over.limit });
         return pressed === "timeout" ? "timeout" : "declined: the traveller keeps to the limit. Validate a candidate whose total fits, or say plainly that nothing does. Nothing is booked.";
