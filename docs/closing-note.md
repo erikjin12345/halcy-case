@@ -28,9 +28,13 @@ are cited) and `concerns.md`. State on 2026-10-06.
 
 ## What we are least sure about
 
-1. **A hotel we have not seen.** Everything ran on one mock hotel. The debrief
-   runs another. Generic patterns were a rule from the first hour, but a rule
-   is not a run (L19, N8 to N10).
+1. **A hotel we have not seen.** Almost everything ran on one mock hotel. A
+   second one, built late with a different layout, a full-page checkout and a
+   hold stated in words, took the payment step through a booking and a
+   decline, but only with scripts in place of the agents; it also exposed that
+   the hold clock was read in one format only, which on a pay-now rate would
+   have meant money without a booking (fixed). The debrief runs a third
+   (L19, N8, N10).
 2. **Whether this shape may be the product's.** Halcy never holds money, and
    we are fairly confident that keeps it clear of the licence question. We are
    not confident that operating the browser a card is typed into is outside
