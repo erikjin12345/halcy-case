@@ -9,7 +9,7 @@ import { runOrchestrator } from "./agents/orchestrator.ts";
 import { HEADLESS, hasCredential, loadDotEnv } from "./config.ts";
 import { modelClassifier } from "./payment/classify.ts";
 import { runValidation } from "./agents/validation.ts";
-import { runPayment } from "./payment/fresh-hold.ts";
+import { revalidationNote, runPayment } from "./payment/fresh-hold.ts";
 import { termsFrom } from "./payment/handoff.ts";
 import { PaymentBoundary } from "./tools/boundary.ts";
 import { guardedDriver } from "./tools/guarded-driver.ts";
@@ -49,8 +49,15 @@ export const bookingAgent: Agent = async (message, chat, ctx) => {
       // If the hold ran down or the page changed while the traveller was
       // deciding, validate the same candidate once more for a fresh hold.
       await runPayment(handoff, async () => {
-        const again = await runValidation(agents, { driver, boundary, candidateId: approved });
-        return again.accepted ? termsFrom(again.observed) : undefined;
+        const goal = state.goal;
+        const notes = goal?.notes;
+        if (goal) goal.notes = [notes, revalidationNote(handoff.terms)].filter(Boolean).join(" ");
+        try {
+          const again = await runValidation(agents, { driver, boundary, candidateId: approved });
+          return again.accepted ? termsFrom(again.observed) : undefined;
+        } finally {
+          if (goal) goal.notes = notes;
+        }
       });
     }
   } catch (e) {

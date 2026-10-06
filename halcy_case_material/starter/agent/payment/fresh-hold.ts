@@ -19,6 +19,20 @@ const FIGURES: [string, "total" | "chargedNow" | "dueAtHotel"][] = [
   ["Paid at the hotel", "dueAtHotel"],
 ];
 
+/**
+ * What the validation agent must know when it is asked a second time. The
+ * first validation wrote the payment page's totals into the candidate, so an
+ * earlier page that shows a lower room-only price is not a change.
+ */
+export function revalidationNote(agreed: Terms): string {
+  const figures = [
+    agreed.total !== undefined ? `total ${agreed.total}` : "",
+    agreed.chargedNow !== undefined ? `charged now ${agreed.chargedNow}` : "",
+    agreed.dueAtHotel !== undefined ? `paid at the hotel ${agreed.dueAtHotel}` : "",
+  ].filter(Boolean);
+  return `Second validation of a candidate the traveller already approved, to get a fresh hold. On the page that splits the amount into charged now and paid at the hotel, the traveller agreed to: ${figures.join(", ")}. The candidate's price figures are those payment-page amounts. A page before it may show a lower price without taxes or fees that are added later; that is not a mismatch. Go on to the payment page and report the amounts it shows.`;
+}
+
 const asNumber = (v: string | number | undefined) => (typeof v === "string" ? parseMoney(v) : v);
 
 /** Figures that differ between what was agreed and what the hotel shows now. */

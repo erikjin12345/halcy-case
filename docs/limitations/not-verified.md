@@ -15,9 +15,8 @@ only with a run log, a test or a source to point at. State as of 2026-10-06
 | N9  | A hotel that sends the whole tab to a payment provider or the bank and back | A unit test with fake navigations | A mock variant with a redirect |
 | N10 | Card fields on the hotel's own page are redacted in a real browser | Unit tests on observation objects | A mock variant with inline fields |
 | N11 | A non-English hotel site or request | One Swedish scenario case exists | Its result, once run |
-| N12 | A fresh hold through the real validation agent (`index.ts` calls `runValidation` again when the hold ran down) | Unit tests with a fake; against the mock with a script in place of the validation agent | A full run where the traveller is slow to approve |
-| N22 | The "price has changed" card when a fresh hold comes back with other figures | Unit tests | A mock that changes its price between two holds |
-| N23 | A change the open page does not show (room taken by someone else, price changed on the server) is caught before the traveller types a card | Nothing: the last look reads the page as it stands and does not reload it | A mock that changes state behind an open payment page |
+| N24 | The "price has changed" card when a fresh hold comes back with other figures | Unit tests | A mock that changes its price between two holds |
+| N25 | A change the open page does not show (room taken by someone else, price changed on the server) is caught before the traveller types a card | Nothing: the last look reads the page as it stands and does not reload it | A mock that changes state behind an open payment page |
 
 ## Measured too thinly
 
@@ -55,6 +54,7 @@ traveller, and all pass `npm run audit:runs`.
 | N5  | A rate that charges now | `confirmed`, "charged now €337.92, paid at the hotel €16.00" | `...T07-17-25-453Z-handoff-path-saver` |
 | N7  | Amounts on the card as the hotel writes them | "Total: €400.00 / Charged now: €0.00" in every run above | same |
 | new | A hold that expired before the hand-over | Hotel's wording quoted, fresh hold, `confirmed` | `...T07-27-43-215Z-handoff-path-expired-then-fresh` |
+| N12 | A fresh hold through the real validation agent, behind the orchestrator, when the traveller is slow to approve | Hotel's "Your hold has expired" quoted, same room validated again, same figures, handed over, `confirmed` in 189 s. A first attempt failed and led to L36 | `...T07-35-26-649Z-booking-full-slow-approval-2` (failed attempt: `...T07-31-43-766Z-booking-full-slow-approval`) |
 | new | A hold too short, twice | Refused, fresh hold asked for once, refused again | `...T07-27-41-593Z-handoff-path-short-hold` |
 
 Two of these used a mock started with a 1-minute hold and shortened

@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { PaymentBoundary } from "../tools/boundary.ts";
 import { guardedDriver } from "../tools/guarded-driver.ts";
-import { runPayment, termChanges } from "./fresh-hold.ts";
+import { revalidationNote, runPayment, termChanges } from "./fresh-hold.ts";
 import type { HandoffDeps } from "./handoff.ts";
 import { fakeChat, fakeLog, fakeRaw, HOTEL, tick } from "./testing.ts";
 import type { Terms } from "./types.ts";
@@ -88,6 +88,12 @@ test("a fresh hold is asked for once, and only when it can help", async () => {
   const stillShort = setup(page("We're holding this room for you for 2:00"));
   assert.equal((await runPayment(stillShort.deps, async () => (validations++, TERMS))).cause, "hold_short", "the second refusal is final");
   assert.equal(validations, 1);
+});
+
+test("the second validation is told what the traveller agreed to on the payment page", () => {
+  const note = revalidationNote(TERMS);
+  assert.match(note, /total 420, charged now 0, paid at the hotel 420/);
+  assert.match(note, /lower price without taxes or fees that are added later; that is not a mismatch/);
 });
 
 test("term changes compare figures, not spellings", () => {
