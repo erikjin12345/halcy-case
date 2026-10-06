@@ -85,3 +85,28 @@ test("prices are compared among feasible candidates only", () => {
   assert.equal(r.score.superior, 0);
   assert.equal(r.feasible.saver, false);
 });
+
+test("an unstated capacity does not reject a room the hotel offered for the party", () => {
+  // Example ask 3: the rooms page never says how many a room sleeps when it is big enough.
+  const r = score({ classic: { room_name: "Classic Double", price_total: 444 } }, { hard: { sleeps: 1, sold_out: false } });
+  assert.equal(r.feasible.classic, true);
+});
+
+test("a stated capacity that is too small still rejects", () => {
+  const r = score({ classic: { sleeps: 2 } }, { hard: { sleeps: 3 } });
+  assert.equal(r.feasible.classic, false);
+});
+
+test("other unstated facts on a hard constraint still reject", () => {
+  const r = score({ room: { price_total: 300 } }, { hard: { cancellable: true } });
+  assert.equal(r.feasible.room, false);
+  assert.equal(r.reason.room, "cancellable unknown, required true");
+});
+
+test("a text weight with a wanted value picks the named room", () => {
+  const r = score(
+    { classic: { room_name: "Classic double", price_total: 444 }, superior: { room_name: "Superior double", price_total: 546 } },
+    { weights: { room_name: 2, price_total: -1 }, wants: { room_name: "classic double" }, threshold: 2 },
+  );
+  assert.deepEqual(r.score, { classic: 3, superior: 0 });
+});

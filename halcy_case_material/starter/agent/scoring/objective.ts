@@ -35,8 +35,19 @@ function value(c: Candidate, name: FeatureName): FeatureValue | undefined {
   return typeof v === "string" || typeof v === "number" || typeof v === "boolean" ? v : undefined;
 }
 
+/**
+ * What a missing fact means for a hard constraint. A room recorded with a rate
+ * is on offer, so an unstated `sold_out` is false; and the hotel's own search
+ * was run for the party, so an unstated capacity is enough. Any other missing
+ * fact (cancellable, breakfast, a price) is a real unknown and fails.
+ */
+function unknownPasses(name: FeatureName, required: FeatureValue): boolean {
+  if (name === "sold_out") return required === false;
+  return AT_LEAST.includes(name);
+}
+
 function hardFailure(name: FeatureName, actual: FeatureValue | undefined, required: FeatureValue): string | null {
-  if (actual === undefined) return `${name} unknown, required ${String(required)}`;
+  if (actual === undefined) return unknownPasses(name, required) ? null : `${name} unknown, required ${String(required)}`;
   if (typeof required === "number" && typeof actual === "number") {
     if (AT_LEAST.includes(name)) return actual >= required ? null : `${name} is ${actual}, required at least ${required}`;
     if (AT_MOST.includes(name)) return actual <= required ? null : `${name} is ${actual}, required at most ${required}`;

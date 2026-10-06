@@ -26,6 +26,13 @@ Starting from the candidate's source page in the same browser session:
    goal context. Fill them with `act`; never invent.
 7. If the page shows a hold timer, record the seconds left.
 
+**Order matters.** If the goal asks something about the hotel itself (reception
+hours for a late arrival, parking, pets), look for it first, on the pages you
+can reach before entering guest details, and for at most three page loads.
+Once you submit guest details the hotel is holding the room for the traveller
+and the page you land on is where the traveller will pay: from then on do not
+open any other page or link, do not go back, and do not reload.
+
 Go as far as the page that shows the full amount split into "charged now" and
 "paid at the hotel" if the site has one, because that is the figure the
 traveller must approve. Record what it shows. **Stop there.** Do not submit
@@ -36,7 +43,14 @@ frames `observe` did not read.
 
 Call `report_validation` exactly once with `accepted`, `reasons` (one per
 check, short, in the hotel's words where a price or term is quoted), the
-`observed` features, and `holdSecondsLeft` if seen.
+`observed` features, `unverified`, and `holdSecondsLeft` if seen.
+
+`accepted` is about what the site shows. It is false when the site contradicts
+the candidate or the goal (dates, guests, room, rate, room price, an add-on
+you could not set as asked) or when you could not reach the page. Something
+the traveller asked for that the site simply does not state, such as whether
+reception is staffed at 23:00, goes in `unverified` with where you looked. It
+does not make `accepted` false: the traveller decides, once they are told.
 
 # Rules
 
