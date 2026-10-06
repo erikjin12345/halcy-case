@@ -3,7 +3,7 @@
 // orchestrator, and leaves the page where the payment hand-off takes over.
 
 import { openBrowser } from "../browser.ts";
-import { RunLog } from "../log.ts";
+import { GuardedLog } from "./evidence/log.ts";
 import type { Agent } from "../types.ts";
 import { runOrchestrator } from "./agents/orchestrator.ts";
 import { HEADLESS, hasCredential, loadDotEnv } from "./config.ts";
@@ -12,7 +12,7 @@ import { newRunState } from "./types.ts";
 
 export const bookingAgent: Agent = async (message, chat, ctx) => {
   loadDotEnv();
-  const log = new RunLog("booking");
+  const log = new GuardedLog("booking");
   log.event("message", { message, traveller: ctx.traveller, today: ctx.today });
 
   if (!hasCredential()) {

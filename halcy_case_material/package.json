@@ -11,6 +11,7 @@
     "chat": "tsx starter/chat/server.ts",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test \"starter/**/*.test.ts\"",
+    "audit:runs": "tsx starter/agent/evidence/audit-cli.ts",
     "setup": "playwright install chromium",
     "agent:check": "tsx starter/agent/check.ts"
   },
