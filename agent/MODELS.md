@@ -49,12 +49,12 @@ live page before the traveller sees anything.
 
 ## 3. Role by role
 
-| Role         | Share of tokens | Cost of an error                                   | Who catches it                              | Proposal                          |
-| ------------ | --------------- | -------------------------------------------------- | ------------------------------------------- | --------------------------------- |
-| Orchestrator | Low             | High: wrong words to the traveller, wrong approval | Nobody after it; the traveller reads it     | Keep Opus 5.5                     |
-| Objective    | Very low        | High: a need ("must cancel") scored as a wish      | Validation, late; a whole search is wasted  | Keep Opus 5.5 at low effort       |
-| Search       | About 40% of cost | Medium: wrong room, add-on left ticked, extra turns | Validation, on the live page              | Sonnet 5.5 held up; see 5 and 6   |
-| Validation   | About 25%, more on retries | High: it reads the price the traveller approves | The approval card, only if the traveller notices | Keep Opus 5.5; measure next |
+| Role         | Share of cost | Cost of an error                                   | Who catches it                              | Model                          |
+| ------------ | ------------- | -------------------------------------------------- | ------------------------------------------- | ------------------------------ |
+| Orchestrator | About 25%     | High: wrong words to the traveller, wrong approval | Nobody after it; the traveller reads it     | Opus 5.5                       |
+| Objective    | About 10%     | High: a need ("must cancel") scored as a wish      | Validation, late; a whole search is wasted  | Opus 5.5 at low effort         |
+| Search       | About 40%     | Medium: wrong room, add-on left ticked, extra turns | Validation, on the live page               | Sonnet 5.5, decided 2026-10-06 |
+| Validation   | About 25%, more on retries | High: it reads the price the traveller approves | The approval card, only if the traveller notices | Opus 5.5; measure next |
 
 Notes:
 
