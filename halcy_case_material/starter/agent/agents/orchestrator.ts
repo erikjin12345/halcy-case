@@ -20,6 +20,8 @@ import { runSearches } from "./search-parallel.ts";
 import { cachedSearch, rememberSearch } from "./search-cache.ts";
 import { scoreAll } from "../tools/scoring.ts";
 import { runValidation } from "./validation.ts";
+import { fxTools, travellerCurrency } from "./fx-tools.ts";
+import { loadRates } from "../scoring/fx.ts";
 
 export interface OrchestratorDeps {
   driver: PageDriver;
@@ -57,13 +59,14 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
         for (const g of fresh) a.log.event("search.cached", { hotel: g.hotel.name });
         const summaries = [...fresh.map((g) => ({ hotel: g.hotel.name, summary: `(from this session's earlier search) ${cachedSearch(a.state, g)!.summary}` }))];
         const results = todo.length ? await runSearches(a, todo) : [];
+        const rates = await loadRates();
         for (const r of results) {
           const g = todo.find((t) => t.hotel.name === r.hotel)!;
           if (!r.error) rememberSearch(a.state, g, r.summary);
           summaries.push(r);
           // A visible step for the traveller, from code, without a model turn.
           a.state.goal = g;
-          const progress = r.error ? `${r.hotel}: I could not search the site this time.` : searchProgress(a.state);
+          const progress = r.error ? `${r.hotel}: I could not search the site this time.` : searchProgress(a.state, { to: travellerCurrency(a), rates });
           if (progress) {
             a.chat.say(progress);
             a.log.event("chat.say", { text: progress, from: "code" });
@@ -71,7 +74,7 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
         }
         a.state.goal = goals[goals.length - 1];
         // Cached or new, every stored room is ranked against the current objective, in code.
-        const scored = JSON.parse(scoreAll(a.state, a.log));
+        const scored = JSON.parse(await scoreAll(a.state, a.log));
         const passing = (scored.ranking ?? []).filter((e: { feasible: boolean; score: number }) => e.feasible && e.score >= (scored.threshold ?? 0)).length;
         return JSON.stringify({ searched: todo.map((g) => g.hotel.name), reused: fresh.map((g) => g.hotel.name), summaries, passing, ...scored }, null, 1);
       } catch (e) {
@@ -137,7 +140,7 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
       `Known hotels (name -> booking site): ${JSON.stringify(a.ctx.hotels)}`,
       `Traveller's message: ${message}`,
     ].join("\n"),
-    tools: [...chatTools({ chat: a.chat, log: a.log }), ...goalTools({ state: a.state, log: a.log }), runObjectiveTool, searchInTurn, validationInTurn, priceChangeTool(a), overLimitTool(a), approveTool],
+    tools: [...chatTools({ chat: a.chat, log: a.log }), ...goalTools({ state: a.state, log: a.log }), runObjectiveTool, searchInTurn, validationInTurn, priceChangeTool(a), overLimitTool(a), ...fxTools(a), approveTool],
     log: a.log,
   });
 
