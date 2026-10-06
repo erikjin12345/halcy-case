@@ -102,6 +102,8 @@ export interface OverLimitAcceptance {
 export interface RunState {
   goal?: SearchGoal;
   objective?: Objective;
+  /** The goal, without the hotel, that the current objective was made for. The objective is reused while this stays the same. */
+  objectiveFor?: string;
   /** Hash of the current objective; evaluations are keyed by it. */
   objectiveHash?: string;
   /** Set by scoring when a price cap could not be applied because of the currency; the orchestrator must tell the traveller. */
