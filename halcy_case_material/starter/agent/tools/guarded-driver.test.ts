@@ -123,3 +123,20 @@ test("navigation signals still work while blind, and say where the tab is on the
   assert.deepEqual(f.driver.location(), { origin: "http://localhost:4100", path: "/payment" });
   assert.deepEqual(await f.driver.waitForNavigation(10), { origin: "http://localhost:4100", path: "/payment" });
 });
+
+test("an action's label is logged from the redacted observation, never for a sensitive field", async () => {
+  const f = fake();
+  const elements = [
+    { id: "0:0", frameUrl: HOTEL, tag: "button", role: null, type: null, name: "Accept all cookies", value: null, checked: null, disabled: false },
+    { id: "0:1", frameUrl: HOTEL, tag: "input", role: null, type: "text", name: "Card number", value: "", checked: null, disabled: false },
+  ];
+  f.raw.observe = async () => ({ url: HOTEL, title: "x", text: [], elements });
+  await f.driver.observe();
+  assert.equal(f.driver.labelOf?.("0:0"), "Accept all cookies");
+  assert.equal(f.driver.labelOf?.("0:1"), null);
+  const tools = Object.fromEntries(browserTools({ driver: f.driver, boundary: f.boundary, log: f.log }).map((t) => [(t as { name: string }).name, t])) as Record<string, { run: (input: unknown) => unknown }>;
+  const logged: Record<string, unknown>[] = [];
+  (f.log as unknown as { event: (t: string, d: Record<string, unknown>) => void }).event = (t, d) => void (t === "act" && logged.push(d));
+  await tools.act.run({ kind: "click", id: "0:0" });
+  assert.equal(logged[0]?.label, "Accept all cookies");
+});

@@ -83,7 +83,7 @@ export function browserTools(deps: BrowserToolDeps): RunnableTool[] {
         else if (input.kind === "select") await driver.act({ kind: "select", id: input.id, value: input.value ?? "" });
         else await driver.act({ kind: "check", id: input.id, checked: input.checked ?? true });
         const where = showLocation(driver.location());
-        log.event("act", { ...input, url: where });
+        log.event("act", { ...input, url: where, label: driver.labelOf?.(input.id) ?? null });
         return `Done. Page is now ${where}. Observe to see the result.`;
       } catch (e) {
         log.event("act.error", { ...input, error: String(e).slice(0, 300) });

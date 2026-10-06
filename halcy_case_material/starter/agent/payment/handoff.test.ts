@@ -147,6 +147,7 @@ test("without a clock on the page the hold comes from validation, and an unknown
   const reported = setup({ ...PAGES, "/payment": worded }, { holdReport: { secondsLeft: 540, at: Date.now() - 180_000 } });
   const endReported = await begin(reported);
   assert.deepEqual([start(reported)?.holdSecondsLeft, start(reported)?.waitSeconds, start(reported)?.holdFromPage], [360, 300, false]);
+  assert.deepEqual([start(reported)?.minHoldSeconds, start(reported)?.marginSeconds], [300, 60], "the thresholds used are in the log");
   assert.ok(reported.c.cards[0].lines?.includes("Room held for about 6 minutes."));
   await endReported();
 
