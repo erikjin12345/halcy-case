@@ -31,6 +31,8 @@ is in `../ARCHITECTURE.md`.
 
 - `TRAPS.md`: how each trap in the mock hotel affects the module and how we
   can get around it. Read it first.
+- `TRAP-TESTS.md`: which unit tests, scenario cases, trap checks and live
+  runs cover each trap, and what is not tested.
 - `DESIGN.md`: what we build. The status-only rule, the `PaymentResult`
   contract, the hand-off sequence, the guards, and the traps `TRAPS.md` does
   not cover (P1 to P14).

@@ -1,5 +1,7 @@
 # The traps in the mock hotel and what they do to the payment module
 
+Which tests cover each trap: `TRAP-TESTS.md`.
+
 Line references point to `halcy_case_material/mock-hotel/server.mjs`.
 Traps are ordered by how hard they hit the module's goals (see `README.md`).
 The first four decide the design. The rest must be handled but do not change

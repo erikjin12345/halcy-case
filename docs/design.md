@@ -30,6 +30,11 @@ code and the payment hand-off. Code is under
   scrub, never by asking a model for its reasoning, and shows nothing from
   the payment except "you are paying in the hotel's window" and the outcome.
   The chat itself carries only concrete answers.
+- **Test mode** (`?test=1` on the chat page) adds a sidebar with every
+  scenario case to paste, and opens the activity log with trap and decision
+  lines and the trap checks at the end of a run. The normal page is unchanged.
+- **Focus.** On macOS the screen is handed back to the chat's browser once the
+  agent's own window has opened, so the traveller keeps typing in the chat.
 
 ```mermaid
 flowchart LR
