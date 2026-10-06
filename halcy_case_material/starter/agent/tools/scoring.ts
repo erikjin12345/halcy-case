@@ -8,6 +8,8 @@ import type { RunLog } from "../../log.ts";
 import type { RunnableTool } from "../llm/client.ts";
 import { budgetNote, maxScore, objectiveHash, scoreCandidates } from "../scoring/objective.ts";
 import { unstated, unstatedNote } from "../scoring/free-text.ts";
+import { estimateNote } from "../scoring/cap-estimate.ts";
+import { loadRates } from "../scoring/fx.ts";
 import { FEATURES, type RunState } from "../types.ts";
 import { cleanUrl } from "./serial.ts";
 import { sameCurrency } from "../scoring/currency.ts";
@@ -176,13 +178,14 @@ export function candidateTools({ state, log }: StateToolDeps): RunnableTool[] {
         }
       }
       const all = [...state.store.candidates(), ...state.store.rejected().map((r) => state.store.candidate(r.candidateId)!).filter(Boolean)];
-      const scored = scoreCandidates(all, o);
+      const rates = await loadRates();
+      const scored = scoreCandidates(all, o, rates);
       for (const { evaluation, failures } of scored) {
         state.store.evaluate(evaluation);
         // One rejection per candidate, under its most telling constraint, with every reason kept.
         if (failures.length) state.store.reject(evaluation.candidateId, failures[0].constraint, failures.map((f) => f.reason).join("; "));
       }
-      const budgetNotApplied = budgetNote(scored);
+      const budgetNotApplied = [budgetNote(scored), estimateNote(scored.flatMap((s) => s.capsEstimated), rates)].filter(Boolean).join(" ") || null;
       state.budgetNotApplied = budgetNotApplied ?? undefined;
       const notStated = unstatedNote(unstated(all, o));
       state.notStated = notStated ?? undefined;

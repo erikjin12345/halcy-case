@@ -190,7 +190,9 @@ and pays in the hotel's page. The approval card shows room, dates, "Room
 €404.00", "Tourist tax, paid at the hotel: €16.00", "Total €420.00",
 "Charged now: €0.00", "Paid at the hotel, to Casa Halcy: €420.00", the
 cancellation terms, what differs from the request, what the site does not
-say, and that their bank sets the exchange rate. The result reads "You're
+say, and, when the hotel charges in another currency than the traveller's,
+an estimate beside each amount: "≈ 4,726 kr (estimate at the ECB rate of 5
+Oct; your bank's rate and fees decide the final amount)". The result reads "You're
 booked with Casa Halcy. Booking reference CH-711228. ... Your booking and
 your contract are with Casa Halcy."
 
@@ -220,14 +222,20 @@ question.
 | Hostile page text | Page text reaches models as data; payment fields cannot be acted on | Nothing; not tested |
 | A site we cannot drive | Search stops after three failed attempts | Told so, nothing booked |
 
-**Exchange rates.** The hotel charges in its own currency and the bank
-converts on the day of each charge, so the part paid at the hotel later can
-differ. Halcy converts nothing. A limit in another currency is not compared:
-asked for "not more than 3000 kronor", the agent said "Casa Halcy prices in
-euros, not kronor, so I couldn't check your 3,000 SEK limit" and asked for
-one in euros. A "pay in your own currency" offer inside the provider's frame
-is never seen. Choosing the charge currency over a guide price is the search
-model's doing, not code's.
+**Exchange rates.** The hotel's own figure, in its own currency, is what the
+traveller agrees to and pays. Beside it Halcy shows an estimate in the
+traveller's currency, made in code from the ECB's daily euro reference rates
+(a bundled snapshot with its date when the fetch fails; no estimate when
+neither exists), labelled as an estimate with the rate's date. A model never
+converts: it quotes text from `estimate_prices` and `compare_prices`. Hotels
+in different currencies are compared on the estimate ("Casa Halcy is about
+6% cheaper than Villa Aurora at the ECB rate of 5 Oct"), and under 3% they
+are called too close to call. A limit in another currency is applied to the
+estimate, and within 3% of the limit the traveller is asked. What stays
+uncertain: the bank's own rate and fees, a different rate on the day the
+part paid at the hotel is charged, and a "pay in your own currency" offer
+inside the provider's frame, which is never seen. Choosing the charge
+currency over a guide price is still the search model's doing.
 
 ## 6. How we would know it works before launch
 

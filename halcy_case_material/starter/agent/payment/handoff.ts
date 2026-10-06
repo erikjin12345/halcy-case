@@ -7,7 +7,7 @@ import type { RunLog } from "../../log.ts";
 import type { Chat } from "../../types.ts";
 import type { PaymentBoundary } from "../tools/boundary.ts";
 import type { PageDriver } from "../tools/driver.ts";
-import { handoffCard, resultMessage, retryCard } from "./messages.ts";
+import { handoffCard, resultMessage, retryCard, type Estimates } from "./messages.ts";
 import { readOutcome, type Classify } from "./outcome.ts";
 import { figureLabelled, holdExpiredLine, missingAmounts, pageText, readHold, shownAs } from "./page-facts.ts";
 import { waitForSignal } from "./signals.ts";
@@ -43,6 +43,8 @@ export interface HandoffDeps {
   terms: Terms;
   /** What validation read about the hold, used when code cannot read a clock off the page. */
   holdReport?: HoldReport;
+  /** The traveller's currency and today's rates, for estimates on the hand-off card. */
+  fx?: Estimates;
   /** False when the browser has no window the traveller can type into. */
   visible: boolean;
   classify: Classify;
@@ -58,6 +60,7 @@ export function termsFrom(seen: Partial<Record<FeatureName, FeatureValue>>): Ter
     chargedNow: money(seen.price_now),
     dueAtHotel: money(seen.price_at_hotel),
     cancellable: typeof seen.cancellable === "boolean" ? seen.cancellable : undefined,
+    currency: [seen.charge_currency, seen.currency].find((v): v is string => typeof v === "string"),
   };
 }
 
@@ -157,7 +160,7 @@ async function sequence(deps: HandoffDeps, progress: { handedOver: boolean }): P
         chat,
         log,
         paymentPath: at.path,
-        card: handoffCard(hotel, shown, holdSecondsLeft, holdUnknown ? waitSeconds : undefined),
+        card: handoffCard(hotel, shown, holdSecondsLeft, holdUnknown ? waitSeconds : undefined, deps.fx),
         deadlineMs: waitSeconds * 1000,
         lastReminderMs: timing.lastReminderMs,
       });
