@@ -16,6 +16,7 @@ import { PaymentBoundary } from "./tools/boundary.ts";
 import { guardedDriver } from "./tools/guarded-driver.ts";
 import { lazyDriver } from "./tools/lazy-driver.ts";
 import { playwrightDriver } from "./tools/playwright-driver.ts";
+import { activateApp, frontmostApp } from "./tools/focus.ts";
 import { traceStep } from "./trace.ts";
 import { reachableHotels } from "./reachable.ts";
 import { newRunState } from "./types.ts";
@@ -51,9 +52,13 @@ export const bookingAgent: Agent = async (message, chat, ctx) => {
   // guarded one leaves this function. The window starts minimised so it stays
   // out of the way; the hand-off brings it forward when the traveller pays.
   const raw = lazyDriver(async () => {
+    // Launching a visible browser takes the focus; give it back to the chat once the window is tucked away.
+    const before = HEADLESS ? undefined : await frontmostApp();
     const { page } = await openBrowser({ headless: HEADLESS, tucked: true });
     log.event("browser.open", {});
-    return playwrightDriver(page, (url) => boundary.known(url), { background: true });
+    const opened = await playwrightDriver(page, (url) => boundary.known(url), { background: true });
+    if (await activateApp(before)) log.event("browser.focus_returned", {});
+    return opened;
   });
   const driver = guardedDriver(raw, boundary);
 
