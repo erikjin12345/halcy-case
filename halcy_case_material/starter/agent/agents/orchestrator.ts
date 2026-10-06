@@ -14,10 +14,12 @@ import type { AgentContext } from "../types.ts";
 import { approvalBlocker, overLimit } from "./approval.ts";
 import { sameCurrency } from "../scoring/currency.ts";
 import { runObjective } from "./objective.ts";
+import { searchProgress } from "./progress.ts";
 import { overLimitTool, priceChangeTool } from "./price-change.ts";
 import { runSearch } from "./search.ts";
 import { runValidation } from "./validation.ts";
-import { fxTools } from "./fx-tools.ts";
+import { fxTools, travellerCurrency } from "./fx-tools.ts";
+import { loadRates } from "../scoring/fx.ts";
 
 export interface OrchestratorDeps {
   driver: PageDriver;
@@ -32,18 +34,24 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
 
   const runObjectiveTool = betaZodTool({
     name: "run_objective",
-    description: "Turn the current goal into a scoring objective. Call after set_goal, and again whenever the goal changes.",
+    description: "Turn the current goal into a scoring objective. Call after set_goal. When only the hotel changed, it reuses the objective at once.",
     inputSchema: z.object({}),
     run: async () => runObjective(a).catch(errorText),
   });
 
   const runSearchTool = betaZodTool({
     name: "run_search",
-    description: "Search the hotel site for rooms and rates matching the goal and score them. Returns the search agent's summary plus the ranking and the rejected candidates.",
+    description: "Search the hotel site for rooms and rates matching the goal and score them. Returns the search agent's summary plus the ranking and the rejected candidates. The traveller has already been told the best match at this hotel; do not repeat it.",
     inputSchema: z.object({}),
     run: async () => {
       try {
         const summary = await runSearch(a, deps);
+        // A visible step for the traveller, from code, without a model turn.
+        const progress = searchProgress(a.state, { to: travellerCurrency(a), rates: await loadRates() });
+        if (progress) {
+          a.chat.say(progress);
+          a.log.event("chat.say", { text: progress, from: "code" });
+        }
         const { store, objective, objectiveHash } = a.state;
         const ranking = objectiveHash ? store.ranked(objectiveHash) : [];
         const threshold = objective?.threshold ?? 0;
