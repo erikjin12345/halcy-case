@@ -16,7 +16,7 @@ import { sameCurrency } from "../scoring/currency.ts";
 import { runObjective } from "./objective.ts";
 import { searchProgress } from "./progress.ts";
 import { overLimitTool, priceChangeTool } from "./price-change.ts";
-import { sequentialSearches } from "./search-many.ts";
+import { runSearches } from "./search-parallel.ts";
 import { cachedSearch, rememberSearch } from "./search-cache.ts";
 import { scoreAll } from "../tools/scoring.ts";
 import { runValidation } from "./validation.ts";
@@ -39,9 +39,6 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
     run: async () => runObjective(a).catch(errorText),
   });
 
-  // One hotel after another on the shared browser until the parallel runner lands.
-  const searchHotels = sequentialSearches(deps);
-
   const runSearchTool = betaZodTool({
     name: "run_search",
     description:
@@ -59,7 +56,7 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
         const todo = goals.filter((g) => !cachedSearch(a.state, g));
         for (const g of fresh) a.log.event("search.cached", { hotel: g.hotel.name });
         const summaries = [...fresh.map((g) => ({ hotel: g.hotel.name, summary: `(from this session's earlier search) ${cachedSearch(a.state, g)!.summary}` }))];
-        const results = todo.length ? await searchHotels(a, todo) : [];
+        const results = todo.length ? await runSearches(a, todo) : [];
         for (const r of results) {
           const g = todo.find((t) => t.hotel.name === r.hotel)!;
           if (!r.error) rememberSearch(a.state, g, r.summary);
