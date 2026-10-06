@@ -29,7 +29,17 @@ export function parseEcb(xml: string, source: Rates["source"] = "ECB"): Rates | 
 let cached: { day: string; rates: Rates | null } | undefined;
 
 /** Today's rates, fetched once per day per process; the bundled snapshot if the fetch fails; null if neither works. */
-export async function loadRates(fetchText: (url: string) => Promise<string> = defaultFetch): Promise<Rates | null> {
+/**
+ * Under `node --test` (it sets NODE_TEST_CONTEXT) the live fetch is never
+ * made, so every test sees the bundled snapshot, the same on every machine and
+ * every day. A test that wants other rates passes its own `fetchText`.
+ */
+const underTest = () => process.env.NODE_TEST_CONTEXT !== undefined;
+const offline = async (): Promise<string> => {
+  throw new Error("no network under test");
+};
+
+export async function loadRates(fetchText: (url: string) => Promise<string> = underTest() ? offline : defaultFetch): Promise<Rates | null> {
   const day = new Date().toISOString().slice(0, 10);
   if (cached?.day === day) return cached.rates;
   let rates: Rates | null = null;
