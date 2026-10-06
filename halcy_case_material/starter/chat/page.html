@@ -31,6 +31,16 @@
       .card button.primary { background: #181818; color: #fff; }
       .card button:disabled { opacity: 0.4; cursor: default; }
       .card button.chosen { opacity: 1; outline: 2px solid #181818; outline-offset: 2px; }
+      /* The trace: how the agent worked. Not part of the conversation: grey, small, folded away. */
+      .trace { align-self: stretch; font: 12px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; color: #8a8a8a; border-left: 2px solid #e0e0e0; padding: 2px 0 2px 8px; }
+      .trace > summary { cursor: pointer; list-style: none; user-select: none; }
+      .trace > summary::before { content: "▸ "; }
+      .trace[open] > summary::before { content: "▾ "; }
+      .trace ol { list-style: none; margin: 4px 0 0; padding: 0; }
+      .trace li { margin: 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .trace li details > summary { cursor: pointer; list-style: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .trace li .detail { white-space: pre-wrap; padding: 2px 0 4px 12px; color: #9a9a9a; }
+      .trace .who { color: #a0a0a0; }
       #busy { padding: 0 16px 6px; color: #5c5c5c; font-size: 13px; min-height: 20px; }
       #examples { display: flex; gap: 6px; overflow-x: auto; padding: 0 12px 8px; }
       #examples button { flex: 0 0 auto; max-width: 260px; font: inherit; font-size: 13px; text-align: left; padding: 7px 11px; border-radius: 12px; border: 1px solid #d6d6d6; background: #fff; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -128,6 +138,44 @@
         }
       }
 
+      // One folded trace block per agent run, appended where the run started.
+      let trace = null;
+      function traceRun() {
+        trace = document.createElement("details");
+        trace.className = "trace";
+        trace.innerHTML = "<summary></summary><ol></ol>";
+        trace.count = 0;
+        traceTitle();
+        log.appendChild(trace);
+      }
+      function traceTitle() {
+        trace.querySelector("summary").textContent = `How Halcy worked on this · ${trace.count} step${trace.count === 1 ? "" : "s"}`;
+      }
+      function traceStep(s) {
+        if (!trace) traceRun();
+        const li = document.createElement("li");
+        const head = `${s.at ? clock(s.at) + "  " : ""}`;
+        const line = (el) => {
+          const who = document.createElement("span");
+          who.className = "who";
+          who.textContent = `${head}${s.who}: `;
+          el.append(who, document.createTextNode(s.text));
+        };
+        if (s.detail) {
+          const d = document.createElement("details");
+          const sum = document.createElement("summary");
+          line(sum);
+          const body = document.createElement("div");
+          body.className = "detail";
+          body.textContent = s.detail;
+          d.append(sum, body);
+          li.appendChild(d);
+        } else line(li);
+        trace.querySelector("ol").appendChild(li);
+        trace.count++;
+        traceTitle();
+      }
+
       const events = new EventSource("/events");
       events.onmessage = (m) => {
         const e = JSON.parse(m.data);
@@ -135,7 +183,9 @@
         if (e.type === "card") card(e.id, e.card, e.at);
         if (e.type === "pressed") pressed(e.card, e.button);
         if (e.type === "busy") document.getElementById("busy").textContent = e.on ? "Halcy is working…" : "";
-        if (e.type === "reset") { log.innerHTML = ""; cards.clear(); }
+        if (e.type === "trace.run") traceRun();
+        if (e.type === "trace") traceStep(e.step);
+        if (e.type === "reset") { log.innerHTML = ""; cards.clear(); trace = null; }
         scroll();
       };
 

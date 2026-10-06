@@ -46,6 +46,8 @@ export interface Chat {
   ask?(card: Card & { buttons: Button[] }, timeoutMs: number): Promise<Answer>;
   /** Wait for the next message, or the timeout. A message typed before the wait began is marked `early`. */
   next?(timeoutMs: number): Promise<Answer>;
+  /** One step of how the agent is working, for a panel apart from the conversation. */
+  trace?(step: { who: string; text: string; detail?: string; at?: number }): void;
 }
 
 export interface Context {

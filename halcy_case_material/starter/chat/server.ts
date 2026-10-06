@@ -28,6 +28,8 @@ type Event = (
   | { type: "pressed"; card: string; button: string }
   | { type: "busy"; on: boolean }
   | { type: "reset" }
+  | { type: "trace"; step: { who: string; text: string; detail?: string; at?: number } }
+  | { type: "trace.run" }
 ) & { at?: number };
 
 let history: Event[] = [];
@@ -64,6 +66,9 @@ const chat: Chat = {
   next(timeoutMs) {
     return waits.next(timeoutMs);
   },
+  trace(step) {
+    emit({ type: "trace", step });
+  },
 };
 
 function context(): Context {
@@ -77,6 +82,7 @@ function context(): Context {
 async function run(text: string) {
   running = true;
   emit({ type: "busy", on: true });
+  emit({ type: "trace.run" });
   try {
     await agent(text, chat, context());
   } catch (e) {
