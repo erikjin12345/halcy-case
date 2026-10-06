@@ -37,8 +37,16 @@ export type Action =
   | { kind: "check"; id: string; checked: boolean }
   | { kind: "goto"; url: string };
 
-export async function openBrowser(opts: { headless?: boolean } = {}): Promise<{ browser: Browser; page: Page }> {
-  const browser = await chromium.launch({ headless: opts.headless ?? false });
+/**
+ * `tucked`: start the window as small as the system allows, in the far corner
+ * of the screen, so the moment before it is minimised shows next to nothing.
+ * macOS keeps windows on a display and at least 500x375, so it cannot be
+ * launched fully out of sight. The page's viewport is fixed below, so the
+ * window's size does not change how the site lays out.
+ */
+export async function openBrowser(opts: { headless?: boolean; tucked?: boolean } = {}): Promise<{ browser: Browser; page: Page }> {
+  const args = opts.tucked && !opts.headless ? ["--window-position=20000,20000", "--window-size=1,1"] : [];
+  const browser = await chromium.launch({ headless: opts.headless ?? false, args });
   const context = await browser.newContext({ viewport: { width: 1200, height: 900 }, locale: "en-GB" });
   // tsx compiles functions passed to page.evaluate with a `__name` helper that
   // only exists in Node; without this shim every evaluate fails in the page.

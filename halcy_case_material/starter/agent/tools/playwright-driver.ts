@@ -10,12 +10,14 @@ import { locationOf, type PageDriver, type PageLocation } from "./driver.ts";
 /** Everything that embeds another document. All of it is masked in every screenshot. */
 export const EMBEDDED = "iframe, frame, object, embed";
 
-/** Sets the window's state through CDP. False when there is no window (headless) or it is not Chromium. */
-async function setWindowState(page: Page, windowState: "minimized" | "normal"): Promise<boolean> {
+type Bounds = { windowState?: "minimized" | "normal"; left?: number; top?: number; width?: number; height?: number };
+
+/** Sets the window's bounds through CDP, one step at a time. False when there is no window (headless) or it is not Chromium. */
+async function setWindow(page: Page, ...steps: Bounds[]): Promise<boolean> {
   try {
     const cdp = await page.context().newCDPSession(page);
     const { windowId } = await cdp.send("Browser.getWindowForTarget");
-    await cdp.send("Browser.setWindowBounds", { windowId, bounds: { windowState } });
+    for (const bounds of steps) await cdp.send("Browser.setWindowBounds", { windowId, bounds });
     await cdp.detach();
     return true;
   } catch {
@@ -30,7 +32,7 @@ async function setWindowState(page: Page, windowState: "minimized" | "normal"): 
  * so they are refused until the hand-off brings the window forward.
  */
 export async function playwrightDriver(page: Page, canRead: (frameUrl: string) => boolean, opts: { background?: boolean } = {}): Promise<PageDriver> {
-  let inBackground = opts.background === true && (await setWindowState(page, "minimized"));
+  let inBackground = opts.background === true && (await setWindow(page, { windowState: "minimized" }));
   const listeners = new Set<(to: PageLocation) => void>();
   page.on("framenavigated", (frame) => {
     if (frame !== page.mainFrame()) return;
@@ -54,7 +56,8 @@ export async function playwrightDriver(page: Page, canRead: (frameUrl: string) =
     },
     // The hand-off: restore a minimised window, then activate the tab.
     bringToFront: async () => {
-      if (inBackground) await setWindowState(page, "normal");
+      // Restore, then give it its full size near the top left of the main display.
+      if (inBackground) await setWindow(page, { windowState: "normal" }, { left: 60, top: 40, width: 1240, height: 980 });
       inBackground = false;
       await page.bringToFront();
     },

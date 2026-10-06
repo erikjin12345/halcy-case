@@ -7,7 +7,7 @@ import type { RunLog } from "../../log.ts";
 import type { Chat } from "../../types.ts";
 import type { PaymentBoundary } from "../tools/boundary.ts";
 import type { PageDriver } from "../tools/driver.ts";
-import { handoffCard, resultMessage, retryCard, type Estimates } from "./messages.ts";
+import { handoffCard, notSubmitted, resultMessage, retryCard, type Estimates } from "./messages.ts";
 import { readOutcome, type Classify } from "./outcome.ts";
 import { figureLabelled, holdExpiredLine, missingAmounts, pageText, readHold, shownAs } from "./page-facts.ts";
 import { waitForSignal } from "./signals.ts";
@@ -28,9 +28,11 @@ export interface Timing {
   /** How long the traveller has to answer "try another card?". */
   retryWaitMs: number;
   maxAttempts: number;
+  /** How often "I'm done" on an unsubmitted payment page sends the traveller back to finish, before it counts. */
+  maxResumes: number;
 }
 
-export const TIMING: Timing = { minHoldSeconds: 300, marginSeconds: 60, defaultWaitSeconds: 600, unknownHoldWaitSeconds: 300, settleMs: 2000, lastReminderMs: 180_000, retryWaitMs: 120_000, maxAttempts: 3 };
+export const TIMING: Timing = { minHoldSeconds: 300, marginSeconds: 60, defaultWaitSeconds: 600, unknownHoldWaitSeconds: 300, settleMs: 2000, lastReminderMs: 180_000, retryWaitMs: 120_000, maxAttempts: 3, maxResumes: 2 };
 
 export interface HandoffDeps {
   driver: PageDriver;
@@ -149,26 +151,37 @@ async function sequence(deps: HandoffDeps, progress: { handedOver: boolean }): P
     const waitSeconds = holdSecondsLeft !== undefined ? holdSecondsLeft - timing.marginSeconds : holdUnknown ? unknownWait : timing.defaultWaitSeconds;
     log.event("handoff.start", { attempt, where: at, terms, holdSecondsLeft, holdUnknown, holdFromPage: hold.secondsLeft !== undefined, waitSeconds, foreignFrames: seen.text.filter((f) => !boundary.known(f.frameUrl)).length });
 
-    let signal: Signal | undefined;
-    const endBlind = boundary.beginBlind("traveller takes over");
-    progress.handedOver = true;
-    try {
-      await driver.bringToFront();
-      signal = await waitForSignal({
-        driver,
-        boundary,
-        chat,
-        log,
-        paymentPath: at.path,
-        card: handoffCard(hotel, shown, holdSecondsLeft, holdUnknown ? waitSeconds : undefined, deps.fx),
-        deadlineMs: waitSeconds * 1000,
-        lastReminderMs: timing.lastReminderMs,
-      });
-    } finally {
-      endBlind(signal?.kind ?? "aborted");
+    const deadline = Date.now() + waitSeconds * 1000;
+    const card = handoffCard(hotel, shown, holdSecondsLeft, holdUnknown ? waitSeconds : undefined, deps.fx);
+    for (let resume = 0; ; resume++) {
+      let signal: Signal | undefined;
+      const endBlind = boundary.beginBlind(resume === 0 ? "traveller takes over" : "traveller goes back to finish");
+      progress.handedOver = true;
+      try {
+        await driver.bringToFront();
+        signal = await waitForSignal({ driver, boundary, chat, log, paymentPath: at.path, card, deadlineMs: Math.max(0, deadline - Date.now()), lastReminderMs: timing.lastReminderMs });
+      } finally {
+        endBlind(signal?.kind ?? "aborted");
+      }
+      result = await readOutcome({ driver, boundary, log, paymentPath: at.path, signal, classify: deps.classify, settleMs: timing.settleMs });
+      let here = driver.location();
+      // The page moved on while it was being read (the traveller paid just then): read it once more.
+      if (result.status === "unconfirmed" && boundary.known(here.origin) && here.path !== at.path) {
+        result = await readOutcome({ driver, boundary, log, paymentPath: at.path, signal: { kind: "navigated", to: here }, classify: deps.classify, settleMs: timing.settleMs });
+        here = driver.location();
+      }
+      // "I'm done" while the page is still the unsubmitted payment form, with no
+      // error and no confirmation: nothing has been paid yet. Say so and wait again.
+      const stillOnForm = result.status === "unconfirmed" && signal.kind === "button" && signal.id === "done" && boundary.known(here.origin) && here.path === at.path;
+      const secondsLeft = Math.round((deadline - Date.now()) / 1000);
+      if (stillOnForm && resume < timing.maxResumes && secondsLeft > timing.marginSeconds) {
+        const text = notSubmitted(hotel, result.holdSecondsLeft ?? secondsLeft);
+        chat.say(text);
+        log.event("handoff.resume", { resume: resume + 1, secondsLeft, said: text });
+        continue;
+      }
+      break;
     }
-
-    result = await readOutcome({ driver, boundary, log, paymentPath: at.path, signal, classify: deps.classify, settleMs: timing.settleMs });
     say(result);
     if (result.status !== "declined" || attempt === timing.maxAttempts) break;
     if ((result.holdSecondsLeft ?? timing.minHoldSeconds) < timing.minHoldSeconds) break;

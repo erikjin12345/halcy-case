@@ -67,6 +67,31 @@ test("a hotel that sends the whole tab to its provider and back to the same page
   assert.equal((await running).status, "declined");
 });
 
+test("\"I'm done\" on an unsubmitted payment page sends the traveller back, then the booking still counts", async () => {
+  const { f, c, l, boundary, deps } = setup();
+  const running = runHandoff(deps);
+  await tick();
+  // Pressed before paying: the page is still the form, and the reader quotes its own sentence about the charge.
+  deps.classify = async (text) => (text.includes("CH-123456") ? { status: "confirmed", reference: "CH-123456" } : { status: "unconfirmed", hotelMessage: "Charged now €0.00" });
+  c.press("Over to you", "done");
+  await tick(20);
+  assert.match(c.said.at(-1) ?? "", /^Casa Halcy's payment page has not been submitted yet: .* nothing has been paid\. Casa Halcy holds the room for about 14 minutes more\./);
+  assert.equal(boundary.blind, true, "blind again, same attempt");
+  assert.equal(l.types().filter((t) => t === "handoff.blind.start").length, 2);
+  f.navigate(`${HOTEL}/confirmation/CH-123456`);
+  assert.equal((await running).status, "confirmed");
+});
+
+test("after the resumes are used up, \"I'm done\" on the form ends as unconfirmed", async () => {
+  const { c, deps } = setup(PAGES, { timing: { settleMs: 0, lastReminderMs: 50, maxResumes: 1 } });
+  const running = runHandoff(deps);
+  await tick();
+  c.press("Over to you", "done");
+  await tick(20);
+  c.press("Over to you", "done");
+  assert.equal((await running).status, "unconfirmed");
+});
+
 test("a declined card can be retried, and the retry reloads the page", async () => {
   const { f, c, boundary, deps } = setup({ ...PAGES, "/payment": `${PAGES["/payment"]}\nYour card was declined by your bank. Try another card` });
   const running = runHandoff(deps);

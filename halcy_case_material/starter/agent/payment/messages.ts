@@ -81,6 +81,10 @@ export function resultMessage(hotel: string, r: PaymentResult): string {
   }
 }
 
+/** "I'm done" pressed while the hotel's payment form is still unsubmitted. */
+export const notSubmitted = (hotel: string, secondsLeft: number) =>
+  `${hotel}'s payment page has not been submitted yet: I can't see a confirmation or an error there, so nothing has been paid. ${hotel} holds the room for about ${minutes(secondsLeft)} more. Finish in the browser window, and press "I'm done" once ${hotel} shows your booking.`;
+
 export const freshHoldNote = (hotel: string) => `I'll ask ${hotel} to hold the same room again and check the price once more. This takes a minute.`;
 
 export const notConfirmedAgain = (hotel: string) => `I could not confirm the same room at ${hotel} again. Nothing is booked and you have not been asked to pay. Tell me if you'd like me to look at the other options.`;

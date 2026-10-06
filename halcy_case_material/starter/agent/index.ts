@@ -39,7 +39,7 @@ export const bookingAgent: Agent = async (message, chat, ctx) => {
   // guarded one leaves this function. The window starts minimised so it stays
   // out of the way; the hand-off brings it forward when the traveller pays.
   const raw = lazyDriver(async () => {
-    const { page } = await openBrowser({ headless: HEADLESS });
+    const { page } = await openBrowser({ headless: HEADLESS, tucked: true });
     log.event("browser.open", {});
     return playwrightDriver(page, (url) => boundary.known(url), { background: true });
   });
