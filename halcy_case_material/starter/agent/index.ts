@@ -1,6 +1,7 @@
 // Entry point: an `Agent` the chat server can call instead of the starter one.
-// Opens one browser, sets the payment boundary to the hotel's origin, runs the
-// orchestrator, and then runs the payment hand-off on the page it left.
+// Sets the payment boundary to the hotel's origin, runs the orchestrator, and
+// then runs the payment hand-off on the page it left. The one browser of the
+// run is opened when an agent first needs the page, not before.
 
 import { openBrowser } from "../browser.ts";
 import { GuardedLog } from "./evidence/log.ts";
@@ -13,6 +14,7 @@ import { holdReportFrom, revalidationNote, runPayment } from "./payment/fresh-ho
 import { termsFrom } from "./payment/handoff.ts";
 import { PaymentBoundary } from "./tools/boundary.ts";
 import { guardedDriver } from "./tools/guarded-driver.ts";
+import { lazyDriver } from "./tools/lazy-driver.ts";
 import { playwrightDriver } from "./tools/playwright-driver.ts";
 import { newRunState } from "./types.ts";
 
@@ -29,12 +31,17 @@ export const bookingAgent: Agent = async (message, chat, ctx) => {
 
   // The hotel is given by name; the orchestrator resolves it, but the boundary
   // needs an origin before any browser tool runs. Allow every known hotel site.
-  const { page } = await openBrowser({ headless: HEADLESS });
   const boundary = new PaymentBoundary(Object.values(ctx.hotels)[0] ?? "http://localhost", log);
   for (const url of Object.values(ctx.hotels)) boundary.allow(url);
   // The raw driver never enters a frame outside the hotel's site, and only the
-  // guarded one leaves this function.
-  const driver = guardedDriver(playwrightDriver(page, (url) => boundary.known(url)), boundary);
+  // guarded one leaves this function. The window starts minimised so it stays
+  // out of the way; the hand-off brings it forward when the traveller pays.
+  const raw = lazyDriver(async () => {
+    const { page } = await openBrowser({ headless: HEADLESS });
+    log.event("browser.open", {});
+    return playwrightDriver(page, (url) => boundary.known(url), { background: true });
+  });
+  const driver = guardedDriver(raw, boundary);
 
   try {
     const state = newRunState();

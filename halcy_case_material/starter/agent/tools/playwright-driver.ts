@@ -10,7 +10,27 @@ import { locationOf, type PageDriver, type PageLocation } from "./driver.ts";
 /** Everything that embeds another document. All of it is masked in every screenshot. */
 export const EMBEDDED = "iframe, frame, object, embed";
 
-export function playwrightDriver(page: Page, canRead: (frameUrl: string) => boolean): PageDriver {
+/** Sets the window's state through CDP. False when there is no window (headless) or it is not Chromium. */
+async function setWindowState(page: Page, windowState: "minimized" | "normal"): Promise<boolean> {
+  try {
+    const cdp = await page.context().newCDPSession(page);
+    const { windowId } = await cdp.send("Browser.getWindowForTarget");
+    await cdp.send("Browser.setWindowBounds", { windowId, bounds: { windowState } });
+    await cdp.detach();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * `background`: minimise the window as soon as it opens, so the agent's work
+ * does not take focus from the chat. Reading, clicking and navigating work
+ * minimised; screenshots do not (Chromium does not paint a minimised window),
+ * so they are refused until the hand-off brings the window forward.
+ */
+export async function playwrightDriver(page: Page, canRead: (frameUrl: string) => boolean, opts: { background?: boolean } = {}): Promise<PageDriver> {
+  let inBackground = opts.background === true && (await setWindowState(page, "minimized"));
   const listeners = new Set<(to: PageLocation) => void>();
   page.on("framenavigated", (frame) => {
     if (frame !== page.mainFrame()) return;
@@ -28,8 +48,16 @@ export function playwrightDriver(page: Page, canRead: (frameUrl: string) => bool
     location: () => locationOf(page.url()),
     // Resolved from the frame list of the last observe, the same one act uses.
     frameUrlOf: (id) => frameUrlOf(page, id),
-    screenshot: () => page.screenshot({ mask: [page.locator(EMBEDDED)] }),
-    bringToFront: () => page.bringToFront(),
+    screenshot: async () => {
+      if (inBackground) throw new Error("no screenshot while the window is in the background; it is taken once the traveller has the window");
+      return page.screenshot({ mask: [page.locator(EMBEDDED)] });
+    },
+    // The hand-off: restore a minimised window, then activate the tab.
+    bringToFront: async () => {
+      if (inBackground) await setWindowState(page, "normal");
+      inBackground = false;
+      await page.bringToFront();
+    },
     waitForNavigation(timeoutMs) {
       return new Promise((resolve) => {
         const finish = (result: PageLocation | "timeout") => {

@@ -39,7 +39,7 @@ const payFound = { text: "Card number 4242 4242 4242 4242", elements: [{ id: "1:
 test("observe never runs code inside a frame outside the hotel's site", async () => {
   const hotel = frame([HOTEL], hotelFound);
   const pay = frame([PAY], payFound);
-  const driver = playwrightDriver(page([hotel, pay]).page, onHotel);
+  const driver = await playwrightDriver(page([hotel, pay]).page, onHotel);
   const seen = await driver.observe();
   assert.equal(hotel.evaluated, 1);
   assert.equal(pay.evaluated, 0, "the provider's frame was not entered");
@@ -51,16 +51,33 @@ test("observe never runs code inside a frame outside the hotel's site", async ()
 
 test("a frame that leaves the hotel's site while it is being read is dropped", async () => {
   const moved = frame([HOTEL, PAY], payFound);
-  const seen = await playwrightDriver(page([moved]).page, onHotel).observe();
+  const seen = await (await playwrightDriver(page([moved]).page, onHotel)).observe();
   assert.deepEqual(seen.text, [{ frameUrl: PAY, text: "" }]);
   assert.equal(seen.elements.length, 0);
 });
 
 test("every screenshot masks every embedded document", async () => {
   const { page: p, shots } = page([frame([HOTEL], hotelFound)]);
-  await playwrightDriver(p, onHotel).screenshot();
+  await (await playwrightDriver(p, onHotel)).screenshot();
   assert.deepEqual(shots, [{ mask: [{ selector: EMBEDDED }] }]);
   for (const tag of ["iframe", "frame", "object", "embed"]) assert.ok(EMBEDDED.split(", ").includes(tag), tag);
+});
+
+test("in the background a screenshot is refused rather than hanging, and the hand-off brings the window back", async () => {
+  const { page: p, shots } = page([frame([HOTEL], hotelFound)]);
+  const calls: string[] = [];
+  const cdp = { send: async (method: string, params?: { bounds?: { windowState?: string } }) => (calls.push(params?.bounds?.windowState ?? method), { windowId: 1 }), detach: async () => {} };
+  (p as unknown as { context: () => unknown }).context = () => ({ newCDPSession: async () => cdp });
+  (p as unknown as { bringToFront: () => Promise<void> }).bringToFront = async () => void calls.push("bringToFront");
+  const driver = await playwrightDriver(p, onHotel, { background: true });
+  assert.deepEqual(calls, ["Browser.getWindowForTarget", "minimized"]);
+  assert.equal((await driver.observe()).elements.length, 1, "reading works in the background");
+  await assert.rejects(driver.screenshot(), /background/);
+  assert.equal(shots.length, 0);
+  await driver.bringToFront();
+  assert.deepEqual(calls.slice(2), ["Browser.getWindowForTarget", "normal", "bringToFront"]);
+  await driver.screenshot();
+  assert.equal(shots.length, 1, "after the hand-off screenshots work again");
 });
 
 test("only index.ts builds the raw driver", () => {
