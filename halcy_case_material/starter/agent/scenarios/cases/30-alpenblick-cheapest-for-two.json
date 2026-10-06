@@ -1,0 +1,48 @@
+{
+  "id": "30-alpenblick-cheapest-for-two",
+  "title": "Unseen hotel: the cheapest room for two",
+  "why": "Debrief rehearsal on an unseen hotel: Gasthof Alpenblick (mock-hotel-3/, built without reading the agent's code) is German throughout, picks dates with day and month dropdowns, shows rooms as cards whose rates open in a modal, charges CHF with a euro guide, adds a pre-ticked service charge on the details page and a city tax (Kurtaxe) stated as a footnote, and puts the card fields on its own page. The message is the only input; nothing in the agent was changed for this hotel. The cheapest room that sleeps two is the Doppelzimmer Seeblick on the Spartarif, CHF 316.80 for two nights, paid now and not refundable; that has to be said. Kurtaxe CHF 18.00 is paid at the hotel.",
+  "message": "Two of us at Gasthof Alpenblick, Tuesday to Thursday next week. Just the cheapest room, no extras.",
+  "replies": [
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "press": "^2$|2 (adult|guest)|two"
+    },
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "say": "Two adults."
+    },
+    {
+      "when": "service|insurance|breakfast|extras|add-on",
+      "press": "^no(\\b|_)|without|none"
+    },
+    {
+      "when": "service|insurance|breakfast|extras|add-on",
+      "say": "No extras."
+    },
+    {
+      "when": "francs|CHF|currency|euro",
+      "press": "continue|go ahead|^yes|fine"
+    },
+    {
+      "when": "francs|CHF|currency|euro",
+      "say": "That is fine, go ahead."
+    }
+  ],
+  "expect": {
+    "outcome": "approved",
+    "room": "doppel",
+    "features": {
+      "cancellable": false
+    },
+    "goal": {
+      "adults": 2,
+      "nights": 2,
+      "checkinWeekday": "Tue"
+    },
+    "says": [
+      "CHF|francs?",
+      "non-?refundable|not refundable|no refund|can(no|')t be (cancel|refund)|nicht erstatt"
+    ]
+  }
+}

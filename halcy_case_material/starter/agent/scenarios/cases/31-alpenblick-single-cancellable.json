@@ -1,0 +1,48 @@
+{
+  "id": "31-alpenblick-single-cancellable",
+  "title": "Unseen hotel: a named room type that must be cancellable",
+  "why": "Debrief rehearsal on an unseen hotel: Gasthof Alpenblick (mock-hotel-3/, built without reading the agent's code) is German throughout, picks dates with day and month dropdowns, shows rooms as cards whose rates open in a modal, charges CHF with a euro guide, adds a pre-ticked service charge on the details page and a city tax (Kurtaxe) stated as a footnote, and puts the card fields on its own page. The message is the only input; nothing in the agent was changed for this hotel. The traveller names the room type. The Einzelzimmer on the Flexibel rate is CHF 360.00 for three nights, nothing now, free cancellation up to two days before; Kurtaxe CHF 13.50 at the hotel; the pre-ticked service charge was not asked for and should be unticked.",
+  "message": "Just me at Gasthof Alpenblick, three nights from next Monday. A single room, and I must be able to cancel.",
+  "replies": [
+    {
+      "when": "service|insurance|breakfast|extras|add-on",
+      "press": "^no(\\b|_)|without|none"
+    },
+    {
+      "when": "service|insurance|breakfast|extras|add-on",
+      "say": "No extras."
+    },
+    {
+      "when": "francs|CHF|currency|euro",
+      "press": "continue|go ahead|^yes|fine"
+    },
+    {
+      "when": "francs|CHF|currency|euro",
+      "say": "That is fine, go ahead."
+    }
+  ],
+  "expect": {
+    "outcome": "approved",
+    "room": "einzel",
+    "features": {
+      "cancellable": true
+    },
+    "goal": {
+      "adults": 1,
+      "nights": 3,
+      "checkinWeekday": "Mon"
+    },
+    "says": [
+      "CHF|francs?"
+    ]
+  },
+  "prefer": {
+    "says": [
+      "373[.,]50",
+      "kurtaxe|city tax|tourist tax"
+    ],
+    "neverSays": [
+      "388[.,]50"
+    ]
+  }
+}
