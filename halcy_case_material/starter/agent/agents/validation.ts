@@ -1,6 +1,7 @@
 // Validation agent: re-verifies one candidate on the live page, in the same
 // browser, and stops before anything that completes a booking.
 
+import { decide, validateChoiceDecision, verdictDecision } from "./decisions.ts";
 import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 import { runAgent } from "../llm/client.ts";
@@ -54,6 +55,7 @@ export async function runValidation(a: AgentContext, deps: ValidationDeps): Prom
   });
   await deps.driver.goto(sourceUrl);
   a.log.event("validation.start", { candidateId: candidate.id });
+  decide(a.log, validateChoiceDecision(a.state, candidate.id));
 
   // What the room should cost on the page that shows the charge: the price it
   // was found at, or the price the traveller has since accepted.
@@ -108,5 +110,6 @@ export async function runValidation(a: AgentContext, deps: ValidationDeps): Prom
   a.state.store.observe(candidate.id, candidate.hotel, nonPrice, "validation");
   if (!reported.accepted) a.state.store.reject(candidate.id, "validation", reported.reasons.join("; "));
   a.log.event("validation.result", { ...reported });
+  decide(a.log, verdictDecision(a.state, reported));
   return reported;
 }

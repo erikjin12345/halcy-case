@@ -4,6 +4,7 @@
 // figures exactly as recorded, the answer is logged with them, and only an
 // accepted answer changes what approval compares against.
 
+import { decide, limitDecision, priceDecision } from "./decisions.ts";
 import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 import type { RunnableTool } from "../llm/client.ts";
@@ -58,6 +59,7 @@ export function priceChangeTool(a: AgentContext): RunnableTool {
       const hotel = a.state.goal?.hotel.name ?? "the hotel";
       const card = priceChangeCard(hotel, offer);
       a.log.event("price.ask", { candidateId, ...offer, title: card.title, lines: card.lines });
+      decide(a.log, priceDecision(a.state, candidateId, offer));
       // It is a question in the chat like any other: log it as one, so the record of what the traveller saw is complete.
       a.log.event("chat.ask", { title: card.title, lines: card.lines, buttons: card.buttons });
       const answer = await askOrType(a.chat, card, timeoutMs);
@@ -115,6 +117,7 @@ export function overLimitTool(a: AgentContext): RunnableTool {
       const hotel = a.state.goal?.hotel.name ?? "the hotel";
       const card = overLimitCard(hotel, over);
       a.log.event("limit.ask", { candidateId, ...over, title: card.title, lines: card.lines });
+      decide(a.log, limitDecision(a.state, candidateId, over));
       a.log.event("chat.ask", { title: card.title, lines: card.lines, buttons: card.buttons });
       const answer = await askOrType(a.chat, card, timeoutMs);
       if (answer.kind === "typed") {
