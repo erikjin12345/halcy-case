@@ -7,7 +7,7 @@
 export const ROOMS = {
   garden: { name: "Garden Room", blurb: "Ground floor, opens onto the garden. No view to speak of.", perNight: 95, sleeps: 2 },
   tower: { name: "Tower Room", blurb: "Top of the old tower, sea view on three sides.", perNight: 140, sleeps: 2, maxNights: 3 },
-  family: { name: "Family Suite", blurb: "Two rooms and a sofa bed, courtyard side.", perNight: 165, sleeps: 4 },
+  family: { name: "Family Suite", blurb: "Two rooms and a sofa bed, courtyard side, with a small balcony.", perNight: 165, sleeps: 4 },
 };
 
 export const RATES = {

@@ -1,0 +1,36 @@
+{
+  "id": "27-casa-bathtub",
+  "title": "A room detail the hotel's site does not state for any room",
+  "why": "The traveller needs a bathtub. Casa Halcy's room descriptions mention size, side, bed and view, never a bathtub or a shower. Nothing on the site says any room has one or lacks one, so the agent must not reject every room and must not pass it silently: it has to tell the traveller the site does not say, before the approval card. The scripted traveller then goes on without it; the cheapest cancellable room midweek is the Classic on the Flexible rate.",
+  "message": "Two of us at Casa Halcy, Tuesday to Thursday next week, cancellable, no breakfast. We need a room with a bathtub.",
+  "replies": [
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "press": "^2$|2 (adult|guest)|two"
+    },
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "say": "Two adults."
+    },
+    {
+      "when": "bathtub|bath",
+      "press": "go on|continue|anyway|without|^yes|book"
+    },
+    {
+      "when": "bathtub|bath",
+      "say": "Go on without it, we will ask the hotel."
+    }
+  ],
+  "expect": {
+    "outcome": "approved",
+    "room": "classic",
+    "features": {
+      "cancellable": true
+    },
+    "says": [
+      "bathtub|bath",
+      "(site|page|hotel|they) (does not|doesn't|do not|don't|says nothing|has no|gives no|never)|could ?n[o']t find|not (stated|said|mentioned|listed|confirmed)|no (information|mention)|can(no|')t (confirm|verify|tell|say)|nothing about"
+    ],
+    "followUp": "required"
+  }
+}

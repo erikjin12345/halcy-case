@@ -94,6 +94,8 @@ can see that the script needs a rule and read the verdict with that in mind.
 | 11 | "Can I pay Halcy instead" |
 | 12 | The traveller says no at the approval card |
 | 13 | A request in Swedish |
+| 14 | A question about the hotel its site does not answer (metro) |
+| 25 to 27 | A question about the hotel its site answers (tram stop); a room detail outside the feature list (balcony); a room detail no room states (bathtub) |
 | 20 to 24 | The second mock hotel, Villa Aurora (`mock-hotel-2/`): a site with another layout that charges in pounds, a room refused for long stays, a room taken on reserving, a budget in kronor |
 
 ## Limits, read before trusting a result

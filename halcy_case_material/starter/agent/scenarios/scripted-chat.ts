@@ -53,8 +53,12 @@ export function scriptedChat(scenario: Pick<Scenario, "replies" | "approve">, ma
       const question = [card.title, ...(card.lines ?? [])].join("\n");
       const labels = card.buttons.map((b) => b.label);
       const base = { kind: "buttons" as const, question, buttons: labels };
+      // The approval card is the case's `approve` setting alone. A rule written for a
+      // follow-up must not press "Not now" on an approval card that happens to
+      // mention the same thing (a card that says the insurance was unticked).
+      const approvalCard = isApprovalCard(card.buttons);
       for (const rule of scenario.replies) {
-        if (rule.press === undefined || !re(rule.when).test(question)) continue;
+        if (approvalCard || rule.press === undefined || !re(rule.when).test(question)) continue;
         const hit = card.buttons.find((b) => matches(b, re(rule.press!)));
         if (hit) return record({ ...base, answer: hit.id, scripted: true, approval: isApprovalCard(card.buttons) });
       }

@@ -125,6 +125,13 @@ test("example ask 3 fails when the traveller ends on the non-refundable rate", (
   assert.equal(passed(grade(s, readOutcome(run("classic-saver", false)))), false);
 });
 
+test("a follow-up rule never decides an approval card", async () => {
+  // Seen in a real run: a rule for "insurance" pressed "Not now" on the approval card that said the insurance was unticked.
+  const { chat } = scriptedChat({ replies: [{ when: "insurance", press: "^no(\\b|_)" }], approve: true });
+  const card = { title: "Continue to payment?", lines: ["The pre-ticked insurance has been unticked."], buttons: [{ id: "continue", label: "Continue to payment" }, { id: "no", label: "Not now" }] };
+  assert.equal(await chat.choose(card), "continue");
+});
+
 test("an agent that keeps asking is stopped", async () => {
   const { chat } = scriptedChat({ replies: [], approve: true }, 2);
   await chat.reply();

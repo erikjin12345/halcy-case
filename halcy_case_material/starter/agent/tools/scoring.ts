@@ -7,6 +7,7 @@ import { z } from "zod";
 import type { RunLog } from "../../log.ts";
 import type { RunnableTool } from "../llm/client.ts";
 import { budgetNote, maxScore, objectiveHash, scoreCandidates } from "../scoring/objective.ts";
+import { unstated, unstatedNote } from "../scoring/free-text.ts";
 import { FEATURES, type RunState } from "../types.ts";
 import { cleanUrl } from "./serial.ts";
 import { sameCurrency } from "../scoring/currency.ts";
@@ -35,6 +36,7 @@ export const factsSchema = z
     cancellable: z.boolean(),
     breakfast_included: z.boolean(),
     view: z.string(),
+    room_details: z.string().describe("What the page says about this room, copied as written: its description and any amenities listed. No summary, nothing added"),
     sleeps: z.number(),
     sold_out: z.boolean(),
   })
@@ -174,7 +176,9 @@ export function candidateTools({ state, log }: StateToolDeps): RunnableTool[] {
       }
       const budgetNotApplied = budgetNote(scored);
       state.budgetNotApplied = budgetNotApplied ?? undefined;
-      const out = { threshold: o.threshold, max: maxScore(o), ranking: state.store.ranked(state.objectiveHash), rejected: state.store.rejected(), ...(budgetNotApplied ? { budgetNotApplied } : {}) };
+      const notStated = unstatedNote(unstated(all, o));
+      state.notStated = notStated ?? undefined;
+      const out = { threshold: o.threshold, max: maxScore(o), ranking: state.store.ranked(state.objectiveHash), rejected: state.store.rejected(), ...(budgetNotApplied ? { budgetNotApplied } : {}), ...(notStated ? { notStated } : {}) };
       log.event("candidates.scored", out);
       return JSON.stringify(out, null, 1);
     },

@@ -36,12 +36,15 @@ the agent must read neither.
 
 All amounts are pounds. Garden Room 95 a night, sleeps 2. Tower Room 140,
 sleeps 2, sea view, stays of up to 3 nights only, and taken by someone else
-on reserving when the stay is exactly 3 nights. Family Suite 165, sleeps 4.
+on reserving when the stay is exactly 3 nights. Family Suite 165, sleeps 4, the only room with a balcony.
 Standard rate: pay on arrival, free cancellation up to 3 days before. Advance
 purchase: 10% off the room, paid today, no refund. Cleaning fee 15 per stay,
 first shown on the review page. Visitor levy 2.50 per person per night, paid
 at the hotel. Insurance 9 per stay, ticked by default. Breakfast basket 12 per
 person per night, not ticked. Euro guide: pounds times 1.17, rounded.
+
+`/location` says the nearest stop is Pier Gardens on tram line 2, four minutes
+on foot. Casa Halcy's site says nothing about transport.
 
 It is a test site, not a second target: nothing in the agent may be written
 for it, any more than for Casa Halcy.

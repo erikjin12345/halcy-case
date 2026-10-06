@@ -11,7 +11,9 @@ room name, rate name, total price, the currency as the page writes it (the
 symbol or code next to the price, such as € or EUR), what is charged now
 versus at the hotel,
 whether it is cancellable, whether breakfast is included, how many it sleeps,
-and whether it is sold out. Record sold-out rooms too, marked as such.
+whether it is sold out, and in `room_details` what the page says about the
+room, copied as written (its description and any listed amenities, nothing
+added). Record sold-out rooms too, marked as such.
 Use `sold_out: true` only when the page says the room is unavailable for the
 dates. A room that is offered but too small for the party is not sold out:
 record `sleeps` with the number the page gives and leave `sold_out` false.

@@ -1,0 +1,51 @@
+{
+  "id": "26-aurora-room-with-a-balcony",
+  "title": "Second hotel: a room attribute outside the feature list",
+  "why": "The traveller wants a balcony and says it matters more than the price. Only the Family Suite has one, and the site says so in the room's description. A balcony is not one of the features the agents record, so nothing in scoring can prefer or require it; the cheapest cancellable room, the Garden Room, has none. A correct run ends on the Family Suite on the Standard rate, GBP 355.00 with the cleaning fee and visitor levy, or tells the traveller before approval that it could not establish which room has a balcony.",
+  "message": "Two of us at Villa Aurora, Tuesday to Thursday next week. We want a room with a balcony, that matters more than the price. It has to be cancellable. No extras.",
+  "replies": [
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "press": "^2$|2 (adult|guest)|two"
+    },
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "say": "Two adults."
+    },
+    {
+      "when": "insurance|breakfast basket|extras",
+      "press": "^no(\\b|_)|without|none"
+    },
+    {
+      "when": "insurance|breakfast basket|extras",
+      "say": "No extras."
+    },
+    {
+      "when": "pounds|GBP|sterling|exchange|currency|euro",
+      "press": "continue|go ahead|^yes|fine|approve"
+    },
+    {
+      "when": "pounds|GBP|sterling|exchange|currency|euro",
+      "say": "That is fine, go ahead."
+    },
+    {
+      "when": "balcony",
+      "press": "family|balcony|^yes|continue"
+    },
+    {
+      "when": "balcony",
+      "say": "Yes, the room with the balcony."
+    }
+  ],
+  "expect": {
+    "outcome": "approved",
+    "room": "family",
+    "features": {
+      "cancellable": true
+    },
+    "says": [
+      "balcony",
+      "355([.,]00)?"
+    ]
+  }
+}
