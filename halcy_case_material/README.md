@@ -20,6 +20,24 @@ Pick one of the example asks under the message box (or write your own) and send 
 - `HEADLESS=1 npm run chat` runs the browser without a visible window. On Windows PowerShell: `$env:HEADLESS="1"; npm run chat`.
 - Use `localhost` addresses, not `127.0.0.1`: the hotel and its payment provider check each other's addresses when they talk.
 
+## Every local address
+
+What `npm run dev` starts, and what each address is for. Use `localhost`, not `127.0.0.1`.
+
+| Address | What it is | Who uses it |
+| ------- | ---------- | ----------- |
+| http://localhost:4200 | **The chat** with the booking agent (`npm run dev`, or `npm run chat:booking`). Open this one | The traveller |
+| http://localhost:4100 | **Casa Halcy**, the first mock hotel's booking site | The agent, and the traveller at payment |
+| http://localhost:4101 | **MockPay**, Casa Halcy's payment provider; its card fields sit in a frame inside the hotel's page | The traveller only |
+| http://localhost:4101/__phone | **The traveller's phone** for Casa Halcy: bank codes arrive here | The traveller only, never the agent |
+| http://localhost:4100/__admin/bookings | Casa Halcy's confirmed bookings and any card charged without a booking, as JSON | You, to check a run; never the agent |
+| http://localhost:4500 | **Villa Aurora**, the second mock hotel (`npm run hotel2`): another layout, prices in GBP, a euro guide on the room list | The agent, and the traveller at payment |
+| http://localhost:4501 | **PayBridge**, Villa Aurora's payment provider; the whole tab goes there to pay and comes back | The traveller only |
+| http://localhost:4501/__phone | **The traveller's phone** for Villa Aurora | The traveller only, never the agent |
+| http://localhost:4500/__admin/bookings | Villa Aurora's confirmed bookings, as JSON | You, to check a run; never the agent |
+
+`starter/hotels.json` maps hotel names to these sites; the agent only offers hotels whose site answers when a run starts. Ports can be moved with `CHAT_PORT`, `HOTEL_PORT`, `PAY_PORT`, `HOTEL2_PORT` and `PAY2_PORT`. Test hotels on the branch `test/unseen-hotels` use 4600 and up (see `test-hotels/README.md` there).
+
 ## The mock hotel
 
 | Address                                    | What it is                                                                                                                        |
