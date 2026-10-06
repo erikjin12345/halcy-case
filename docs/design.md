@@ -5,8 +5,8 @@ website, while the traveller pays the hotel directly. It answers the three
 questions in `halcy_case_material/BRIEF.md`.
 
 **State on 2026-10-06.** Built and run on two mock hotels with different
-layouts. All 13 scenario cases have met a real run; one full booking and every
-payment failure path have run with a script standing in for the traveller. A
+layouts, and rehearsed on a third built blind. Every payment failure path has
+run with a script standing in for the traveller. A
 person has paid once, in the visible window on Casa Halcy, on a pay-now rate:
 confirmed, reference CH-972001. Nothing has run on a real hotel site.
 What is and is not shown is in `limitations/`.
@@ -14,8 +14,22 @@ What is and is not shown is in `limitations/`.
 ## 1. Architecture
 
 One Node process holds the chat server, four model-driven roles, scoring in
-code, the payment hand-off and one Chromium browser. Code is under
+code and the payment hand-off. Code is under
 `halcy_case_material/starter/agent/`.
+
+- **Browsers.** Search runs one headless browser per hotel, up to three at
+  once. Validation and the hand-off share one visible browser, opened only at
+  validation, kept minimised and tucked in a screen corner, and brought
+  forward when the traveller is to pay.
+- **Hotels that are down.** Each hotel's site is probed once per run (1 s).
+  One that does not answer is not offered or searched; if the traveller named
+  it, they are told its site is not answering.
+- **Activity log.** Beside the conversation, a folded grey panel shows each
+  step: tools called, pages read, candidates and why they were rejected,
+  scores, validation reasons. It is built from the run log after its card
+  scrub, never by asking a model for its reasoning, and shows nothing from
+  the payment except "you are paying in the hotel's window" and the outcome.
+  The chat itself carries only concrete answers.
 
 ```mermaid
 flowchart LR
@@ -58,7 +72,7 @@ flowchart LR
    to hold the same room again once, and re-checks. Then it goes blind: no
    read, action or screenshot.
 7. The traveller types the card, ticks the conditions and confirms with their
-   bank in the hotel's page.
+   bank in the hotel's page, in the window that has now come forward.
 8. The wait ends when the tab is back on the hotel's site on another page, a
    chat button is pressed, the window closes or the deadline passes. Code
    reads the hotel's page once, with card fields redacted, and decides a
@@ -71,26 +85,23 @@ stop, parking or the neighbourhood, come in the product from Halcy's places
 database, which `hotels.json` stands in for. A hotel's site describes itself
 in its own favour, may say nothing, and says it differently everywhere; a
 places database holds the same fields for every hotel and can be checked
-against a map. The prototype has no such source, so it quotes the hotel and
-says so, or says the site does not say. On Villa Aurora it quoted "The
-nearest stop is Pier Gardens on tram line 2, about four minutes on foot"; on
-Casa Halcy, whose site says nothing about transport, it said "Metro: the site
-does not say" and did not guess.
+against a map. The prototype has no such source, so it opens the hotel's own
+location or facilities pages, quotes the hotel and says so, or says it did
+not find it on the pages it checked, never that the site does not say. On
+Villa Aurora it quoted "The nearest stop is Pier Gardens on tram line 2, about
+four minutes on foot"; on Casa Halcy, whose site says nothing about
+transport, it said so and did not guess.
 
 **At scale.** With hundreds of hotels or rooms, live browsing must be the
 last step, not the first. Candidates come from Halcy's places database with
 cached static facts (room types, amenities, location) filtered by hard
-constraints, so only the top few hotels are browsed. Raw fetches and
-candidates are cached with freshness per field: prices for minutes, static
-facts for days (`infrastructure.md`). Search runs as parallel workers with a
-concurrency limit per site. Where a hotel offers a booking-engine API or
-structured data, it is read directly and the browser is kept for validation
-and the hand-off. Recipes learned per booking engine let repeated sites need
-fewer model turns. Of this, the prototype has scoring and re-ranking in code
-without a new search, the Store seam for a shared cache, a session cache that
-re-ranks a hotel already searched for the same dates and party (fresh for 10
-minutes; validation always re-reads the live price), and parallel search with
-one headless browser per hotel. The places database, cross-session caches,
+constraints, so only the top few hotels are browsed. Facts are cached with freshness per field:
+prices for minutes, static facts for days (`infrastructure.md`). Where a hotel
+offers a booking-engine API, it is read directly and the browser is kept for
+validation and the hand-off; recipes learned per booking engine cut model
+turns. The prototype has re-ranking in code without a new search, a session
+cache (10 minutes; validation always re-reads the live price) and parallel
+search. The places database, cross-session caches,
 API readers and learned recipes are design only.
 
 Production layout, not deployed: the same roles in a Cloud Run worker and the
@@ -179,8 +190,11 @@ every message names the hotel as the seller.
 
 **Why Halcy stays out, in layers.** The driver never enters a frame outside
 the hotel's site. During the hand-off nothing is observed, acted on or
-screenshotted. Card-like fields on the hotel's own page are redacted by
-field. The run log refuses page events while blind and scrubs card-like
+screenshotted. Card and bank-code fields on the hotel's own page are found
+by their attributes first (`autocomplete` cc-* and one-time-code, field names
+such as card or cvc), so it does not depend on the page's language; those are
+never read at all. Labels in eight languages and a Luhn-valid value are the
+fallback. The run log refuses page events while blind and scrubs card-like
 numbers, and an audit fails any log that breaks this. "Booked" is said only
 when code finds the reference verbatim on a hotel page. The traveller ticks
 the conditions; the agent does not.
@@ -206,8 +220,8 @@ The traveller writes a request, answers a question or two, approves one card
 and pays in the hotel's page. The approval card shows room, dates, "Room
 €404.00", "Tourist tax, paid at the hotel: €16.00", "Total €420.00",
 "Charged now: €0.00", "Paid at the hotel, to Casa Halcy: €420.00", the
-cancellation terms, what differs from the request, what the site does not
-say, and, when the hotel charges in another currency than the traveller's,
+cancellation terms, what differs from the request, what it did not
+find, and, when the hotel charges in another currency than the traveller's,
 an estimate beside each amount: "≈ 4,726 kr (estimate at the ECB rate of 5
 Oct; your bank's rate and fees decide the final amount)". The result reads "You're
 booked with Casa Halcy. Booking reference CH-711228. ... Your booking and
@@ -239,43 +253,34 @@ question.
 | Hostile page text | Page text reaches models as data; payment fields cannot be acted on | Nothing; not tested |
 | A site we cannot drive | Search stops after three failed attempts | Told so, nothing booked |
 
-**Exchange rates.** The hotel's own figure, in its own currency, is what the
-traveller agrees to and pays. Beside it Halcy shows an estimate in the
-traveller's currency, made in code from the ECB's daily euro reference rates
-(a bundled snapshot with its date when the fetch fails; no estimate when
-neither exists), labelled as an estimate with the rate's date. A model never
-converts: it quotes text from `estimate_prices` and `compare_prices`. Hotels
-in different currencies are compared on the estimate ("Casa Halcy is about
-6% cheaper than Villa Aurora at the ECB rate of 5 Oct"), and under 3% they
-are called too close to call. A limit in another currency is applied to the
-estimate, and within 3% of the limit the traveller is asked. What stays
-uncertain: the bank's own rate and fees, a different rate on the day the
-part paid at the hotel is charged, and a "pay in your own currency" offer
-inside the provider's frame, which is never seen. Choosing the charge
-currency over a guide price is still the search model's doing.
+**Exchange rates.** The traveller agrees to and pays the hotel's own figure
+in its own currency. Beside it Halcy shows an estimate in the traveller's
+currency, made in code from the ECB's daily reference rates and labelled with
+the rate's date; a model never converts. Hotels in different currencies are
+compared on the estimate, and under 3% apart they are called too close to
+call. The bank's own rate and fees, and a "pay in your own currency" offer in
+the provider's frame, stay outside what Halcy can see.
 
 ## 6. How we would know it works before launch
 
-**What exists.** 13 scenario cases with a scripted traveller and a grader
-that reads the run log; every case must pass the payment-boundary audit, log
-no error and never have two agents on the browser. About 135 unit tests. CI
+**What exists.** 23 scenario cases (14 on Casa Halcy, 9 on the second
+hotel) with a scripted traveller and a grader that reads the run log; every
+case must pass the payment-boundary audit, log no error and never have two
+agents on one browser. About 210 unit tests. CI
 runs typecheck, tests and the audit; live runs are started by hand.
 
-**Results.** All 13 cases have met a real run; twelve pass, and 07 now passes
+**Results.** The 13 first cases have all met a real run and pass, 07
 after PR #29. The payment step has one full booking behind the orchestrator
 and, with a stand-in, every failure path in section 4 plus a pay-now rate,
 Cancel, a closed tab and an expired hold. Every run log passes the audit.
 
-**A second hotel found what the first could not.** Different markup,
-per-night prices, a fee shown late, a pre-ticked insurance, a hold stated as
-"until 15:47", payment by redirect. The euro version reached the card 3 of 3
-in about 90 s. The hand-off ran there twice with scripts standing in for
-validation and the traveller: the tab went to the provider and back, once
-confirmed ("charged now GBP 186.00, paid at the hotel GBP 10.00") and once
-declined in the hotel's words. The pound version exposed a price recorded as text, a levy
-counted into the price, a dead end after a mismatch, and a hold format the
-hand-off could not read; all four are now fixed (PRs #29, #31). That is the
-argument for testing on many sites.
+**A second hotel found what the first could not**: per-night prices, a fee
+shown late, a hold stated as "until 15:47", payment by redirect, prices in
+pounds. Its cases reached the card; the hand-off ran there with scripts as
+validation and traveller, confirmed once and declined once. It exposed a
+price recorded as text, a levy counted into the price, a dead end after a
+mismatch and a hold the hand-off could not read; all are fixed (PRs #29, #31).
+That is the argument for testing on many sites.
 
 **What a pass is worth.** The grader has been wrong once, passing a run that
 ended on the wrong rate. Up to the card it reads what agents recorded; the

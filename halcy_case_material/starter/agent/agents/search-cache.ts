@@ -30,3 +30,8 @@ export function cachedSearch(state: RunState, goal: SearchGoal, now = Date.now()
 export function rememberSearch(state: RunState, goal: SearchGoal, summary: string, now = Date.now()): void {
   state.searchCache[searchKey(goal)] = { at: now, summary };
 }
+
+/** Drop the earlier search for this goal, so the next run_search reads the site again. */
+export function forgetSearch(state: RunState, goal: SearchGoal): void {
+  delete state.searchCache[searchKey(goal)];
+}

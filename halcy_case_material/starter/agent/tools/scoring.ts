@@ -197,7 +197,15 @@ export async function scoreAll(state: RunState, log: StateToolDeps["log"]): Prom
       const budgetNotApplied = [budgetNote(scored), estimateNote(scored.flatMap((s) => s.capsEstimated), rates)].filter(Boolean).join(" ") || null;
       state.budgetNotApplied = budgetNotApplied ?? undefined;
       const notStated = [unstatedNote(unstated(all, o)), roomTypeNote(unmatchedRoomType(all, o))].filter(Boolean).join(" ") || null;
-      const ratesMissing = missingRatesNote(missingRates(all));
+      const pageOf = (c: { features: Record<string, { value: unknown } | undefined> }) => {
+        const url = c.features.source_url?.value;
+        try {
+          return typeof url === "string" ? state.pages[new URL(url).pathname] : undefined;
+        } catch {
+          return undefined;
+        }
+      };
+      const ratesMissing = missingRatesNote(missingRates(all, pageOf));
       state.notStated = notStated ?? undefined;
       const out = { threshold: o.threshold, max: maxScore(o), ranking: state.store.ranked(state.objectiveHash), rejected: state.store.rejected(), ...(budgetNotApplied ? { budgetNotApplied } : {}), ...(notStated ? { notStated } : {}), ...(ratesMissing ? { ratesMissing } : {}) };
       log.event("candidates.scored", out);

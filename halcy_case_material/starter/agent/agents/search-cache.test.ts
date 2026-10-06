@@ -24,3 +24,14 @@ test("a changed preference reuses the earlier search; past the freshness limit i
   assert.equal(cachedSearch(state, goal, 1_000 + SEARCH_FRESH_MS + 1), undefined);
   assert.equal(cachedSearch(state, { ...goal, adults: 2 }, 2_000), undefined);
 });
+
+test("forgetting a search makes the next run_search read the site again, for that hotel only", async () => {
+  const { forgetSearch } = await import("./search-cache.ts");
+  const state = newRunState(memoryStore());
+  const other = { ...goal, hotel: { name: "Villa Aurora", url: "http://v" } };
+  rememberSearch(state, goal, "rooms without their rates", 1_000);
+  rememberSearch(state, other, "other hotel", 1_000);
+  forgetSearch(state, { ...goal, preferences: ["cheapest rate"] });
+  assert.equal(cachedSearch(state, goal, 2_000), undefined, "a fresh search is not blocked by the earlier list");
+  assert.equal(cachedSearch(state, other, 2_000)?.summary, "other hotel");
+});
