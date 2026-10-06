@@ -76,6 +76,22 @@ nearest stop is Pier Gardens on tram line 2, about four minutes on foot"; on
 Casa Halcy, whose site says nothing about transport, it said "Metro: the site
 does not say" and did not guess.
 
+**At scale.** With hundreds of hotels or rooms, live browsing must be the
+last step, not the first. Candidates come from Halcy's places database with
+cached static facts (room types, amenities, location) filtered by hard
+constraints, so only the top few hotels are browsed. Raw fetches and
+candidates are cached with freshness per field: prices for minutes, static
+facts for days (`infrastructure.md`). Search runs as parallel workers with a
+concurrency limit per site. Where a hotel offers a booking-engine API or
+structured data, it is read directly and the browser is kept for validation
+and the hand-off. Recipes learned per booking engine let repeated sites need
+fewer model turns. Of this, the prototype has scoring and re-ranking in code
+without a new search, the Store seam for a shared cache, a session cache that
+re-ranks a hotel already searched for the same dates and party (fresh for 10
+minutes; validation always re-reads the live price), and parallel search with
+one headless browser per hotel. The places database, cross-session caches,
+API readers and learned recipes are design only.
+
 Production layout, not deployed: the same roles in a Cloud Run worker and the
 hotel's site in a WebView in the Halcy app, so the hotel session is the
 phone's own (`infrastructure.md`, `../agent/WEBVIEW-PLAN.md`).
