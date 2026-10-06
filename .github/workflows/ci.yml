@@ -1,6 +1,7 @@
 # Pull request checks. Kept to what the case can be disqualified on:
-# the code compiles and the tests pass. The payment-boundary audit is
-# planned as a third job once the hand-off code exists (agent/payment/).
+# the code compiles, the tests pass (including the payment-boundary tests
+# under starter/agent/tools and starter/agent/evidence), and every run log
+# checked in for the submission passes the blind-interval audit.
 name: ci
 on:
   pull_request:
@@ -22,3 +23,4 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      - run: npm run audit:runs
