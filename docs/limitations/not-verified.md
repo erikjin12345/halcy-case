@@ -8,10 +8,10 @@ only with a run log, a test or a source to point at. State as of 2026-10-06
 
 | #   | Claim | What exists instead | What would verify it |
 | --- | ----- | ------------------- | -------------------- |
-| N1  | A person can pay in the visible window and the chat reports the booking | Runs with a script standing in for the traveller, browser without a window | The developer plays the traveller with `npm run chat:booking` |
-| N2  | The hand-off works with a real window (`bringToFront`, the window being found) | All automated runs forced `visible` with a headless browser | Same as N1 |
+| N1  | A person can pay in the visible window and the chat reports the booking | The developer's own attempt reached the hand-off and pressed "I'm done" before paying (run `2026-10-06T08-31-47-748Z-booking`); the run ended, which PR #51 changes. Payments so far only by a script standing in for the traveller | The developer completes one payment with `npm run dev` |
+| N2  | The window is found and in front at the hand-off, and nothing shows before it | The window is opened at search or validation, tucked and minimised, then restored at the hand-off (PR #45, #51); checked by reading its bounds, not by a person watching | Same as N1 |
 | N6  | Any ask other than example ask 1 through payment with the orchestrator in front, including a long stay with the price rise | Ask 3 reached the approval card in a run without a window, and the hand-off refused to start there, as designed | Runs with a window or the stand-in |
-| N8  | Anything on a hotel site other than Casa Halcy | Nothing | A second mock; the debrief |
+| N8  | Anything on a hotel site other than the two mocks | A second mock (Villa Aurora) ran the scenarios and the payment step | The debrief's hotel |
 | N10 | Card fields on the hotel's own page are redacted in a real browser | Unit tests on observation objects | A mock variant with inline fields |
 | N11 | A non-English hotel site or request | One Swedish scenario case exists | Its result, once run |
 | N24 | The "price has changed" card when a fresh hold comes back with other figures | Unit tests | A mock that changes its price between two holds |
