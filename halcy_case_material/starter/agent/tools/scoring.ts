@@ -2,6 +2,7 @@
 // Store of candidates and evaluations. Scoring is deterministic
 // (scoring/objective.ts); the model only sets the parameters.
 
+import { decide, objectiveDecision, scoringDecisions } from "../agents/decisions.ts";
 import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 import type { RunLog } from "../../log.ts";
@@ -104,6 +105,7 @@ export function applyObjective(state: RunState, log: StateToolDeps["log"], input
         if (!stillHard.has(constraint) && constraint !== "validation") readmitted += state.store.readmit(constraint);
       }
       log.event("objective.set", { objective: state.objective, hash: state.objectiveHash, explanation, notes, readmitted });
+      decide(log, objectiveDecision(state.objective, explanation));
       return `Objective recorded. Maximum possible score is ${maxScore(state.objective)}.`;
   }
 }
@@ -209,5 +211,6 @@ export async function scoreAll(state: RunState, log: StateToolDeps["log"]): Prom
       state.notStated = notStated ?? undefined;
       const out = { threshold: o.threshold, max: maxScore(o), ranking: state.store.ranked(state.objectiveHash), rejected: state.store.rejected(), ...(budgetNotApplied ? { budgetNotApplied } : {}), ...(notStated ? { notStated } : {}), ...(ratesMissing ? { ratesMissing } : {}) };
       log.event("candidates.scored", out);
+      for (const d of scoringDecisions(state, out.ranking, out.rejected, o.threshold)) decide(log, d);
       return JSON.stringify(out, null, 1);
 }
