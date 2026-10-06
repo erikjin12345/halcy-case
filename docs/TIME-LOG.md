@@ -5,7 +5,7 @@ The case is capped at **8 hours**. The debrief will ask where the hours went.
 | Item            | Value                                          |
 | --------------- | ---------------------------------------------- |
 | Session start   | 2026-10-06 10:52 HKT (UTC+8)                   |
-| Hard deadline   | 2026-10-06 18:52 HKT                           |
+| Hard deadline   | 2026-10-06 18:52 HKT, plus paused time (below) |
 | Source          | Creation time of this Claude Code session file |
 
 ## Where the hours went
@@ -28,5 +28,19 @@ The case is capped at **8 hours**. The debrief will ask where the hours went.
 | 12:52      | 2:00    | Review fixes on PR #7; payment hand-off sequence built and run against the mock (confirmed and declined), PR #11 |
 | 12:59      | 2:07    | Merged #9 into #7 and #11 ahead of time; review fixes; first full run behind the orchestrator: chat message to confirmed booking in 151 s |
 | 13:30      | 2:38    | PR #14 for the fix that missed #11; review of #15; `docs/limitations/` (trade-offs, limitations, not verified) and the two-hourly documentation review routine |
+| 13:41      | 2:49    | Break starts; the clock is paused (see Breaks)                |
 
 Add a row whenever a phase ends. Keep it honest; it is part of the submission.
+
+## Breaks
+
+The 8 hours count working time. The clock is paused while Erik is away and no
+Claude session is working. A stretch in which a session keeps working during a
+break still counts. The hard deadline moves later by the total paused time, and
+`Elapsed` above counts working time only.
+
+| Start (HKT) | End (HKT) | Paused | Note |
+| ----------- | --------- | ------ | ---- |
+| 13:41       | open      | open   | 2:49 elapsed at the start. No open PRs. Every session's last activity was 13:28 to 13:30; only the mock hotel server was left running. A documentation review is scheduled for 14:03 and counts if it runs. |
+
+Fill in `End` and `Paused` when work resumes, from the session transcripts.
