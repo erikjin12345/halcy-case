@@ -24,9 +24,30 @@ export function isSensitiveField(el: PageElement): boolean {
   return el.type === "password" || SENSITIVE_NAME.test(el.name) || looksLikeCard(el.value ?? "") || looksLikeCard(el.name);
 }
 
+/**
+ * One run of asterisks or x, a space, then four digits. A masked card can look
+ * like this, but so can a star rating before a year ("***** 2024") and a
+ * footnote mark before a price ("** 1200"). Bullets, several groups, or a mask
+ * that touches the digits are never weak: nothing else is written that way.
+ */
+const WEAK_PREFIX = /^(?:\*+|[xX]+)\s+$/;
+
+/** Says a nearby masked number is a payment card. Only consulted for a weak prefix. */
+const CARD_WORD = /card|visa|master|maestro|amex|american express|diners|discover|debit|credit|paid with|charged to|kort|karte|carte|tarjeta|cart[aã]o/i;
+
+/** How far back to look for a card word: the same line and the one or two before it. */
+const CONTEXT_CHARS = 80;
+
+function maskAfterPrefix(text: string): string {
+  return text.replace(MASKED_PREFIX, (match: string, prefix: string, offset: number) => {
+    const weak = WEAK_PREFIX.test(prefix) && !CARD_WORD.test(text.slice(Math.max(0, offset - CONTEXT_CHARS), offset));
+    return weak ? match : `${prefix}••••`;
+  });
+}
+
 /** Card-like numbers and last-four mentions removed from free text. */
 export function redactText(text: string): string {
-  return redactCardNumbers(text).data.replace(LAST_FOUR, "$1 ••••").replace(MASKED_PREFIX, "$1••••");
+  return maskAfterPrefix(redactCardNumbers(text).data.replace(LAST_FOUR, "$1 ••••"));
 }
 
 /**
