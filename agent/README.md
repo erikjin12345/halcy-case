@@ -9,6 +9,7 @@ Planning folder for the whole booking agent. No code yet. Conventions are in
 | ----------------- | ----------------------------------------------------------------------------- |
 | `CLAUDE.md`       | Conventions: English only, short files, payment boundary, logging             |
 | `ARCHITECTURE.md` | The four-agent design (orchestrator, web search, objective function, validation) and an assessment against the brief |
+| `MODELS.md`       | Which model does which job, cost per booking, what we measure                 |
 | `payment/`        | The payment hand-off module that runs after the four agents                   |
 | `payment/README.md` | Goals and hard limits of the hand-off                                       |
 | `payment/TRAPS.md`  | Every trap in the mock hotel, its effect, and ways around it                |
@@ -37,3 +38,6 @@ One line per decision, with a date. Open questions live in
   in the 2.9 three-table shape. No sqlite or Docker for the prototype: the
   hold and browser session die with the run anyway, and evidence is in
   `RunLog`. A Firestore store implements the same interface later.
+- 2026-10-06: Model choices written up in `MODELS.md`. Defaults stay on
+  `claude-opus-5-5` for every role. Proposed: search moves to a cheaper model
+  once measured against Opus on the example asks; the other three stay.
