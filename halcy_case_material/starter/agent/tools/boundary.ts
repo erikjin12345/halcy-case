@@ -4,6 +4,9 @@
 
 import type { RunLog } from "../../log.ts";
 
+/** Ends the blind interval it was handed out for. Logs once; calling it again does nothing. */
+export type EndBlind = (outcome: string) => void;
+
 export class PaymentBoundary {
   private readonly origins = new Set<string>();
   private blindSince: number | null = null;
@@ -42,18 +45,24 @@ export class PaymentBoundary {
     return this.blindSince !== null;
   }
 
-  /** From here until endBlind(), no observe, act or screenshot is served. */
-  beginBlind(reason: string): void {
-    if (this.blind) return;
-    this.blindSince = Date.now();
+  /**
+   * From here until the returned function is called, no observe, act or
+   * screenshot is served. The return value is the only way to end blind mode:
+   * no tool or agent that merely holds the boundary can. Call it in a
+   * `finally`, with the outcome, so the run log always closes the interval.
+   */
+  beginBlind(reason: string): EndBlind {
+    if (this.blind) throw new Error("already blind: only the holder of the first ender can end it");
+    const since = Date.now();
+    this.blindSince = since;
     this.log.event("handoff.blind.start", { reason });
-  }
-
-  endBlind(outcome: string): void {
-    if (!this.blind) return;
-    const ms = Date.now() - (this.blindSince ?? Date.now());
-    this.blindSince = null;
-    this.log.event("handoff.blind.end", { outcome, ms });
+    let ended = false;
+    return (outcome) => {
+      if (ended) return;
+      ended = true;
+      this.blindSince = null;
+      this.log.event("handoff.blind.end", { outcome, ms: Date.now() - since });
+    };
   }
 
   /** Human-readable note for the model about a frame it may not read. */

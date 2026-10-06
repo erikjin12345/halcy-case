@@ -22,12 +22,13 @@ test("only the hotel's own origin may be read", () => {
 test("blind mode blocks everything, even the hotel's origin, and is logged", () => {
   const { log, events } = fakeLog();
   const b = new PaymentBoundary("http://localhost:4100/", log);
-  b.beginBlind("traveller takes over");
+  const end = b.beginBlind("traveller takes over");
   assert.equal(b.blind, true);
   assert.equal(b.allows("http://localhost:4100/payment"), false);
-  b.beginBlind("again");
-  b.endBlind("url changed");
-  b.endBlind("again");
+  assert.throws(() => b.beginBlind("again"), "a second begin hands out no ender");
+  assert.equal("endBlind" in b, false, "no public member ends blind mode");
+  end("url changed");
+  end("again");
   assert.equal(b.blind, false);
   assert.equal(b.allows("http://localhost:4100/confirmation/CH-1"), true);
   assert.deepEqual(

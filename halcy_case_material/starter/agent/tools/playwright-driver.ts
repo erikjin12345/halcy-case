@@ -10,7 +10,7 @@ import { locationOf, type PageDriver, type PageLocation } from "./driver.ts";
 /** Everything that embeds another document. All of it is masked in every screenshot. */
 export const EMBEDDED = "iframe, frame, object, embed";
 
-export function playwrightDriver(page: Page, canRead: (frameUrl: string) => boolean = () => true): PageDriver {
+export function playwrightDriver(page: Page, canRead: (frameUrl: string) => boolean): PageDriver {
   const listeners = new Set<(to: PageLocation) => void>();
   page.on("framenavigated", (frame) => {
     if (frame !== page.mainFrame()) return;
