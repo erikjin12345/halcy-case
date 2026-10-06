@@ -108,3 +108,11 @@ test("the traveller is not asked when the total is within the limit", async () =
   assert.match(await tool.run({ candidateId: "classic-flex" }), /^Refused/);
   assert.equal(cards.length, 0);
 });
+
+test("the price-change card is logged as a question in the chat, with its words", async () => {
+  const { tool, events } = context(ACCEPT);
+  await tool.run({ candidateId: "classic-flex" });
+  const asked = events.find((e) => e.type === "chat.ask")!;
+  assert.equal(asked.data.title, "Casa Halcy's price has gone up");
+  assert.ok((asked.data.lines as string[]).includes("Room when I found it: €928.00"));
+});
