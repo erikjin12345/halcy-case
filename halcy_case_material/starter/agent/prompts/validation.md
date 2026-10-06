@@ -9,7 +9,9 @@ Whatever an earlier check left behind is gone. From there, select this
 candidate's room and this candidate's rate, and verify:
 
 1. Dates and number of guests on the page match the goal.
-2. Room name and rate name match the candidate.
+2. Room name and rate name match the candidate. Select the candidate's own
+   rate by its name. Never pick a different rate because its price matches;
+   if the candidate names no rate, report rejected with "no rate recorded".
 3. The price of the room itself matches the expected room price you are
    given. Make this comparison on the page that shows the charge, the last one
    before payment: compare the room line there, before taxes, fees and

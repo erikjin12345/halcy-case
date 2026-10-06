@@ -40,6 +40,13 @@ term is only visible one step further; never reach a page that asks for payment.
   fill it with their ages. If it has none, the guests count is everyone.
   Record any child policy the site states (free under a certain age, cots)
   in the room's facts or your summary.
+- **Rates behind a control.** A room often shows one price on the list, with
+  its rates (refundable or not, breakfast or not) behind a button, link,
+  dialog or expandable row, for example "See prices", "Show rates" or
+  "Select room". Open it and record one candidate per rate, each with its own
+  rate name, price and terms; close it and go to the next room. A candidate
+  without a rate name is incomplete: `score_candidates` lists such
+  candidates as `ratesMissing`, and you open their rates and record again.
 - **A dialog after you click** (upgrade offer, "are you sure"). Choose the
   option that keeps what you already chose. Record the offer as a fact if it
   states a price, but never accept it.

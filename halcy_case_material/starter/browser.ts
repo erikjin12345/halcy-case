@@ -158,9 +158,16 @@ export async function act(page: Page, action: Action): Promise<void> {
     case "fill":
       await el.fill(action.value, { timeout: 5000 });
       break;
-    case "select":
-      await el.selectOption({ label: action.value }, { timeout: 5000 });
+    case "select": {
+      // The model names the option as it reads it. Option text and value often
+      // differ ("13." shown, "13" sent), so match text, then value, then a
+      // text that starts with it, before waiting for anything.
+      const want = action.value.trim().toLowerCase();
+      const options = await el.locator("option").evaluateAll((os) => os.map((o) => ({ text: (o.textContent ?? "").trim().toLowerCase(), value: (o as HTMLOptionElement).value })));
+      const hit = options.find((o) => o.text === want) ?? options.find((o) => o.value.toLowerCase() === want) ?? options.find((o) => o.text.startsWith(want));
+      await el.selectOption(hit ? { value: hit.value } : { label: action.value }, { timeout: 5000 });
       break;
+    }
     case "check":
       await el.setChecked(action.checked, { timeout: 5000 });
       break;
