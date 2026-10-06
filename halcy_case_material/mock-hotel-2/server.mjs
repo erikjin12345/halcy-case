@@ -47,6 +47,7 @@ const hotel = http.createServer(async (req, res) => {
 
   if (route === "GET /") return html(res, page.searchPage(q));
   if (route === "GET /conditions") return html(res, page.conditionsPage());
+  if (route === "GET /location") return html(res, page.locationPage());
   if (route === "GET /__admin/bookings") return res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(confirmed, null, 2));
   if (route === "GET /availability") {
     const stay = parseStay(q);

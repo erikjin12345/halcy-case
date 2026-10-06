@@ -37,6 +37,7 @@ export const FEATURES = [
   "cancellable",
   "breakfast_included",
   "view",
+  "room_details",
   "sleeps",
   "sold_out",
 ] as const;
@@ -103,6 +104,8 @@ export interface RunState {
   objectiveHash?: string;
   /** Set by scoring when a price cap could not be applied because of the currency; the orchestrator must tell the traveller. */
   budgetNotApplied?: string;
+  /** Set by scoring when a required room detail is stated for no room; the orchestrator must tell the traveller. */
+  notStated?: string;
   store: Store;
   /** The currency the hotel says it charges in, once any page or validation has shown it. Prices in another currency are refused. */
   chargeCurrency?: string;

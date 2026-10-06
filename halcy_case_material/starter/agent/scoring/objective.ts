@@ -11,6 +11,7 @@
 import { objectiveHash as storeHash, type Candidate, type Evaluation } from "../store.ts";
 import { FEATURES, type FeatureName, type FeatureValue, type Objective } from "../types.ts";
 import { sameCurrency } from "./currency.ts";
+import { FREE_TEXT, says, unstated } from "./free-text.ts";
 
 /** A price cap that was not applied because the cap and the price are not known to be in the same currency. */
 export interface CapNotApplied {
@@ -67,7 +68,8 @@ function hardFailure(name: FeatureName, actual: FeatureValue | undefined, requir
     if (AT_MOST.includes(name)) return actual <= required ? null : `${name} is ${actual}, required at most ${required}`;
   }
   if (typeof required === "string" && typeof actual === "string") {
-    return actual.toLowerCase().includes(required.toLowerCase()) ? null : `${name} is "${actual}", required "${required}"`;
+    const ok = FREE_TEXT.includes(name) ? says(actual, required) : actual.toLowerCase().includes(required.toLowerCase());
+    return ok ? null : `${name} does not say "${required}"`;
   }
   return actual === required ? null : `${name} is ${String(actual)}, required ${String(required)}`;
 }
@@ -97,10 +99,11 @@ function overLimitWithFees(c: Candidate, name: FeatureName, required: FeatureVal
   return `price_total fits before fees only: room ${room} plus stated charges ${fees} is ${round(room + fees)}, required at most ${required}`;
 }
 
-function hardChecks(c: Candidate, o: Objective): Pick<ScoredCandidate, "failures" | "capsNotApplied"> {
+function hardChecks(c: Candidate, o: Objective, skip: Set<string>): Pick<ScoredCandidate, "failures" | "capsNotApplied"> {
   const out: ScoredCandidate["failures"] = [];
   const capsNotApplied: CapNotApplied[] = [];
   for (const [name, required] of Object.entries(o.hard) as [FeatureName, FeatureValue][]) {
+    if (skip.has(name)) continue;
     const gap = capCurrencyGap(c, o, name, required);
     if (gap) {
       capsNotApplied.push(gap);
@@ -137,13 +140,16 @@ function fit(name: FeatureName, v: FeatureValue | undefined, wantHigh: boolean, 
   }
   const want = o.wants[name];
   if (!want) return 0;
-  return v.toLowerCase().includes(want.toLowerCase()) === wantHigh ? 1 : 0;
+  const has = FREE_TEXT.includes(name) ? says(v, want) : v.toLowerCase().includes(want.toLowerCase());
+  return has === wantHigh ? 1 : 0;
 }
 
 
 export function scoreCandidates(candidates: Candidate[], o: Objective): ScoredCandidate[] {
   const hash = objectiveHash(o);
-  const checked = new Map(candidates.map((c) => [c.id, hardChecks(c, o)]));
+  // A free-text requirement no room states is left out, never a reason to reject every room.
+  const skip = new Set<string>(unstated(candidates, o).map((g) => g.feature));
+  const checked = new Map(candidates.map((c) => [c.id, hardChecks(c, o, skip)]));
   // Compare prices only among candidates the traveller could actually get.
   const feasible = candidates.filter((c) => checked.get(c.id)!.failures.length === 0);
   const ranges = numericRanges(feasible.length ? feasible : candidates);

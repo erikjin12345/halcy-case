@@ -49,7 +49,7 @@ Call `set_objective` exactly once with:
 
 room_name, rate_name, price_total, price_room, price_now, price_at_hotel,
 fees_known, currency,
-cancellable, breakfast_included, view, sleeps, sold_out. Do not put a weight
+cancellable, breakfast_included, view, room_details, sleeps, sold_out. Do not put a weight
 on `currency`; it is recorded so that prices are never compared across
 currencies.
 
@@ -59,8 +59,13 @@ case-insensitive substring match done by code.
 
 # Rules
 
-- Do not invent features. If the goal mentions something not in the list, put
-  it in `notes` so the orchestrator can mention it to the traveller.
+- Do not invent features. Something about the room that has no feature of its
+  own ("a balcony", "a bathtub", "quiet") goes on `room_details`, the hotel's
+  own description of the room: a weight with the wanted word in `wants` when
+  it is a wish, or `hard: { room_details: "balcony" }` when it is a need. Use
+  the plain word the page would use, one requirement only. Something about
+  the hotel, not the room (near a metro, parking, pets), goes in `notes` for
+  the orchestrator; no feature covers it.
 - "No breakfast" is a preference against `breakfast_included`, weight about
   -0.5, unless the traveller insists. It is also a reminder for validation to
   untick a pre-ticked breakfast.

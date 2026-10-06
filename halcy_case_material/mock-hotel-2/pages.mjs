@@ -22,7 +22,8 @@ ${error ? `<p class="err" role="alert">${esc(error)}</p>` : ""}
 <label>Arrival <input type="date" name="arrival" value="${esc(q.arrival ?? "")}" required></label>
 <label>Length of stay <select name="nights">${options(1, 14, q.nights ?? 2, (n) => `${n} night${n > 1 ? "s" : ""}`)}</select></label>
 <label>Guests <select name="guests">${options(1, 4, q.guests ?? 2, (n) => `${n} guest${n > 1 ? "s" : ""}`)}</select></label>
-<button type="submit">Check availability</button></form>`);
+<button type="submit">Check availability</button></form>
+<p><a href="/location">Where we are and how to get here</a></p>`);
 
 export function availabilityPage(stay, cur = "EUR", taken = false) {
   const link = `/availability?arrival=${esc(stay.arrival)}&nights=${stay.nights}&guests=${stay.guests}`;
@@ -83,6 +84,7 @@ export const confirmationPage = (b) => {
 
 export const lostPage = () => layout("Villa Aurora · Reservation not found", `<h1>We could not find your reservation in this browser</h1><p>A reservation can only be finished in the browser that started it. <a href="/">Start again</a></p>`);
 export const lapsedPage = () => layout("Villa Aurora · Reservation lapsed", `<h1>Your reservation has lapsed</h1><p>We keep a room for ${HOLD_MINUTES} minutes. That time has passed and the room is on sale again. Nothing has been charged. <a href="/">Start again</a></p>`);
+export const locationPage = () => layout("Villa Aurora · Where we are", `<h1>Where we are</h1><p>12 Clifton Rise, above the old pier. The nearest stop is Pier Gardens on tram line 2, about four minutes on foot. The railway station is 15 minutes away by the same tram.</p><p>We have no car park. <a href="/">Back to booking</a></p>`);
 export const conditionsPage = () => layout("Villa Aurora · Booking conditions", `<h1>Booking conditions</h1><p>Your contract is with Villa Aurora Lda. Standard rate: cancel free of charge up to 3 days before arrival. Advance purchase: no changes, no refund.</p>`);
 
 const pb = (title, body) => layout(title, body, "PayBridge · secure payments");

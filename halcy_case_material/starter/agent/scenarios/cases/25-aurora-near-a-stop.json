@@ -1,0 +1,43 @@
+{
+  "id": "25-aurora-near-a-stop",
+  "title": "Second hotel: a question about the hotel that its site does answer",
+  "why": "Villa Aurora's location page says the nearest stop is Pier Gardens on tram line 2, about four minutes on foot. The agent should find that page and repeat what the hotel says, as the hotel's own statement. The booking: the cheapest cancellable room is the Garden Room on the Standard rate, GBP 215.00 with the cleaning fee and visitor levy.",
+  "message": "Two of us at Villa Aurora, Tuesday to Thursday next week. Cheapest room we can cancel, no extras. Is it near a metro or tram stop?",
+  "replies": [
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "press": "^2$|2 (adult|guest)|two"
+    },
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "say": "Two adults."
+    },
+    {
+      "when": "insurance|breakfast basket|extras",
+      "press": "^no(\\b|_)|without|none"
+    },
+    {
+      "when": "insurance|breakfast basket|extras",
+      "say": "No extras."
+    },
+    {
+      "when": "pounds|GBP|sterling|exchange|currency|euro",
+      "press": "continue|go ahead|^yes|fine|approve"
+    },
+    {
+      "when": "pounds|GBP|sterling|exchange|currency|euro",
+      "say": "That is fine, go ahead."
+    }
+  ],
+  "expect": {
+    "outcome": "approved",
+    "room": "garden",
+    "features": {
+      "cancellable": true
+    },
+    "says": [
+      "Pier Gardens|tram line 2|four minutes|4 minutes",
+      "GBP|pounds|sterling|£"
+    ]
+  }
+}
