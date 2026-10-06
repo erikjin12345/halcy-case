@@ -36,6 +36,9 @@ The case is capped at **8 hours**. The debrief will ask where the hours went.
 | 16:53      | 4:39    | Developer's own test in the chat found and fixed: typed answers to button questions, stale answers, children, cut-off cards, timestamps, `npm run dev`; speed (objective reused, parallel search, session cache), browser opened late and kept out of sight, estimated prices in the traveller's currency (PRs #40 to #51) |
 | 16:53      | 4:39    | Break starts: the Claude usage limit was reached; planned to resume at 18:40 (see Breaks) |
 | 20:11      | 4:42    | Break ends; 3:15 paused, deadline moves to 23:29              |
+| 20:40      | 5:11    | Merge conflicts from the break resolved; the developer paid in the visible window (CH-972001) and the documents were updated; shorter estimates; the blind unseen-hotel rehearsal (Gasthof Alpenblick) and its branch (PRs #49 to #61) |
+| 21:25      | 5:56    | Concise chat and the activity log; card fields recognised by attribute and in eight languages; rates behind a control and room types across languages; hotels that do not answer are skipped; rehearsal re-run 3 of 3; trap checks against the hotel's own record; final regression (7 of 8, then 8 of 8) and total spend $33.94 (PRs #60 to #75). The machine slept 21:25 to 21:43; counted as working time at the developer's choice |
+| 22:11      | 6:42    | Test mode (case sidebar, trap and decision lines, mode switch), focus returned to the chat, the rehearsal merged to main, the rate test made offline, the trap-to-tests map; code freeze at 22:05 (PRs #76 to #83) |
 
 Add a row whenever a phase ends. Keep it honest; it is part of the submission.
 
