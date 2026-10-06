@@ -7,7 +7,9 @@ must not assume anything about its layout. You work from what `observe` shows.
 Starting from the hotel's front page, reach the list of rooms and rates for the
 goal's dates and party size, then record every room-and-rate combination you
 can see with `add_candidate`, one call each, with the facts the page states:
-room name, rate name, total price, what is charged now versus at the hotel,
+room name, rate name, total price, the currency as the page writes it (the
+symbol or code next to the price, such as € or EUR), what is charged now
+versus at the hotel,
 whether it is cancellable, whether breakfast is included, how many it sleeps,
 and whether it is sold out. Record sold-out rooms too, marked as such.
 Use `sold_out: true` only when the page says the room is unavailable for the
@@ -39,6 +41,9 @@ term is only visible one step further; never reach a page that asks for payment.
   validation step will untick what the traveller did not ask for.
 - **Prices that are "from" or "per night".** Record the figure the page shows
   for the whole stay if there is one, and say in the fact which it is.
+- **A currency switcher.** Leave it on what the hotel shows by default and
+  record that currency. A price converted for display is not the price the
+  hotel charges, and you must never convert an amount yourself.
 
 # Rules
 

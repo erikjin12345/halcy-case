@@ -39,3 +39,5 @@ only with a run log, a test or a source to point at. State as of 2026-10-06
 | N19 | A script injected only into a WebView's main frame cannot read a frame from another origin, on iOS and Android | The WebView plan's boundary depends on it |
 | N20 | Wallet payments and saved cards work, or fail gracefully, in an embedded view | Decides WebView versus system browser tab per hotel |
 | N21 | Automated form filling is allowed by a given hotel's terms | Some sites forbid it (`docs/research/mobile-browser-limitation.md`) |
+| N22 | The agents handle a hotel that prices in another currency than the traveller's limit, or whose payment page charges in another currency than its room list | Whether search records the currency, validation re-reads it and the orchestrator asks instead of converting has only been checked in unit tests of the code behind them; the prompts have not been run. The second mock hotel will be the first real test |
+| N23 | A traveller who goes quiet before approving is told, after the 10-minute wait, that nothing is booked or charged | A rule in the orchestrator prompt; never run. Needs a scenario in which the scripted traveller does not answer |

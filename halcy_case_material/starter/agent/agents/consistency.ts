@@ -2,8 +2,10 @@
 // The validation agent decides `accepted`; these checks can only take an
 // acceptance away. They catch the case where the page ended up on a different
 // rate than the one being validated: a pay-at-the-hotel rate never charges
-// now, and a refundable rate is never shown as non-refundable.
+// now, and a refundable rate is never shown as non-refundable. They also catch
+// a payment page that charges in another currency than the room list showed.
 
+import { sameCurrency } from "../scoring/currency.ts";
 import type { FeatureValue } from "../types.ts";
 
 type Facts = Record<string, FeatureValue | unknown>;
@@ -29,6 +31,12 @@ export function contradictions(candidate: Facts, observed: Facts): string[] {
         ? `the candidate charges nothing now, but the page charges ${sawNow} now`
         : `the candidate charges ${wantNow} now, but the page charges nothing now`,
     );
+  }
+
+  const wantCurrency = typeof candidate.currency === "string" ? candidate.currency : undefined;
+  const sawCurrency = typeof observed.currency === "string" ? observed.currency : undefined;
+  if (wantCurrency && sawCurrency && !sameCurrency(wantCurrency, sawCurrency)) {
+    out.push(`the candidate was priced in ${wantCurrency}, but the page charges in ${sawCurrency}`);
   }
 
   return out;

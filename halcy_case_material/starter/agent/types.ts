@@ -30,6 +30,7 @@ export const FEATURES = [
   "price_total",
   "price_now",
   "price_at_hotel",
+  "currency",
   "cancellable",
   "breakfast_included",
   "view",
@@ -47,6 +48,8 @@ export interface Objective {
   hard: Partial<Record<FeatureName, FeatureValue>>;
   /** Wanted substring for string features, e.g. { view: "river" }. */
   wants: Partial<Record<FeatureName, string>>;
+  /** The currency the traveller's price caps in `hard` are in, as they wrote it. A cap is only applied to prices in this currency. */
+  currency?: string;
   /** A candidate at or above this score is "good enough". */
   threshold: number;
   maxSearchMs: number;
@@ -72,6 +75,8 @@ export interface RunState {
   objective?: Objective;
   /** Hash of the current objective; evaluations are keyed by it. */
   objectiveHash?: string;
+  /** Set by scoring when a price cap could not be applied because of the currency; the orchestrator must tell the traveller. */
+  budgetNotApplied?: string;
   store: Store;
   validations: ValidationResult[];
 }
