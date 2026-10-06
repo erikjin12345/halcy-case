@@ -12,6 +12,7 @@ import { objectiveHash as storeHash, type Candidate, type Evaluation } from "../
 import { FEATURES, type FeatureName, type FeatureValue, type Objective } from "../types.ts";
 import { sameCurrency } from "./currency.ts";
 import { FREE_TEXT, says, unstated } from "./free-text.ts";
+import { isRoomType, unmatchedRoomType } from "./room-type.ts";
 import { judgeCap, type CapGap } from "./cap-estimate.ts";
 import type { Rates } from "./fx.ts";
 
@@ -74,7 +75,7 @@ function hardFailure(name: FeatureName, actual: FeatureValue | undefined, requir
     if (AT_MOST.includes(name)) return actual <= required ? null : `${name} is ${actual}, required at most ${required}`;
   }
   if (typeof required === "string" && typeof actual === "string") {
-    const ok = FREE_TEXT.includes(name) ? says(actual, required) : actual.toLowerCase().includes(required.toLowerCase());
+    const ok = FREE_TEXT.includes(name) ? says(actual, required) : name === "room_name" ? isRoomType(actual, required) : actual.toLowerCase().includes(required.toLowerCase());
     return ok ? null : `${name} does not say "${required}"`;
   }
   return actual === required ? null : `${name} is ${String(actual)}, required ${String(required)}`;
@@ -150,7 +151,7 @@ function fit(name: FeatureName, v: FeatureValue | undefined, wantHigh: boolean, 
   }
   const want = o.wants[name];
   if (!want) return 0;
-  const has = FREE_TEXT.includes(name) ? says(v, want) : v.toLowerCase().includes(want.toLowerCase());
+  const has = FREE_TEXT.includes(name) ? says(v, want) : name === "room_name" ? isRoomType(v, want) : v.toLowerCase().includes(want.toLowerCase());
   return has === wantHigh ? 1 : 0;
 }
 
@@ -159,6 +160,7 @@ export function scoreCandidates(candidates: Candidate[], o: Objective, rates: Ra
   const hash = objectiveHash(o);
   // A free-text requirement no room states is left out, never a reason to reject every room.
   const skip = new Set<string>(unstated(candidates, o).map((g) => g.feature));
+  if (unmatchedRoomType(candidates, o)) skip.add("room_name");
   const checked = new Map(candidates.map((c) => [c.id, hardChecks(c, o, skip, rates)]));
   // Compare prices only among candidates the traveller could actually get.
   const feasible = candidates.filter((c) => checked.get(c.id)!.failures.length === 0);

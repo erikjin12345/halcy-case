@@ -66,6 +66,13 @@ case-insensitive substring match done by code.
   the plain word the page would use, one requirement only. Something about
   the hotel, not the room (near a metro, parking, pets), goes in `notes` for
   the orchestrator; no feature covers it.
+- A room type the traveller names ("a single", "a double room", "a family
+  room") goes on `room_name` in the traveller's own word. Code matches the
+  common ways sites write it in other languages ("chambre double",
+  "habitación individual", "dubbelrum"), so do not translate it. Make it a
+  weight with `wants` unless the traveller insists on that type; then it may
+  be hard. If no room on the site matches, code leaves it out and the
+  orchestrator asks the traveller.
 - "No breakfast" is a preference against `breakfast_included`, weight about
   -0.5, unless the traveller insists. It is also a reminder for validation to
   untick a pre-ticked breakfast.
