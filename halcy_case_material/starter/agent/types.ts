@@ -31,6 +31,7 @@ export const FEATURES = [
   "price_now",
   "price_at_hotel",
   "price_room",
+  "fees_known",
   "currency",
   "cancellable",
   "breakfast_included",
@@ -83,6 +84,16 @@ export interface PriceAcceptance {
   at: string;
 }
 
+/** A total over the traveller's own limit that they agreed to anyway. Logged with the limit. */
+export interface OverLimitAcceptance {
+  candidateId: string;
+  /** The all-in total on the hotel's page that the traveller accepted. */
+  total: number;
+  limit: number;
+  currency?: string;
+  at: string;
+}
+
 /** In-process state for one booking run. Facts and scores are in `store`. */
 export interface RunState {
   goal?: SearchGoal;
@@ -95,10 +106,12 @@ export interface RunState {
   validations: ValidationResult[];
   /** Price rises the traveller accepted, newest last. */
   priceAcceptances: PriceAcceptance[];
+  /** Totals over the traveller's limit that they accepted, newest last. */
+  overLimitAcceptances: OverLimitAcceptance[];
 }
 
 export function newRunState(store: Store = memoryStore()): RunState {
-  return { store, validations: [], priceAcceptances: [] };
+  return { store, validations: [], priceAcceptances: [], overLimitAcceptances: [] };
 }
 
 /** Everything an agent run needs besides its own tools. */

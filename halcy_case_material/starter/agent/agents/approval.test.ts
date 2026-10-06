@@ -107,3 +107,55 @@ test("a changed total with the same room price is not silently approved", () => 
   state.validations.push(revalidated(1000, 1090));
   assert.match(approvalBlocker(state, "classic-flex")!, /accepted a total of 1048, but the page now shows 1090/);
 });
+
+// --- the traveller's limit holds for the all-in total --------------------
+
+import { overLimit } from "./approval.ts";
+
+function withLimit(limit: number, limitCurrency: string | undefined, total: number) {
+  const state = newRunState(memoryStore());
+  state.objective = { weights: {}, hard: { price_total: limit }, wants: {}, currency: limitCurrency, threshold: 0, maxSearchMs: 1, extraAfterPassMs: 0 };
+  state.store.observe("classic-flex", "Casa Halcy", { price_total: 296, currency: "€" }, "rooms page");
+  state.validations.push({ candidateId: "classic-flex", accepted: true, reasons: ["ok"], observed: { price_room: 296, price_total: total, price_now: 0, price_at_hotel: total, currency: "€" } });
+  return state;
+}
+
+test("under the limit at the list price and over it once taxes are in: approval is refused", () => {
+  // Seen live: room 296.00, tourist tax 16.00 on the payment page, limit 300.
+  const state = withLimit(300, "EUR", 312);
+  assert.deepEqual(overLimit(state, "classic-flex"), { total: 312, limit: 300, over: 12, room: 296, chargedNow: 0, atHotel: 312, currency: "€" });
+  assert.match(approvalBlocker(state, "classic-flex")!, /312, which is 12 over the traveller's limit of 300/);
+});
+
+test("a total within the limit is not held back", () => {
+  assert.equal(overLimit(withLimit(300, "EUR", 300), "classic-flex"), null);
+  assert.equal(approvalBlocker(withLimit(320, "EUR", 312), "classic-flex"), null);
+});
+
+test("once the traveller accepts that exact total, approval is allowed", () => {
+  const state = withLimit(300, "EUR", 312);
+  state.overLimitAcceptances.push({ candidateId: "classic-flex", total: 312, limit: 300, currency: "€", at: "t" });
+  assert.equal(overLimit(state, "classic-flex"), null);
+  assert.equal(approvalBlocker(state, "classic-flex"), null);
+});
+
+test("a different total after that acceptance is asked about again", () => {
+  const state = withLimit(300, "EUR", 312);
+  state.overLimitAcceptances.push({ candidateId: "classic-flex", total: 312, limit: 300, currency: "€", at: "t" });
+  state.validations.push({ candidateId: "classic-flex", accepted: true, reasons: ["ok"], observed: { price_room: 296, price_total: 320, currency: "€" } });
+  assert.equal(overLimit(state, "classic-flex")!.over, 20);
+  assert.match(approvalBlocker(state, "classic-flex")!, /320, which is 20 over/);
+});
+
+test("a limit in another currency is never compared with the total", () => {
+  const state = withLimit(3000, "SEK", 312);
+  assert.equal(overLimit(state, "classic-flex"), null);
+  assert.equal(approvalBlocker(state, "classic-flex"), null);
+});
+
+test("the limit can come from the goal when the objective holds none", () => {
+  const state = withLimit(300, "EUR", 312);
+  state.objective = { ...state.objective!, hard: {}, currency: undefined };
+  state.goal = { hotel: { name: "Casa Halcy", url: "http://h" }, checkin: "a", checkout: "b", adults: 2, mustHave: [], preferences: [], budget: { currency: "EUR", maxTotal: 300 } };
+  assert.equal(overLimit(state, "classic-flex")!.over, 12);
+});

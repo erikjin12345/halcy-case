@@ -2,6 +2,7 @@
 // validation on the live page was accepted. The hand-off takes its amounts
 // from that validation, so these are code rules, not prompt requests.
 
+import { sameCurrency } from "../scoring/currency.ts";
 import type { FeatureValue, PriceAcceptance, RunState, ValidationResult } from "../types.ts";
 
 const CENT = 0.005;
@@ -37,7 +38,46 @@ export function approvalBlocker(state: RunState, candidateId: string): string | 
       return `the traveller accepted a total of ${agreed.total}, but the page now shows ${total}. Show the new figures and ask again.`;
     }
   }
+  // The traveller's limit is for everything they will pay, not for the room line.
+  const over = overLimit(state, candidateId);
+  if (over) {
+    return `the total on the hotel's page is ${over.total}, which is ${over.over} over the traveller's limit of ${over.limit}. Validate a candidate that fits, or ask with ask_over_limit; do not approve this one unasked.`;
+  }
   return null;
+}
+
+export interface OverLimit {
+  total: number;
+  limit: number;
+  over: number;
+  room?: number;
+  chargedNow?: number;
+  atHotel?: number;
+  currency?: string;
+}
+
+/**
+ * The validated all-in total against the traveller's limit, when both are
+ * known to be in the same currency and the traveller has not already accepted
+ * exactly this total. Null when there is nothing to hold the candidate back
+ * on: no limit, within it, another currency (surfaced elsewhere, never
+ * compared), or accepted.
+ */
+export function overLimit(state: RunState, candidateId: string): OverLimit | null {
+  const o = state.objective;
+  const limit = num(o?.hard.price_total) ?? state.goal?.budget?.maxTotal;
+  const v = latestValidation(state, candidateId);
+  const total = num(v?.observed.price_total);
+  if (limit === undefined || !v || total === undefined) return null;
+  const limitCurrency = o?.currency ?? state.goal?.budget?.currency;
+  const candidate = state.store.candidate(candidateId);
+  const currency = [v.observed.currency, candidate?.features.currency?.value].find((c): c is string => typeof c === "string");
+  if (limitCurrency && currency && !sameCurrency(limitCurrency, currency)) return null;
+  if (total <= limit + CENT) return null;
+  const agreed = [...state.overLimitAcceptances].reverse().find((a) => a.candidateId === candidateId);
+  if (agreed && !differs(agreed.total, total)) return null;
+  const round = (n: number) => Math.round(n * 100) / 100;
+  return { total, limit, over: round(total - limit), room: num(v.observed.price_room), chargedNow: num(v.observed.price_now), atHotel: num(v.observed.price_at_hotel), currency };
 }
 
 export interface PriceChangeOffer {

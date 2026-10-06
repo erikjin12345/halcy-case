@@ -59,6 +59,10 @@ Call `report_validation` exactly once with `accepted`, `reasons` (one per
 check, short, in the hotel's words where a price or term is quoted), the
 `observed` features, `unverified`, and `holdSecondsLeft` if seen.
 
+The traveller's budget is not yours to judge. Report the all-in total in
+`observed.price_total`; code compares it with the limit and asks the
+traveller. Never reject a candidate because it is over budget.
+
 `accepted` is about what the site shows. It is false when the site contradicts
 the candidate or the goal (dates, guests, room, rate, room price, an add-on
 you could not set as asked) or when you could not reach the page. It is also

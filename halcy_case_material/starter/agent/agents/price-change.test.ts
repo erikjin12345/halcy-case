@@ -64,3 +64,47 @@ test("the traveller is not asked when there is nothing to accept", async () => {
   assert.match(await tool.run({ candidateId: "classic-flex" }), /^Refused: .*has not changed/);
   assert.equal(cards.length, 0);
 });
+
+// --- over the traveller's limit -----------------------------------------
+
+import { ACCEPT_OVER, DECLINE_OVER, overLimitCard, overLimitTool } from "./price-change.ts";
+
+function overContext(press: string) {
+  const c = context(press);
+  c.state.validations.length = 0;
+  c.state.store.observe("classic-flex", "Casa Halcy", { price_total: 296, currency: "€" }, "rooms page");
+  c.state.objective = { weights: {}, hard: { price_total: 300 }, wants: {}, currency: "EUR", threshold: 0, maxSearchMs: 1, extraAfterPassMs: 0 };
+  c.state.validations.push({ candidateId: "classic-flex", accepted: true, reasons: ["ok"], observed: { price_room: 296, price_total: 312, price_now: 0, price_at_hotel: 312, currency: "€" } });
+  return { ...c, tool: overLimitTool(c.a) as unknown as Runnable };
+}
+
+test("the over-limit card states the limit, the total, the amount over and where the difference comes from", () => {
+  const card = overLimitCard("Casa Halcy", { total: 312, limit: 300, over: 12, room: 296, chargedNow: 0, atHotel: 312, currency: "€" });
+  assert.equal(card.title, "Over your limit at Casa Halcy");
+  assert.ok(card.lines!.includes("Your limit: €300.00"));
+  assert.ok(card.lines!.includes("Total on Casa Halcy's own payment page: €312.00"));
+  assert.ok(card.lines!.includes("Over your limit by: €12.00"));
+  assert.ok(card.lines!.includes("Room €296.00, plus €16.00 in taxes, fees and extras that Casa Halcy adds"));
+  assert.deepEqual(card.buttons.map((b) => b.id), [ACCEPT_OVER, DECLINE_OVER]);
+});
+
+test("accepting a total over the limit is recorded with the limit and logged", async () => {
+  const { tool, state, events } = overContext(ACCEPT_OVER);
+  assert.match(await tool.run({ candidateId: "classic-flex" }), /^accepted/);
+  assert.deepEqual({ ...state.overLimitAcceptances[0], at: "" }, { candidateId: "classic-flex", total: 312, limit: 300, currency: "€", at: "" });
+  assert.equal(events.find((e) => e.type === "limit.accepted")!.data.over, 12);
+});
+
+test("keeping to the limit records nothing", async () => {
+  const { tool, state, events } = overContext(DECLINE_OVER);
+  assert.match(await tool.run({ candidateId: "classic-flex" }), /^declined/);
+  assert.equal(state.overLimitAcceptances.length, 0);
+  assert.ok(events.some((e) => e.type === "limit.declined"));
+});
+
+test("the traveller is not asked when the total is within the limit", async () => {
+  const { tool, state, cards } = overContext(ACCEPT_OVER);
+  state.objective!.hard.price_total = 400;
+  assert.match(await tool.run({ candidateId: "classic-flex" }), /^Refused/);
+  assert.equal(cards.length, 0);
+});

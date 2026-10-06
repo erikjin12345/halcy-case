@@ -27,6 +27,7 @@ export const factsSchema = z
     price_room: amount("The room line on the page that shows the charge, before taxes, fees and add-ons"),
     price_now: amount("What is charged at booking"),
     price_at_hotel: amount("What is paid at the hotel"),
+    fees_known: amount("Charges the page states as not included in the room price, for the whole stay and the whole party: city tax, visitor levy, cleaning fee. Only what the page states; never an estimate"),
     currency: z.string().describe("The currency the hotel charges in, as the page writes it: a symbol or a code"),
     cancellable: z.boolean(),
     breakfast_included: z.boolean(),
