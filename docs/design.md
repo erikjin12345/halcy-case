@@ -229,7 +229,10 @@ Cancel, a closed tab and an expired hold. Every run log passes the audit.
 **A second hotel found what the first could not.** Different markup,
 per-night prices, a fee shown late, a pre-ticked insurance, a hold stated as
 "until 15:47", payment by redirect. The euro version reached the card 3 of 3
-in about 90 s. The pound version exposed a price recorded as text, a levy
+in about 90 s. The hand-off ran there twice with scripts standing in for
+validation and the traveller: the tab went to the provider and back, once
+confirmed ("charged now GBP 186.00, paid at the hotel GBP 10.00") and once
+declined in the hotel's words. The pound version exposed a price recorded as text, a levy
 counted into the price, a dead end after a mismatch, and a hold format the
 hand-off could not read; all four are now fixed (PRs #29, #31). That is the
 argument for testing on many sites.
@@ -238,8 +241,9 @@ argument for testing on many sites.
 ended on the wrong rate. Up to the card it reads what agents recorded; the
 mock's own booking record, which a harness may read, should be compared first.
 
-**Still missing.** A person paying in the window. The over-limit question and
-the payment redirect live. Repeats. Real hotel sites.
+**Still missing.** A person paying in the window. The over-limit question
+live. The redirect payment with the agents end to end, and redaction of card
+fields on a provider's full page. Repeats. Real hotel sites.
 
 **Launch gates**, on at least five unseen sites: the amount on the card
 equals what the hotel recorded; right room and rate; questions per booking;
