@@ -124,6 +124,27 @@ A first estimate of about $2.2 per booking was seven times too high (25
 search turns, 400k uncached input tokens, no caching assumed). Kept as a line
 because the debrief asks what the tools got wrong.
 
+### Total spent building this
+
+Model spend for the whole day (2026-10-06), summed from the usage in every
+run log on the development machine: the shared tree's `runs/` and every
+session's worktree `runs/`, each run counted once by its folder name, at the
+prices above. 143 runs. The Anthropic Console receipt is the authority; runs
+whose logs were deleted with a worktree during the day are not in this sum.
+
+| | Cost |
+| --- | --- |
+| **Total** | **about $33.94** |
+| Scenario runs (scripted traveller) | $25.55 |
+| Chat runs in the shared tree (mostly the user's own) | $4.30 |
+| Chat runs on a session's own port (live checks) | $2.30 |
+| Other (smoke checks, payment hand-off tests) | $1.79 |
+
+By hour (HKT): 12:00 $2.54, 13:00 $2.97, 15:00 $13.10, 16:00 $6.17,
+20:00 $5.65, 21:00 $3.50. No runs between 14:00 and 15:00 or 17:00 and 20:00
+(breaks). The final regression ($2.53, `docs/runs/regression.md`) is
+included in the total. The brief reimburses up to $50.
+
 ## 6. What we measure
 
 | Metric                              | Why                                              |
