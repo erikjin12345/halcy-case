@@ -18,5 +18,6 @@ The case is capped at **8 hours**. The debrief will ask where the hours went.
 | 11:15      | 0:23    | Recorded the four-agent architecture and assessed it vs brief  |
 | 11:35      | 0:43    | Restructured to `agent/` + `agent/payment/`, infra decision    |
 | 11:50      | 0:58    | Merged research docs and GCP setup; concerns register          |
+| 11:42      | 0:50    | Wrote `starter/agent/store.ts` (memory store, 2.9 shape), tests, `npm test` and CI workflow |
 
 Add a row whenever a phase ends. Keep it honest; it is part of the submission.
