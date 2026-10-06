@@ -48,6 +48,12 @@ test("a star rating or a footnote mark before a number is not a card, unless a c
   assert.equal(redactText("Payment method\nVisa\n**** 2024"), "Payment method\nVisa\n**** ••••");
   assert.equal(redactText("Betalt med kort xxxx 4242"), "Betalt med kort xxxx ••••");
   assert.equal(redactText("Charged to **** 0002 on arrival"), "Charged to **** •••• on arrival");
+  // Lines about paying that name no card. All were masked before the weak rule existed and must stay masked.
+  for (const line of ["Payment method: **** 4242", "Paid: **** 4242", "Guarantee held on **** 4242", "Your booking is guaranteed with **** 4242.", "Betalning: **** 4242"]) {
+    assert.equal(redactText(line).includes("4242"), false, line);
+  }
+  // The side this errs on: a footnoted four-digit price next to a payment word is still masked.
+  assert.equal(redactText("We hold your card as a guarantee.\nTotal: ** 1200 per stay"), "We hold your card as a guarantee.\nTotal: ** •••• per stay");
   // Never weak, card word or not: bullets, several groups, a mask that touches the digits.
   assert.equal(redactText("•••• 2024"), "•••• ••••");
   assert.equal(redactText("**** **** 2024"), "**** **** ••••");

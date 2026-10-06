@@ -32,10 +32,16 @@ export function isSensitiveField(el: PageElement): boolean {
  */
 const WEAK_PREFIX = /^(?:\*+|[xX]+)\s+$/;
 
-/** Says a nearby masked number is a payment card. Only consulted for a weak prefix. */
-const CARD_WORD = /card|visa|master|maestro|amex|american express|diners|discover|debit|credit|paid with|charged to|kort|karte|carte|tarjeta|cart[aã]o/i;
+/**
+ * Says the nearby text is about a card or about paying. Only consulted for a
+ * weak prefix, and deliberately broad: "Payment method: **** 4242" names no
+ * card. So the weak rule spares a rating or a footnote only in text that is
+ * not about paying at all.
+ */
+const CARD_WORD =
+  /card|visa|master|maestro|amex|american express|diners|discover|debit|credit|pay|paid|charged|guarantee|kort|karte|carte|tarjeta|cart[aã]o|betal|garanti|zahl|paiement|pago/i;
 
-/** How far back to look for a card word: the same line and the one or two before it. */
+/** How far back to look for such a word: the same line and the one or two before it. */
 const CONTEXT_CHARS = 80;
 
 function maskAfterPrefix(text: string): string {
