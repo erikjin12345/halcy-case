@@ -44,6 +44,8 @@ State on 2026-10-06. Row numbers (L, T, N) point into `limitations/`.
 4. The phone path, starting with what a WebView can read (N19, N20).
 5. Ask the people who would know: card-data scope, licence, hotels' terms
    (N17, N18, N21).
+6. Score prices in one currency, converted in code, so ranking across
+   currencies does not lean on the orchestrator's comparison (L41).
 
 ## Where the tools were wrong
 
