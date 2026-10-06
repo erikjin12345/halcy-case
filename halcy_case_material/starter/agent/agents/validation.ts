@@ -11,6 +11,7 @@ import { factsSchema } from "../tools/scoring.ts";
 import type { AgentContext, ValidationResult } from "../types.ts";
 import { latestAcceptance } from "./approval.ts";
 import { contradictions } from "./consistency.ts";
+import { honestUnverified } from "./unverified.ts";
 
 export interface ValidationDeps {
   driver: PageDriver;
@@ -31,7 +32,7 @@ export async function runValidation(a: AgentContext, deps: ValidationDeps): Prom
     inputSchema: z.object({
       accepted: z.boolean(),
       reasons: z.array(z.string()),
-      unverified: z.array(z.string()).default([]).describe("What the traveller asked for that the site does not state either way, with where you looked"),
+      unverified: z.array(z.string()).default([]).describe("What the traveller asked for that you did not find stated either way, with the pages you looked on"),
       observed: factsSchema.describe("What the page showed. price_total here is the all-in total on the page that shows the charge"),
       holdSecondsLeft: z.number().optional(),
     }),
@@ -45,6 +46,12 @@ export async function runValidation(a: AgentContext, deps: ValidationDeps): Prom
   // an earlier validation left in the browser (another rate's payment page,
   // a running hold) is not this candidate's.
   const sourceUrl = typeof facts.source_url === "string" ? facts.source_url : goal.hotel.url;
+  // Pages this validation opens, so a claim that the site lacks something can be checked.
+  const visited: string[] = [];
+  let listening = true;
+  deps.driver.onNavigated((to) => {
+    if (listening && !visited.includes(to.path)) visited.push(to.path);
+  });
   await deps.driver.goto(sourceUrl);
   a.log.event("validation.start", { candidateId: candidate.id });
 
@@ -70,8 +77,16 @@ export async function runValidation(a: AgentContext, deps: ValidationDeps): Prom
     log: a.log,
   });
 
+  listening = false;
   if (!reported) {
     reported = { candidateId: candidate.id, accepted: false, reasons: ["validation agent did not report"], observed: {} };
+  }
+  if (reported.unverified?.length) {
+    const honest = honestUnverified(reported.unverified, visited);
+    if (honest.reworded) {
+      a.log.event("validation.unverified.reworded", { candidateId: candidate.id, was: reported.unverified, now: honest.items, visited });
+      reported = { ...reported, unverified: honest.items };
+    }
   }
   const conflicts = reported.accepted ? contradictions(facts, reported.observed) : [];
   const roomNow = reported.observed.price_room;
