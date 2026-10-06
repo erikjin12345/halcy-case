@@ -42,11 +42,19 @@ export function fxTools(a: AgentContext): RunnableTool[] {
     name: "compare_prices",
     description:
       "Say which of several options is cheaper when they may be priced in different currencies. Returns one sentence made by code, labelled as an estimate when currencies differ, or 'too close to call' under 3%. Quote it exactly; never compare across currencies yourself.",
-    inputSchema: z.object({ options: z.array(amount.omit({ atHotel: true })).min(2).max(6) }),
+    inputSchema: z.object({
+      options: z
+        .array(amount.omit({ atHotel: true }).extend({ fees: z.number().optional().describe("Taxes, levies and fees the hotel states as not included, in the same currency; added by code") }))
+        .min(2)
+        .max(6)
+        .describe("Like for like: each option's `amount` is the same kind of figure (all room prices before fees, with stated fees in `fees`)"),
+    }),
     run: async ({ options }) => {
       const to = travellerCurrency(a);
       const rates = await loadRates();
-      const text = compareText(options, to, rates) ?? "These cannot be compared: no exchange rate for one of the currencies. Show each in its own currency.";
+      // Fees are added in code, so a room price is never compared with another hotel's total.
+      const totals = options.map((o) => ({ label: o.label, currency: o.currency, amount: o.amount + (o.fees ?? 0) }));
+      const text = compareText(totals, to, rates) ?? "These cannot be compared: no exchange rate for one of the currencies. Show each in its own currency.";
       a.log.event("fx.compare", { to: to ?? null, rateDate: rates?.date ?? null, text });
       return text;
     },
