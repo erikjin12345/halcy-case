@@ -24,6 +24,19 @@ export function hotelOrigin(events: Event[]): string | null {
   }
 }
 
+/** One `traps.result` event at the end of a run, for the chat's test mode. Never throws. */
+export async function logTrapsResult(log: { dir: string; event: (type: string, data: Record<string, unknown>) => void }): Promise<void> {
+  try {
+    const raw = readFileSync(join(log.dir, "events.jsonl"), "utf8");
+    const origin = hotelOrigin(raw.split("\n").filter((l) => l.trim()).map((l) => JSON.parse(l) as Event));
+    const recordAvailable = origin ? (await fetchAdmin(origin)) !== null : false;
+    const results = await trapsForRun(log.dir);
+    log.event("traps.result", { hotel: origin, recordAvailable, results });
+  } catch (e) {
+    log.event("traps.result", { hotel: null, recordAvailable: false, results: [], error: String(e).slice(0, 200) });
+  }
+}
+
 export async function trapsForRun(dir: string): Promise<TrapResult[]> {
   const raw = readFileSync(join(dir, "events.jsonl"), "utf8");
   const lines = raw.split("\n");
