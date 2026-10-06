@@ -1,12 +1,14 @@
 // Entry point: an `Agent` the chat server can call instead of the starter one.
 // Opens one browser, sets the payment boundary to the hotel's origin, runs the
-// orchestrator, and leaves the page where the payment hand-off takes over.
+// orchestrator, and then runs the payment hand-off on the page it left.
 
 import { openBrowser } from "../browser.ts";
 import { GuardedLog } from "./evidence/log.ts";
 import type { Agent } from "../types.ts";
 import { runOrchestrator } from "./agents/orchestrator.ts";
 import { HEADLESS, hasCredential, loadDotEnv } from "./config.ts";
+import { modelClassifier } from "./payment/classify.ts";
+import { runHandoff, termsFrom } from "./payment/handoff.ts";
 import { PaymentBoundary } from "./tools/boundary.ts";
 import { guardedDriver } from "./tools/guarded-driver.ts";
 import { playwrightDriver } from "./tools/playwright-driver.ts";
@@ -33,12 +35,23 @@ export const bookingAgent: Agent = async (message, chat, ctx) => {
   const driver = guardedDriver(playwrightDriver(page, (url) => boundary.known(url)), boundary);
 
   try {
-    const approved = await runOrchestrator({ chat, ctx, log, state: newRunState() }, message, { driver, boundary });
+    const state = newRunState();
+    const approved = await runOrchestrator({ chat, ctx, log, state }, message, { driver, boundary });
     log.event("orchestrator.done", { approved });
     if (approved) {
-      // TODO: payment hand-off (agent/payment in the planning folder). Until it
-      // exists, say so instead of pretending.
-      chat.say("The hand-off to payment isn't built yet. Nothing has been booked or charged.");
+      // Validation left the browser on the hotel's payment page. From here on
+      // it is code, not a model: the traveller pays in the hotel's window.
+      const validated = [...state.validations].reverse().find((v) => v.candidateId === approved && v.accepted);
+      await runHandoff({
+        driver,
+        boundary,
+        chat,
+        log,
+        hotel: state.goal?.hotel.name ?? "the hotel",
+        terms: termsFrom(validated?.observed ?? {}),
+        visible: !HEADLESS,
+        classify: modelClassifier(log),
+      });
     }
   } catch (e) {
     log.event("error", { error: String(e).slice(0, 500) });

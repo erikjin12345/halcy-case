@@ -21,6 +21,14 @@ is the code. Conventions: `../../../agent/CLAUDE.md`.
 | `tools/playwright-driver.ts` | The raw driver over a Playwright page; reads every frame, never given to an agent |
 | `tools/guarded-driver.ts` | The boundary applied to a driver: nothing reaches the page while blind, foreign frames emptied |
 | `tools/browser.ts`       | `observe`, `act`, `goto`, `screenshot` as tools on a guarded driver, iframes masked  |
+| `payment/handoff.ts`     | The payment step as a fixed sequence in code: last look, blind mode, wait, outcome, report |
+| `payment/signals.ts`     | The wait while blind: main-tab navigation, chat buttons, tab closed, deadline, reminders |
+| `payment/outcome.ts`     | One redacted read after blind mode; `decide` turns a proposal into a `PaymentResult`  |
+| `payment/classify.ts`    | The one model call in the payment step: propose a status from the hotel's page text   |
+| `payment/redact.ts`      | Card, code and password fields and last-four digits removed from every observation    |
+| `payment/page-facts.ts`  | Hold clock and amounts read from the page by code                                     |
+| `payment/messages.ts`    | Every traveller-facing text of the payment step, as templates                         |
+| `payment/types.ts`       | `PaymentStatus`, `PaymentResult`, `Signal`, `Terms`                                    |
 | `tools/chat.ts`          | `say`, `show_card`, `ask_traveller`, `wait_for_reply`, with timeouts                |
 | `tools/scoring.ts`       | `set_goal`, `set_objective`, `add_candidate`, `score_candidates`                    |
 | `tools/time.ts`          | `check_time` against a search budget and an optional hard deadline                  |

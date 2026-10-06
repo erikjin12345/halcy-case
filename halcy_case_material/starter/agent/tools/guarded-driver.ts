@@ -4,10 +4,13 @@
 //   - while blind, observe, act, goto and screenshot never reach the page
 //   - frames outside the hotel's site are emptied before anything is returned
 //   - a location outside the hotel's site is reported as an origin only
+//   - card, code and password fields are emptied wherever they sit, and
+//     cannot be acted on (payment/redact.ts)
 // Signals that read no page content (navigation, close) pass through, since
 // the hand-off waits on exactly those while blind.
 
 import type { Observation } from "../../browser.ts";
+import { redactObservation } from "../payment/redact.ts";
 import type { PaymentBoundary } from "./boundary.ts";
 import { originOf, type PageDriver, type PageLocation } from "./driver.ts";
 
@@ -29,14 +32,19 @@ export function guardedDriver(raw: PageDriver, boundary: PaymentBoundary): PageD
     if (boundary.blind) throw new BoundaryError(`${what} refused: blind mode, the traveller is in control`);
   };
   const safe = (l: PageLocation): PageLocation => (boundary.known(l.origin) ? l : { origin: l.origin, path: "" });
+  /** Ids of sensitive fields in the latest observation. */
+  let sensitive = new Set<string>();
 
   return {
     async observe() {
       refuseIfBlind("observe");
-      return filterObservation(await raw.observe(), boundary);
+      const redacted = redactObservation(filterObservation(await raw.observe(), boundary));
+      sensitive = redacted.sensitive;
+      return redacted.seen;
     },
     async act(action) {
       refuseIfBlind("act");
+      if (sensitive.has(action.id)) throw new BoundaryError(`element ${action.id} is a card, code or password field; only the traveller fills those`);
       const frameUrl = raw.frameUrlOf(action.id);
       if (!frameUrl) throw new BoundaryError(`no frame for ${action.id}; observe again`);
       if (!boundary.allows(frameUrl)) throw new BoundaryError(`element ${action.id} is in a frame outside the hotel's site`);
