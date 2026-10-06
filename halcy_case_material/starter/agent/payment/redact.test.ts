@@ -40,6 +40,29 @@ test("the last four digits on a confirmation page are masked", () => {
   for (const kept of ["Total €4242", "Maxx 2024 offer", "2 x 2026 rate", "Ref **A1234"]) assert.equal(redactText(kept), kept);
 });
 
+test("a star rating or a footnote mark before a number is not a card, unless a card word is near", () => {
+  // One run of asterisks or x, a space, four digits: left alone without a card word nearby.
+  for (const kept of ["Rating: ***** 2024 winner", "Hotel **** 2025 award", "Total: ** 1200 per stay", "Size xxxx 1200 mm"]) assert.equal(redactText(kept), kept);
+  // The same shape is masked when the text just before it says it is a card.
+  assert.equal(redactText("Card: **** 4242"), "Card: **** ••••");
+  assert.equal(redactText("Payment method\nVisa\n**** 2024"), "Payment method\nVisa\n**** ••••");
+  assert.equal(redactText("Betalt med kort xxxx 4242"), "Betalt med kort xxxx ••••");
+  assert.equal(redactText("Charged to **** 0002 on arrival"), "Charged to **** •••• on arrival");
+  // Lines about paying that name no card. All were masked before the weak rule existed and must stay masked.
+  for (const line of ["Payment method: **** 4242", "Paid: **** 4242", "Guarantee held on **** 4242", "Your booking is guaranteed with **** 4242.", "Betalning: **** 4242"]) {
+    assert.equal(redactText(line).includes("4242"), false, line);
+  }
+  // The side this errs on: a footnoted four-digit price next to a payment word is still masked.
+  assert.equal(redactText("We hold your card as a guarantee.\nTotal: ** 1200 per stay"), "We hold your card as a guarantee.\nTotal: ** •••• per stay");
+  // Never weak, card word or not: bullets, several groups, a mask that touches the digits.
+  assert.equal(redactText("•••• 2024"), "•••• ••••");
+  assert.equal(redactText("**** **** 2024"), "**** **** ••••");
+  assert.equal(redactText("****2024"), "****••••");
+  assert.equal(redactText("xxxx-2024"), "xxxx-••••");
+  // A card word further back than the context window does not count.
+  assert.equal(redactText(`Visa is accepted. ${"Breakfast is served from seven. ".repeat(4)}Rated ***** 2024`).endsWith("***** 2024"), true);
+});
+
 test("the guarded driver redacts every observation and refuses to act on a sensitive field", async () => {
   const f = fakeRaw({}, `${HOTEL}/pay`);
   f.raw.observe = async () => inline;
