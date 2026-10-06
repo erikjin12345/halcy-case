@@ -22,9 +22,9 @@ only with a run log, a test or a source to point at. State as of 2026-10-06
 
 | #   | Claim | Sample | Source |
 | --- | ----- | ------ | ------ |
-| N13 | Cost and time per booking up to the approval card: $0.31 to $0.47 and 116 to 181 s on Opus 5.5 | Three example asks, one run each | `agent/MODELS.md` section 5 |
+| N13 | $0.22 to $0.41 and 85 to 176 s per booking up to the approval card, with search on Sonnet 5.5 (the default) | Two scripted runs per example ask, on the mock: one on 6f5dd69, one on main after PR #16 and #19 | `agent/MODELS.md` section 5; `runs/scenarios/2026-10-06T05-14-58-249Z` and `2026-10-06T07-10-23-704Z` |
 | N14 | 151 s from message to confirmed booking | One run, stand-in paying in 6 s | `runs/2026-10-06T04-56-27-570Z-booking-full-standin` |
-| N15 | Sonnet 5.5 does the search job as well as Opus 5.5 at about half the search cost | Three asks, one run each, one hotel; the default is unchanged | `agent/MODELS.md` section 6 |
+| N15 | Sonnet 5.5 is good enough for search, which is now the default | Two scripted runs per example ask on the mock, 3 of 3 to the approval card both times, the second on main after PR #16 with the corrected grader. Compared with Opus once per ask: same candidates, same prices. Not run on a second hotel | `agent/MODELS.md` sections 5 and 6 |
 | N16 | The 5 minute and 60 second hold thresholds are right | Never tuned | Runs with a slow traveller |
 
 ## Not checked by someone who would know
@@ -36,6 +36,8 @@ only with a run log, a test or a source to point at. State as of 2026-10-06
 | N19 | A script injected only into a WebView's main frame cannot read a frame from another origin, on iOS and Android | The WebView plan's boundary depends on it |
 | N20 | Wallet payments and saved cards work, or fail gracefully, in an embedded view | Decides WebView versus system browser tab per hotel |
 | N21 | Automated form filling is allowed by a given hotel's terms | Some sites forbid it (`docs/research/mobile-browser-limitation.md`) |
+| N22 | The agents handle a hotel whose payment page charges in another currency than its room list | The code check is unit-tested. One live run on the mock showed the other half: a limit in SEK against EUR prices was left out, the traveller was told the hotel prices in euros and asked for a limit in euros, the new limit was applied, and the card carried the exchange-rate line. The mock never changes currency between pages, so the rejection itself has not been seen live. The second mock hotel will be the first real test |
+| N23 | A traveller who goes quiet at the approval card, with the hotel already holding the room, is told what the hold means | One live run with the wait shortened to 20 s (`REPLY_TIMEOUT_MS`): quiet at the first question, the agent said it had stopped, that nothing was booked or charged and that no room was being held. Quiet at the approval card, after validation has started a hold, has not been run |
 
 ## Moved out, with evidence
 

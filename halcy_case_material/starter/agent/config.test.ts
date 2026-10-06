@@ -35,3 +35,17 @@ test("roleConfig reads MODEL_<ROLE> and EFFORT_<ROLE> from the environment", () 
     delete process.env.EFFORT_SEARCH;
   }
 });
+
+test("defaults: search on Sonnet 5.5, the three roles the traveller depends on directly on Opus 5.5", () => {
+  const saved: Record<string, string | undefined> = {};
+  for (const role of ["ORCHESTRATOR", "SEARCH", "OBJECTIVE", "VALIDATION"]) {
+    saved[role] = process.env[`MODEL_${role}`];
+    delete process.env[`MODEL_${role}`];
+  }
+  try {
+    assert.equal(roleConfig("search").model, "claude-sonnet-5-5");
+    for (const role of ["orchestrator", "objective", "validation"] as const) assert.equal(roleConfig(role).model, "claude-opus-5-5");
+  } finally {
+    for (const [role, value] of Object.entries(saved)) if (value !== undefined) process.env[`MODEL_${role}`] = value;
+  }
+});

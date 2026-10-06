@@ -36,12 +36,16 @@ export interface RoleConfig {
 
 /**
  * Defaults per role. Override with MODEL_<ROLE> and EFFORT_<ROLE>, e.g.
- * MODEL_VALIDATION=claude-haiku-4-5. Cheaper models per role are a measured
- * decision for the design document, not a default.
+ * MODEL_SEARCH=claude-opus-5-5 to put search back on Opus.
+ *
+ * Search runs on Sonnet 5.5: it is the largest role by tokens and validation
+ * re-checks its result on the live page before the traveller sees anything.
+ * The three roles whose errors reach the traveller directly stay on Opus 5.5.
+ * Decided 2026-10-06 on one run per example ask (agent/MODELS.md section 5).
  */
 const DEFAULTS: Record<AgentRole, RoleConfig> = {
   orchestrator: { model: "claude-opus-5-5", effort: "medium", maxIterations: 60 },
-  search: { model: "claude-opus-5-5", effort: "medium", maxIterations: 80 },
+  search: { model: "claude-sonnet-5-5", effort: "medium", maxIterations: 80 },
   objective: { model: "claude-opus-5-5", effort: "low", maxIterations: 10 },
   validation: { model: "claude-opus-5-5", effort: "low", maxIterations: 30 },
 };

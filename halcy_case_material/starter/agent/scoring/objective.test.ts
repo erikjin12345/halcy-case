@@ -4,10 +4,16 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { memoryStore } from "../store.ts";
 import type { Objective } from "../types.ts";
-import { maxScore, scoreCandidates } from "./objective.ts";
+import { budgetNote, maxScore, scoreCandidates } from "./objective.ts";
 
 type Features = Record<string, string | number | boolean>;
 const base: Objective = { weights: {}, hard: {}, wants: {}, threshold: 0, maxSearchMs: 1, extraAfterPassMs: 0 };
+
+function rooms(all: Record<string, Features>) {
+  const store = memoryStore();
+  for (const [id, f] of Object.entries(all)) store.observe(id, "H", f, "test");
+  return store.candidates();
+}
 
 function score(rooms: Record<string, Features>, o: Partial<Objective>) {
   const store = memoryStore();
@@ -109,4 +115,35 @@ test("a text weight with a wanted value picks the named room", () => {
     { weights: { room_name: 2, price_total: -1 }, wants: { room_name: "classic double" }, threshold: 2 },
   );
   assert.deepEqual(r.score, { classic: 3, superior: 0 });
+});
+
+test("a cap in one currency is never compared with a price in another", () => {
+  // 3200 SEK is far more than 404 EUR as a number, and 320 SEK far less; neither comparison means anything.
+  const high = scoreCandidates(rooms({ superior: { price_total: 404, currency: "€" } }), { ...base, hard: { price_total: 3200 }, currency: "SEK" });
+  const low = scoreCandidates(rooms({ superior: { price_total: 404, currency: "€" } }), { ...base, hard: { price_total: 320 }, currency: "SEK" });
+  for (const [s] of [high, low]) {
+    assert.equal(s.evaluation.feasible, true);
+    assert.deepEqual(s.capsNotApplied, [{ constraint: "price_total", cap: s.capsNotApplied[0].cap, capCurrency: "SEK", priceCurrency: "€" }]);
+  }
+  assert.match(budgetNote(low)!, /320 SEK was NOT applied: the hotel prices in €/);
+  assert.match(budgetNote(low)!, /No conversion was made/);
+});
+
+test("a cap in the hotel's own currency is applied, however the currency is written", () => {
+  const scored = scoreCandidates(rooms({ under: { price_total: 380, currency: "€" }, over: { price_total: 420, currency: "EUR" } }), { ...base, hard: { price_total: 400 }, currency: "EUR" });
+  assert.deepEqual(scored.map((s) => [s.evaluation.candidateId, s.evaluation.feasible]), [["under", true], ["over", false]]);
+  assert.equal(budgetNote(scored), null);
+});
+
+test("a cap with a currency is not applied to a price whose currency was never recorded", () => {
+  const [s] = scoreCandidates(rooms({ room: { price_total: 380 } }), { ...base, hard: { price_total: 300 }, currency: "EUR" });
+  assert.equal(s.evaluation.feasible, true);
+  assert.equal(s.capsNotApplied[0].priceCurrency, undefined);
+  assert.match(budgetNote([s])!, /did not record which currency/);
+});
+
+test("only price caps are affected: other hard constraints still apply across currencies", () => {
+  const [s] = scoreCandidates(rooms({ room: { price_total: 404, currency: "€", cancellable: false } }), { ...base, hard: { price_total: 3200, cancellable: true }, currency: "SEK" });
+  assert.equal(s.evaluation.feasible, false);
+  assert.equal(s.failures[0].constraint, "cancellable");
 });

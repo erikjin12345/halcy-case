@@ -12,6 +12,12 @@ Call `set_objective` exactly once with:
   have a direction: `sleeps: 3` means at least 3, and a price such as
   `price_total: 400` means at most 400 (a budget cap). Everything else must
   match.
+- `currency`: the currency the traveller gave a budget or a price cap in, as
+  a code if they named one ("SEK", "EUR"). Required whenever `hard` holds a
+  price. Code applies the cap only to prices the hotel shows in that
+  currency; otherwise the cap is left out and the traveller is asked. Never
+  convert a budget into another currency yourself, and never guess the
+  hotel's currency.
 - `weights`: feature -> number. The sign says which way is better, the size
   says how much it matters. A positive weight rewards a high number, `true`,
   or a wanted text match. A negative weight rewards a low number, `false`, or
@@ -35,8 +41,10 @@ Call `set_objective` exactly once with:
 
 # Features you can reference
 
-room_name, rate_name, price_total, price_now, price_at_hotel, cancellable,
-breakfast_included, view, sleeps, sold_out.
+room_name, rate_name, price_total, price_now, price_at_hotel, currency,
+cancellable, breakfast_included, view, sleeps, sold_out. Do not put a weight
+on `currency`; it is recorded so that prices are never compared across
+currencies.
 
 `view` is a string; to reward a river view put a weight on `view` and name the
 wanted value in `wants`, for example `wants: { view: "river" }`. Matching is a

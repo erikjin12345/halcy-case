@@ -6,7 +6,7 @@ import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 import type { RunLog } from "../../log.ts";
 import type { RunnableTool } from "../llm/client.ts";
-import { maxScore, objectiveHash, scoreCandidates } from "../scoring/objective.ts";
+import { budgetNote, maxScore, objectiveHash, scoreCandidates } from "../scoring/objective.ts";
 import { FEATURES, type RunState } from "../types.ts";
 import { cleanUrl } from "./serial.ts";
 
@@ -29,6 +29,7 @@ export const objectiveSchema = z.object({
   weights: z.partialRecord(featureName, z.number()),
   hard: z.partialRecord(featureName, featureValue),
   wants: z.partialRecord(featureName, z.string()).optional().describe("Wanted substring for string features, e.g. view: river"),
+  currency: z.string().optional().describe("The currency the traveller gave a budget or price cap in, e.g. SEK or EUR. Required whenever hard contains a price"),
   threshold: z.number(),
   maxSearchMs: z.number().int().default(180000),
   extraAfterPassMs: z.number().int().default(20000),
@@ -60,8 +61,9 @@ export function objectiveTools({ state, log }: StateToolDeps): RunnableTool[] {
     name: "set_objective",
     description: "Record the scoring objective derived from the goal.",
     inputSchema: objectiveSchema,
-    run: async ({ explanation, notes, wants, ...rest }) => {
-      state.objective = { ...rest, wants: wants ?? {} };
+    run: async ({ explanation, notes, wants, currency, ...rest }) => {
+      // The budget's currency comes from the goal if the objective agent left it out: a cap must never be unit-less.
+      state.objective = { ...rest, wants: wants ?? {}, currency: currency ?? state.goal?.budget?.currency };
       state.objectiveHash = objectiveHash(state.objective);
       // A relaxed hard constraint re-admits whatever it had rejected; re-scoring re-rejects the rest.
       const stillHard = new Set(Object.keys(state.objective.hard));
@@ -101,12 +103,15 @@ export function candidateTools({ state, log }: StateToolDeps): RunnableTool[] {
       const o = state.objective;
       if (!o || !state.objectiveHash) return "No objective set yet.";
       const all = [...state.store.candidates(), ...state.store.rejected().map((r) => state.store.candidate(r.candidateId)!).filter(Boolean)];
-      for (const { evaluation, failures } of scoreCandidates(all, o)) {
+      const scored = scoreCandidates(all, o);
+      for (const { evaluation, failures } of scored) {
         state.store.evaluate(evaluation);
         // One rejection per candidate, under its most telling constraint, with every reason kept.
         if (failures.length) state.store.reject(evaluation.candidateId, failures[0].constraint, failures.map((f) => f.reason).join("; "));
       }
-      const out = { threshold: o.threshold, max: maxScore(o), ranking: state.store.ranked(state.objectiveHash), rejected: state.store.rejected() };
+      const budgetNotApplied = budgetNote(scored);
+      state.budgetNotApplied = budgetNotApplied ?? undefined;
+      const out = { threshold: o.threshold, max: maxScore(o), ranking: state.store.ranked(state.objectiveHash), rejected: state.store.rejected(), ...(budgetNotApplied ? { budgetNotApplied } : {}) };
       log.event("candidates.scored", out);
       return JSON.stringify(out, null, 1);
     },
