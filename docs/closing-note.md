@@ -25,8 +25,9 @@ State on 2026-10-06. Row numbers (L, T, N) point into `limitations/`.
    needs a specialist (N17, N18).
 3. **"Does not" versus "cannot".** The browser process could read every frame;
    code, tests and a run-log audit stop it (L15).
-4. **A person at the keyboard.** Every payment run used a script as the
-   traveller (N1, N2, T22).
+4. **A person at the keyboard.** A person has paid once, on Casa Halcy at a
+   pay-now rate (CH-972001). Declines, wrong codes and the second hotel were
+   only run with a script as the traveller (T22).
 5. **The hotel's hold.** A bank can approve after the hotel released the room.
    We lower the odds, with guessed thresholds, but cannot remove them (T7, N16).
 6. **What the open page does not show**, such as a room taken meanwhile, is

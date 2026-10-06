@@ -274,7 +274,8 @@ until the deadline, the hold expiring before and during the hand-off
 that sends the whole tab to its provider. The developer's own attempt in the
 visible window (run `2026-10-06T08-31-47-748Z-booking`) reached the hand-off
 and showed that "I'm done" pressed before paying ended the run; PR #51 sends
-the traveller back instead. No person has completed a payment yet.
+the traveller back instead. Later the developer paid in the visible window:
+confirmed, CH-972001, charged now €658.24 (run `2026-10-06T12-18-19-976Z-booking`).
 
 Not built: the recorder test (P5), reopening the page after `session_lost`
 (P10), the follow-up for `unconfirmed` beyond the question in the message, a

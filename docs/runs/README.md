@@ -10,6 +10,7 @@ validation, the line says so.
 
 | Folder | What it shows | Backs |
 | --- | --- | --- |
+| `2026-10-06T12-18-19-976Z-booking` | **A person paid.** The developer's own request through the chat: two hotels searched in parallel, Casa Halcy Superior Double, Saver rate, approved; the developer typed the card and bank code in the visible window; confirmed CH-972001, charged now €658.24 | `design.md` section 6; closing note "least sure" 4; `not-verified.md` N1, N2 |
 | `2026-10-06T07-35-26-649Z-booking-full-slow-approval-2` | Whole flow behind the real orchestrator: request, search, validation, approval, hand-off, confirmed booking. The traveller (a script) took 55 s on a 1-minute hold, so the hotel's "Your hold has expired" is quoted, the same room is validated again and paid | `design.md` section 1; closing note "least sure" 5 |
 | `2026-10-06T07-17-55-606Z-handoff-path-wrong-code` | Wrong bank code three times: declined in the hotel's words, retry, confirmed | `design.md` section 4, the bank wants to confirm |
 | `2026-10-06T07-18-10-395Z-handoff-path-decline-then-ok` | Declined card, then a second card that works | `design.md` section 4, the card is declined |
@@ -23,4 +24,4 @@ validation, the line says so.
 | `2026-10-06T07-49-41-133Z-handoff-villa-decline` | Same, declined: the tab comes back to the same review page and the decline is read in the hotel's words | `limitations/not-verified.md` N9 |
 | `2026-10-06T07-17-25-959Z-booking` | Scenario 10: the traveller types a card number into the chat; it is removed before anything reads it, and they are told to type it only on the hotel's page | report in `scenario-reports/10-card-typed-in-chat.md`; `design.md` section 1 step 1 |
 
-No person has paid in a visible window in any of these. The report for scenario 10 quotes the traveller's message as the test case wrote it, with the mock's public test card number; the run log itself has it scrubbed.
+Apart from the first folder, a script stood in for the traveller. The report for scenario 10 quotes the traveller's message as the test case wrote it, with the mock's public test card number; the run log itself has it scrubbed.

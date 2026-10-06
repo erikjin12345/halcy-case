@@ -8,8 +8,6 @@ only with a run log, a test or a source to point at. State as of 2026-10-06
 
 | #   | Claim | What exists instead | What would verify it |
 | --- | ----- | ------------------- | -------------------- |
-| N1  | A person can pay in the visible window and the chat reports the booking | The developer's own attempt reached the hand-off and pressed "I'm done" before paying (run `2026-10-06T08-31-47-748Z-booking`); the run ended, which PR #51 changes. Payments so far only by a script standing in for the traveller | The developer completes one payment with `npm run dev` |
-| N2  | The window is found and in front at the hand-off, and nothing shows before it | The window is opened at search or validation, tucked and minimised, then restored at the hand-off (PR #45, #51); checked by reading its bounds, not by a person watching | Same as N1 |
 | N6  | Any ask other than example ask 1 through payment with the orchestrator in front, including a long stay with the price rise | Ask 3 reached the approval card in a run without a window, and the hand-off refused to start there, as designed | Runs with a window or the stand-in |
 | N8  | Anything on a hotel site other than the two mocks | A second mock (Villa Aurora) ran the scenarios and the payment step | The debrief's hotel |
 | N10 | Card fields on the hotel's own page are redacted in a real browser | Unit tests on observation objects | A mock variant with inline fields |
@@ -42,11 +40,12 @@ only with a run log, a test or a source to point at. State as of 2026-10-06
 
 Run folders are under `halcy_case_material/runs/` (not in git; selected ones
 go into the submission). All were run on 2026-10-06 against the mock hotel
-with a real browser, the real classifier and a script standing in for the
-traveller, and all pass `npm run audit:runs`.
+with a real browser and the real classifier, and all pass `npm run audit:runs`.
+A script stood in for the traveller in every run except the first row.
 
 | Was | Claim | Outcome | Run folder |
 | --- | ----- | ------- | ---------- |
+| N1, N2 | A person pays in the visible window, and the chat reports the booking | The developer's own request (cheapest room for three, 20 to 24 October, both hotels searched in parallel), Casa Halcy Superior Double on the Saver rate, approved in the chat; the developer typed the card and the bank code in the window. Nothing was logged while blind except the wait; `confirmed`, "Booking reference CH-972001 ... charged now €658.24, paid at the hotel €48.00". The mock's own record matches; nothing charged without a booking. Still not done by a person: a decline, a wrong bank code, Villa Aurora | `2026-10-06T12-18-19-976Z-booking` (copied to `docs/runs/`) |
 | N3  | Wrong bank code three times, then a retry | `declined` quoting "Too many wrong codes. The payment was cancelled.", then `confirmed` | `...T07-17-55-606Z-handoff-path-wrong-code` |
 | N3  | The hold expires and the bank still approves (Saver rate) | `hold_expired` quoting the hotel; no claim about money; the mock lists the charge without a booking | `...T07-24-01-478Z-handoff-path-expired-late` |
 | N3  | Silence until the deadline | Two reminders, then `timed_out` | `...T07-23-19-072Z-handoff-path-deadline` |

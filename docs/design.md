@@ -6,8 +6,9 @@ questions in `halcy_case_material/BRIEF.md`.
 
 **State on 2026-10-06.** Built and run on two mock hotels with different
 layouts. All 13 scenario cases have met a real run; one full booking and every
-payment failure path have run with a script standing in for the traveller. No
-person has yet paid in the window, and nothing has run on a real hotel site.
+payment failure path have run with a script standing in for the traveller. A
+person has paid once, in the visible window on Casa Halcy, on a pay-now rate:
+confirmed, reference CH-972001. Nothing has run on a real hotel site.
 What is and is not shown is in `limitations/`.
 
 ## 1. Architecture
@@ -280,7 +281,8 @@ argument for testing on many sites.
 ended on the wrong rate. Up to the card it reads what agents recorded; the
 mock's own booking record, which a harness may read, should be compared first.
 
-**Still missing.** A person paying in the window. The over-limit question
+**Still missing.** A person paying more than once: a decline, a wrong bank
+code, and Villa Aurora have only been run with a script. The over-limit question
 live. The redirect payment with the agents end to end, and redaction of card
 fields on a provider's full page. Repeats. Real hotel sites.
 
