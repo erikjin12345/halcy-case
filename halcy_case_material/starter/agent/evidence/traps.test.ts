@@ -78,3 +78,9 @@ test("trap 3 reads the minimum the hand-off used, and trap 14 the label of the c
   assert.equal(verdicts(check(base([act("Zimmer anzeigen")])))["14"], "n/a");
   assert.equal(verdicts(check(base([JSON.stringify({ at: "2026-10-06T10:00:00.500Z", type: "act", kind: "click", id: "0:1" })])))["14"], "n/a", "an old log without labels");
 });
+
+test("the trap results themselves never trip the payment-boundary audit", async () => {
+  const { auditEvents } = await import("./audit.ts");
+  const results = check(run());
+  assert.deepEqual(auditEvents([JSON.stringify({ at: "t", type: "traps.result", results })]), []);
+});

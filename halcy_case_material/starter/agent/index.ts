@@ -20,6 +20,8 @@ import { activateApp, frontmostApp } from "./tools/focus.ts";
 import { traceStep } from "./trace.ts";
 import { reachableHotels } from "./reachable.ts";
 import { newRunState } from "./types.ts";
+import { trapWatcher } from "./evidence/trap-watch.ts";
+import { logTrapsResult } from "./evidence/traps-cli.ts";
 import { loadRates } from "./scoring/fx.ts";
 import { travellerCurrency } from "./agents/fx-tools.ts";
 
@@ -30,6 +32,11 @@ export const bookingAgent: Agent = async (message, chat, ctx) => {
   log.subscribe((type, data, blind) => {
     const step = traceStep(type, data, blind, ctx.traveller);
     if (step) chat.trace?.(step);
+  });
+  // Test mode: trap events derived from what is logged, added after the event that showed them.
+  const watch = trapWatcher();
+  log.subscribe((type, data, blind) => {
+    for (const e of watch(type, data, blind)) log.event(e.type, { ...e.data });
   });
   log.event("message", { message, traveller: ctx.traveller, today: ctx.today });
 
@@ -92,6 +99,8 @@ export const bookingAgent: Agent = async (message, chat, ctx) => {
     chat.say("Something went wrong on my side and I had to stop. I had not started the payment step, so nothing has been booked or charged.");
   } finally {
     await driver.close();
+    // The trap checks against the hotel's own record, read here by code, never by a model.
+    await logTrapsResult(log);
     log.event("done", { dir: log.dir });
   }
 };
