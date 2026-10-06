@@ -9,7 +9,8 @@ Everything below happens **inside this folder**. A terminal opened anywhere else
 ```bash
 npm install
 npm run setup     # downloads the Chromium build Playwright drives (once)
-npm run hotel     # terminal 1: the mock hotel; leave it running
+npm run dev       # both mock hotels and the chat with the booking agent, in one terminal
+npm run hotel     # or one at a time: terminal 1, the mock hotel; leave it running
 npm run chat      # terminal 2: the chat; open http://localhost:4200
 npm run typecheck
 ```
