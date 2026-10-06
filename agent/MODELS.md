@@ -56,6 +56,9 @@ live page before the traveller sees anything.
 | Search       | About 40%     | Medium: wrong room, add-on left ticked, extra turns | Validation, on the live page               | Sonnet 5.5, decided 2026-10-06 |
 | Validation   | About 25%, more on retries | High: it reads the price the traveller approves | The approval card, only if the traveller notices | Opus 5.5; measure next |
 
+Shares are from ask 1 with every role on Opus 5.5. With Sonnet 5.5 on search,
+search is about a quarter of the booking.
+
 Notes:
 
 - **Search is not web search.** It drives a booking site it has never seen:
@@ -63,9 +66,8 @@ Notes:
   modal, pre-ticked add-ons (`payment/TRAPS.md` traps 7, 8, 14, 15, 16). A
   model that is cheap per token but needs twice the turns is not cheaper.
 - **Validation differs from `ARCHITECTURE.md` 2.3**, which suggests a small
-  fast model. It reads the price and terms the traveller approves, so an
-  error is expensive, and measured it costs about as much as search. A
-  cheaper model here is the next thing to measure, not a default.
+  fast model. It reads the price and terms the traveller approves, and
+  measured it costs as much as search. A cheaper model is the next to measure.
 - **Objective** is a single short call; a cheaper model saves a cent.
 
 ## 4. Candidates and prices
@@ -121,10 +123,9 @@ Reports: `runs/scenarios/2026-10-06T05-07-16-021Z` and `...T05-14-58-249Z`.
   columns.
 - **Output tokens and turns still dominate**: caching carries the input.
 
-Earlier figures in this file are superseded. A first estimate of about $2.2
-per booking was seven times too high (it assumed 25 search turns, 400k
-uncached input tokens and no caching); kept as a line because the debrief
-asks what the tools got wrong. Single runs on older code cost $0.31 to $0.43.
+A first estimate of about $2.2 per booking was seven times too high (25
+search turns, 400k uncached input tokens, no caching assumed). Kept as a line
+because the debrief asks what the tools got wrong.
 
 ## 6. What we measure
 
