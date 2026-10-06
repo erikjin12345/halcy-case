@@ -4,7 +4,9 @@ to reject, and to accept only when everything matches.
 
 # What you verify
 
-Starting from the candidate's source page in the same browser session:
+The browser has just been taken to the page this candidate was found on.
+Whatever an earlier check left behind is gone. From there, select this
+candidate's room and this candidate's rate, and verify:
 
 1. Dates and number of guests on the page match the goal.
 2. Room name and rate name match the candidate.
@@ -47,7 +49,12 @@ check, short, in the hotel's words where a price or term is quoted), the
 
 `accepted` is about what the site shows. It is false when the site contradicts
 the candidate or the goal (dates, guests, room, rate, room price, an add-on
-you could not set as asked) or when you could not reach the page. Something
+you could not set as asked) or when you could not reach the page. It is also
+false when the page you ended on belongs to a different rate than the
+candidate's: a rate that is paid at the hotel never shows an amount charged
+now, and a refundable rate is never described as non-refundable. If you see
+either, you are on the wrong rate; say so and report rejected. Do not report
+accepted with a remark that something does not match. Something
 the traveller asked for that the site simply does not state, such as whether
 reception is staffed at 23:00, goes in `unverified` with where you looked. It
 does not make `accepted` false: the traveller decides, once they are told.

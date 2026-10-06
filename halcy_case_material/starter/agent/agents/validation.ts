@@ -8,6 +8,7 @@ import type { PaymentBoundary } from "../tools/boundary.ts";
 import { showLocation, type PageDriver } from "../tools/driver.ts";
 import { browserTools } from "../tools/browser.ts";
 import { FEATURES, type AgentContext, type ValidationResult } from "../types.ts";
+import { contradictions } from "./consistency.ts";
 
 export interface ValidationDeps {
   driver: PageDriver;
@@ -38,6 +39,13 @@ export async function runValidation(a: AgentContext, deps: ValidationDeps): Prom
     },
   });
 
+  // Every validation starts from the page the candidate was seen on. Whatever
+  // an earlier validation left in the browser (another rate's payment page,
+  // a running hold) is not this candidate's.
+  const sourceUrl = typeof facts.source_url === "string" ? facts.source_url : goal.hotel.url;
+  await deps.driver.goto(sourceUrl);
+  a.log.event("validation.start", { candidateId: candidate.id });
+
   const t = a.ctx.traveller;
   await runAgent({
     role: "validation",
@@ -45,7 +53,7 @@ export async function runValidation(a: AgentContext, deps: ValidationDeps): Prom
       `Candidate ${candidate.id}:\n${JSON.stringify(facts, null, 1)}`,
       `Goal:\n${JSON.stringify(goal, null, 1)}`,
       `Traveller (use only if the page asks for guest details): ${t.first} ${t.last}, ${t.email}, ${t.phone}`,
-      `The browser is at ${showLocation(deps.driver.location())}. Start with observe; use goto to the candidate's source_url if needed.`,
+      `The browser has just been taken to the page this candidate was found on (${showLocation(deps.driver.location())}). Start with observe and select this candidate's room and rate from there.`,
     ].join("\n\n"),
     tools: [...browserTools({ driver: deps.driver, boundary: deps.boundary, log: a.log }), report],
     log: a.log,
@@ -53,6 +61,11 @@ export async function runValidation(a: AgentContext, deps: ValidationDeps): Prom
 
   if (!reported) {
     reported = { candidateId: candidate.id, accepted: false, reasons: ["validation agent did not report"], observed: {} };
+  }
+  const conflicts = reported.accepted ? contradictions(facts, reported.observed) : [];
+  if (conflicts.length) {
+    reported = { ...reported, accepted: false, reasons: [...reported.reasons, ...conflicts.map((c) => `Not this candidate: ${c}`)] };
+    a.log.event("validation.overruled", { candidateId: candidate.id, conflicts });
   }
   a.state.validations.push(reported);
   // Facts seen on the live page are newer than the search's; merge them in.

@@ -13,5 +13,10 @@ export function approvalBlocker(state: RunState, candidateId: string): string | 
   const v = latestValidation(state, candidateId);
   if (!v) return `${candidateId} has not been validated on the live site. Call run_validation first.`;
   if (!v.accepted) return `the latest validation of ${candidateId} was rejected: ${v.reasons.slice(-1)[0] ?? "no reason given"}. Validate again or choose another candidate.`;
+  // One browser: it sits on the page of whichever candidate was validated last.
+  const last = state.validations[state.validations.length - 1];
+  if (last.candidateId !== candidateId) {
+    return `the browser is on ${last.candidateId}, which was validated after ${candidateId}. Call run_validation for ${candidateId} again before sending the traveller to pay.`;
+  }
   return null;
 }

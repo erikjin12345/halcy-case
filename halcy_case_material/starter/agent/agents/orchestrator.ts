@@ -9,6 +9,7 @@ import type { PaymentBoundary } from "../tools/boundary.ts";
 import type { PageDriver } from "../tools/driver.ts";
 import { chatTools } from "../tools/chat.ts";
 import { goalTools } from "../tools/scoring.ts";
+import { serialise } from "../tools/serial.ts";
 import type { AgentContext } from "../types.ts";
 import { approvalBlocker } from "./approval.ts";
 import { runObjective } from "./objective.ts";
@@ -53,13 +54,17 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
 
   const runValidationTool = betaZodTool({
     name: "run_validation",
-    description: "Verify one candidate on the live site. Returns accepted or rejected with reasons and what the page showed.",
+    description: "Verify one candidate on the live site. Returns accepted or rejected with reasons and what the page showed. There is one browser: calls run one after another, and the browser ends on the candidate validated last.",
     inputSchema: z.object({ candidateId: z.string() }),
     run: async ({ candidateId }) =>
       runValidation(a, { ...deps, candidateId })
         .then((r) => JSON.stringify(r, null, 1))
         .catch(errorText),
   });
+
+  // One browser, one agent at a time: two validations issued in the same turn
+  // must not drive the same page together.
+  const [searchInTurn, validationInTurn] = serialise([runSearchTool, runValidationTool]);
 
   const approveTool = betaZodTool({
     name: "mark_approved",
@@ -86,7 +91,7 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
       `Known hotels (name -> booking site): ${JSON.stringify(a.ctx.hotels)}`,
       `Traveller's message: ${message}`,
     ].join("\n"),
-    tools: [...chatTools({ chat: a.chat, log: a.log }), ...goalTools({ state: a.state, log: a.log }), runObjectiveTool, runSearchTool, runValidationTool, approveTool],
+    tools: [...chatTools({ chat: a.chat, log: a.log }), ...goalTools({ state: a.state, log: a.log }), runObjectiveTool, searchInTurn, validationInTurn, approveTool],
     log: a.log,
   });
 
