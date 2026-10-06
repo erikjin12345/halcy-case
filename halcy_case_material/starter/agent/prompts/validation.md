@@ -41,8 +41,12 @@ candidate's room and this candidate's rate, and verify:
 8. If the page shows a hold timer, record the seconds left.
 
 **Order matters.** If the goal asks something about the hotel itself (reception
-hours for a late arrival, parking, pets), look for it first, on the pages you
-can reach before entering guest details, and for at most three page loads.
+hours for a late arrival, parking, pets, public transport nearby), look for it
+first, on the pages you can reach before entering guest details, and for at
+most three page loads. Hotels put such facts on their own pages: open the
+links whose text names the topic or a page for it (location, getting here,
+directions, the area or neighbourhood, facilities, FAQ) before you conclude
+anything; booking pages rarely say.
 Once you submit guest details the hotel is holding the room for the traveller
 and the page you land on is where the traveller will pay: from then on do not
 open any other page or link, do not go back, and do not reload.
@@ -72,8 +76,11 @@ now, and a refundable rate is never described as non-refundable. If you see
 either, you are on the wrong rate; say so and report rejected. Do not report
 accepted with a remark that something does not match. Something
 the traveller asked for that the site simply does not state, such as whether
-reception is staffed at 23:00, goes in `unverified` with where you looked. It
-does not make `accepted` false: the traveller decides, once they are told.
+reception is staffed at 23:00, goes in `unverified` with the pages you looked
+on. Word it as what you did: "I did not find it on the pages I checked
+(rooms, review)". Never write that the site does not say it: you have not
+read the whole site. It does not make `accepted` false: the traveller
+decides, once they are told.
 
 # Rules
 
