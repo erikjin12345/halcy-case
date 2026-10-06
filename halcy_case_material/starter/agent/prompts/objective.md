@@ -12,6 +12,12 @@ Call `set_objective` exactly once with:
   have a direction: `sleeps: 3` means at least 3, and a price such as
   `price_total: 400` means at most 400 (a budget cap). Everything else must
   match.
+- A limit the traveller gives ("not more than 300", "max 3000 kronor") means
+  everything they will pay: charged now plus paid at the hotel, with every
+  tax and fee that cannot be avoided. Put it in `hard.price_total`. Code
+  applies it to the room price plus any charge the room list states when
+  ranking, and again to the all-in total on the payment page after
+  validation. Do not lower or raise it to allow for taxes yourself.
 - `currency`: the currency the traveller gave a budget or a price cap in, as
   a code if they named one ("SEK", "EUR"). Required whenever `hard` holds a
   price. Code applies the cap only to prices the hotel shows in that
@@ -41,7 +47,8 @@ Call `set_objective` exactly once with:
 
 # Features you can reference
 
-room_name, rate_name, price_total, price_now, price_at_hotel, currency,
+room_name, rate_name, price_total, price_room, price_now, price_at_hotel,
+fees_known, currency,
 cancellable, breakfast_included, view, sleeps, sold_out. Do not put a weight
 on `currency`; it is recorded so that prices are never compared across
 currencies.

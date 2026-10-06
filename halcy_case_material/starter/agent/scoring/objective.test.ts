@@ -147,3 +147,16 @@ test("only price caps are affected: other hard constraints still apply across cu
   assert.equal(s.evaluation.feasible, false);
   assert.equal(s.failures[0].constraint, "cancellable");
 });
+
+test("a room that fits the limit only before a charge the list states is rejected, and the reason says so", () => {
+  const scored = scoreCandidates(
+    rooms({ tight: { price_total: 296, fees_known: 16, currency: "€" }, roomy: { price_total: 280, fees_known: 16, currency: "€" }, plain: { price_total: 296, currency: "€" } }),
+    { ...base, hard: { price_total: 300 }, currency: "EUR" },
+  );
+  const by = Object.fromEntries(scored.map((s) => [s.evaluation.candidateId, s]));
+  assert.equal(by.tight.evaluation.feasible, false);
+  assert.equal(by.tight.failures[0].reason, "price_total fits before fees only: room 296 plus stated charges 16 is 312, required at most 300");
+  assert.equal(by.roomy.evaluation.feasible, true);
+  // Nothing stated on the list: the room line is the best total known, and validation checks the rest.
+  assert.equal(by.plain.evaluation.feasible, true);
+});

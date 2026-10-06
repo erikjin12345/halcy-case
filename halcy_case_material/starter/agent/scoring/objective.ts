@@ -34,6 +34,8 @@ const AT_LEAST: FeatureName[] = ["sleeps"];
 /** Numeric hard constraints that mean "at most": a budget cap. */
 const AT_MOST: FeatureName[] = ["price_total", "price_now", "price_at_hotel"];
 
+const round = (n: number) => Math.round(n * 1000) / 1000;
+
 type Range = { min: number; max: number };
 type Ranges = Partial<Record<FeatureName, Range>>;
 
@@ -82,6 +84,19 @@ function capCurrencyGap(c: Candidate, o: Objective, name: FeatureName, required:
   return { constraint: name, cap: required, capCurrency: o.currency, priceCurrency: typeof priced === "string" ? priced : undefined };
 }
 
+/**
+ * A limit on the total is a limit on everything the traveller will pay. When
+ * the room list already states a charge that is not included, the limit is
+ * applied to the room price plus that charge, the best total known so far.
+ */
+function overLimitWithFees(c: Candidate, name: FeatureName, required: FeatureValue): string | null {
+  const room = value(c, "price_total");
+  const fees = value(c, "fees_known");
+  if (name !== "price_total" || typeof required !== "number" || typeof room !== "number" || typeof fees !== "number" || fees <= 0) return null;
+  if (room > required || room + fees <= required) return null;
+  return `price_total fits before fees only: room ${room} plus stated charges ${fees} is ${round(room + fees)}, required at most ${required}`;
+}
+
 function hardChecks(c: Candidate, o: Objective): Pick<ScoredCandidate, "failures" | "capsNotApplied"> {
   const out: ScoredCandidate["failures"] = [];
   const capsNotApplied: CapNotApplied[] = [];
@@ -91,7 +106,7 @@ function hardChecks(c: Candidate, o: Objective): Pick<ScoredCandidate, "failures
       capsNotApplied.push(gap);
       continue;
     }
-    const reason = hardFailure(name, value(c, name), required);
+    const reason = hardFailure(name, value(c, name), required) ?? overLimitWithFees(c, name, required);
     if (reason) out.push({ constraint: name, reason });
   }
   // Most telling first: a sold-out room, then other definite mismatches, then facts the page never stated.
@@ -125,7 +140,6 @@ function fit(name: FeatureName, v: FeatureValue | undefined, wantHigh: boolean, 
   return v.toLowerCase().includes(want.toLowerCase()) === wantHigh ? 1 : 0;
 }
 
-const round = (n: number) => Math.round(n * 1000) / 1000;
 
 export function scoreCandidates(candidates: Candidate[], o: Objective): ScoredCandidate[] {
   const hash = objectiveHash(o);

@@ -11,9 +11,9 @@ import { chatTools } from "../tools/chat.ts";
 import { goalTools } from "../tools/scoring.ts";
 import { serialise } from "../tools/serial.ts";
 import type { AgentContext } from "../types.ts";
-import { approvalBlocker } from "./approval.ts";
+import { approvalBlocker, overLimit } from "./approval.ts";
 import { runObjective } from "./objective.ts";
-import { priceChangeTool } from "./price-change.ts";
+import { overLimitTool, priceChangeTool } from "./price-change.ts";
 import { runSearch } from "./search.ts";
 import { runValidation } from "./validation.ts";
 
@@ -60,7 +60,12 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
     inputSchema: z.object({ candidateId: z.string() }),
     run: async ({ candidateId }) =>
       runValidation(a, { ...deps, candidateId })
-        .then((r) => JSON.stringify(r, null, 1))
+        .then((r) => {
+          // The limit is for everything the traveller will pay; tell the orchestrator before it tries to approve.
+          const over = r.accepted ? overLimit(a.state, candidateId) : null;
+          const overLimitNote = over ? `The total on the hotel's page, ${over.total}, is ${over.over} over the traveller's limit of ${over.limit}. Validate a cheaper candidate that fits, or call ask_over_limit. mark_approved is refused until then.` : undefined;
+          return JSON.stringify({ ...r, ...(overLimitNote ? { overLimit: overLimitNote } : {}) }, null, 1);
+        })
         .catch(errorText),
   });
 
@@ -93,7 +98,7 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
       `Known hotels (name -> booking site): ${JSON.stringify(a.ctx.hotels)}`,
       `Traveller's message: ${message}`,
     ].join("\n"),
-    tools: [...chatTools({ chat: a.chat, log: a.log }), ...goalTools({ state: a.state, log: a.log }), runObjectiveTool, searchInTurn, validationInTurn, priceChangeTool(a), approveTool],
+    tools: [...chatTools({ chat: a.chat, log: a.log }), ...goalTools({ state: a.state, log: a.log }), runObjectiveTool, searchInTurn, validationInTurn, priceChangeTool(a), overLimitTool(a), approveTool],
     log: a.log,
   });
 

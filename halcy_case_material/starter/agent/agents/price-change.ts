@@ -1,14 +1,15 @@
-// When the hotel's price differs from the one the room was found at, the
-// traveller is asked by code, not by a model: the card carries the two room
-// prices exactly as recorded, the answer is logged with both, and only an
-// accepted answer changes what validation and approval compare against.
+// Two questions about money are asked by code, not by a model: the hotel's
+// price differs from the one the room was found at, and the total on the
+// hotel's page is over the traveller's own limit. The card carries the
+// figures exactly as recorded, the answer is logged with them, and only an
+// accepted answer changes what approval compares against.
 
 import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 import type { RunnableTool } from "../llm/client.ts";
 import type { Button, Card } from "../../types.ts";
 import type { AgentContext } from "../types.ts";
-import { priceChangeOffer, type PriceChangeOffer } from "./approval.ts";
+import { overLimit, priceChangeOffer, type OverLimit, type PriceChangeOffer } from "./approval.ts";
 
 export const ACCEPT = "accept_new_price";
 export const DECLINE = "decline_new_price";
@@ -68,6 +69,59 @@ export function priceChangeTool(a: AgentContext): RunnableTool {
       a.state.priceAcceptances.push({ candidateId, was: offer.was, now: offer.now, total: offer.total, currency: offer.currency, at: new Date().toISOString() });
       a.log.event("price.accepted", { candidateId, was: offer.was, now: offer.now, total: offer.total, currency: offer.currency });
       return `accepted: the traveller agreed to a room price of ${offer.now} (it was ${offer.was}). Now call run_validation for ${candidateId} again; do not search again. If it is accepted, call mark_approved without another question: the traveller has just agreed to these figures. If the price has changed again, it will be rejected and you ask again.`;
+    },
+  });
+}
+
+export const ACCEPT_OVER = "accept_over_limit";
+export const DECLINE_OVER = "decline_over_limit";
+
+export function overLimitCard(hotel: string, o: OverLimit): Card & { buttons: Button[] } {
+  const m = (v: number | undefined) => (v === undefined ? undefined : money(v, o.currency));
+  const extras = o.room !== undefined && o.total - o.room > 0.005 ? `Room ${m(o.room)}, plus ${m(o.total - o.room)} in taxes, fees and extras that ${hotel} adds` : undefined;
+  const lines = [
+    `Your limit: ${m(o.limit)}`,
+    `Total on ${hotel}'s own payment page: ${m(o.total)}`,
+    `Over your limit by: ${m(o.over)}`,
+    extras,
+    o.chargedNow !== undefined ? `Charged now: ${m(o.chargedNow)}` : undefined,
+    o.atHotel !== undefined ? `Paid at the hotel: ${m(o.atHotel)}` : undefined,
+    "Nothing is booked yet.",
+  ].filter((l): l is string => Boolean(l));
+  return {
+    title: `Over your limit at ${hotel}`,
+    lines,
+    buttons: [
+      { id: ACCEPT_OVER, label: `Yes, continue at ${m(o.total)}` },
+      { id: DECLINE_OVER, label: "No, keep to my limit" },
+    ],
+  };
+}
+
+export function overLimitTool(a: AgentContext): RunnableTool {
+  const timeoutMs = Number(process.env.REPLY_TIMEOUT_MS ?? 10 * 60 * 1000);
+  return betaZodTool({
+    name: "ask_over_limit",
+    description:
+      "Use when run_validation accepted a candidate but reported that its total is over the traveller's limit, and no cheaper candidate fits. Shows the traveller the limit, the total and the amount over, and waits. Returns accepted, declined or timeout. Do not ask about this with ask_traveller.",
+    inputSchema: z.object({ candidateId: z.string() }),
+    run: async ({ candidateId }) => {
+      const over = overLimit(a.state, candidateId);
+      if (!over) return `Refused: the validated total of ${candidateId} is not over a limit in the same currency, or the traveller has already accepted it.`;
+      const hotel = a.state.goal?.hotel.name ?? "the hotel";
+      const card = overLimitCard(hotel, over);
+      a.log.event("limit.ask", { candidateId, ...over, title: card.title, lines: card.lines });
+      let timer: NodeJS.Timeout | undefined;
+      const quiet = new Promise<string>((r) => (timer = setTimeout(() => r("timeout"), timeoutMs)));
+      const pressed = await Promise.race([a.chat.choose(card), quiet]);
+      clearTimeout(timer);
+      if (pressed !== ACCEPT_OVER) {
+        a.log.event(pressed === "timeout" ? "limit.timeout" : "limit.declined", { candidateId, total: over.total, limit: over.limit });
+        return pressed === "timeout" ? "timeout" : "declined: the traveller keeps to the limit. Validate a candidate whose total fits, or say plainly that nothing does. Nothing is booked.";
+      }
+      a.state.overLimitAcceptances.push({ candidateId, total: over.total, limit: over.limit, currency: over.currency, at: new Date().toISOString() });
+      a.log.event("limit.accepted", { candidateId, total: over.total, limit: over.limit, over: over.over, currency: over.currency });
+      return `accepted: the traveller agreed to a total of ${over.total}, ${over.over} over their limit of ${over.limit}. Call mark_approved for ${candidateId} now, without another question. If the total changes, you will be refused and must ask again.`;
     },
   });
 }

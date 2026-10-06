@@ -44,6 +44,11 @@ term is only visible one step further; never reach a page that asks for payment.
   separately or calls "not included", even when it is stated up front; the
   check on the live page adds those. If the page gives only a per-night
   price, record that price times the number of nights.
+- **Charges the page says are not included.** When the room list states one
+  ("city tax €4 per person per night, not included", "visitor levy £10 per
+  stay"), record what it comes to for the whole stay and party in
+  `fees_known`. Only what the page states; if you cannot work it out from
+  the page, leave it out.
 - **Which currency.** Record the currency the hotel charges in, and prices
   in that currency. A guide figure shown for convenience ("about EUR 164")
   is not a price: if the page offers the charge currency, switch the display

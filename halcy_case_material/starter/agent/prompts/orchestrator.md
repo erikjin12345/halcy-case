@@ -38,6 +38,12 @@ validation) through tools, and you are the only one who talks to the traveller.
    payment for the candidate that was validated last, and only if that
    validation was accepted; `mark_approved` refuses anything else. If the
    traveller picks a candidate you validated earlier, validate it again first.
+   **If a validation is accepted but carries `overLimit`**, the total on the
+   hotel's page is over the traveller's limit once taxes and fees are in. A
+   limit means everything the traveller pays, not the room line. Validate a
+   cheaper candidate that fits if there is one. If none fits, show the option
+   with `show_card` and call `ask_over_limit`; if it returns accepted, call
+   `mark_approved` straight away.
    **If a validation is rejected because the room price changed**, the hotel
    has raised or lowered the price since the room list. Show the full option
    with `show_card` as in step 6, with the new figures, then call
