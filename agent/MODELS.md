@@ -16,22 +16,19 @@ cell is an observation, not a measurement.
 
 From `halcy_case_material/starter/agent/config.ts`:
 
-| Role         | Model             | Effort | Max turns | Shape of the job                          |
-| ------------ | ----------------- | ------ | --------- | ----------------------------------------- |
-| Orchestrator | `claude-opus-5-5` | medium | 60        | Talks to the traveller, owns the goal     |
-| Objective    | `claude-opus-5-5` | low    | 10        | One call: goal to weights and constraints |
-| Search       | `claude-sonnet-5-5` | medium | 80      | Drives an unseen hotel site in a browser  |
-| Validation   | `claude-opus-5-5` | low    | 30        | Re-checks one candidate on the live page  |
+| Role         | Model               | Effort | Max turns | Shape of the job                          |
+| ------------ | ------------------- | ------ | --------- | ----------------------------------------- |
+| Orchestrator | `claude-opus-5-5`   | medium | 60        | Talks to the traveller, owns the goal     |
+| Objective    | `claude-opus-5-5`   | low    | 10        | One call: goal to weights and constraints |
+| Search       | `claude-sonnet-5-5` | medium | 80        | Drives an unseen hotel site in a browser  |
+| Validation   | `claude-opus-5-5`   | low    | 30        | Re-checks one candidate on the live page  |
 
 Scoring is deterministic code, not a model (`scoring/objective.ts`). The
 payment hand-off is a controlled sequence, not an agent (`ARCHITECTURE.md`
 2.7).
 
-Switching a role needs no code change. To put search back on Opus:
-
-```bash
-MODEL_SEARCH=claude-opus-5-5
-```
+Switching a role needs no code change: `MODEL_SEARCH=claude-opus-5-5` in
+`.env` puts search back on Opus.
 
 `capabilities()` in `config.ts` (PR #5) keeps an override from breaking the
 request: Haiku 4.5 rejects the `effort` parameter and does not take the
