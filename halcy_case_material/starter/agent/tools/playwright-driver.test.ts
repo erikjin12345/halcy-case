@@ -80,12 +80,12 @@ test("in the background a screenshot is refused rather than hanging, and the han
   assert.equal(shots.length, 1, "after the hand-off screenshots work again");
 });
 
-test("only index.ts builds the raw driver", () => {
+test("only index.ts and the parallel search build the raw driver, each wrapping it at once", () => {
   const root = new URL("..", import.meta.url).pathname;
   const users: string[] = [];
   for (const entry of readdirSync(root, { recursive: true, encoding: "utf8" })) {
     if (!entry.endsWith(".ts") || entry.endsWith(".test.ts") || entry.endsWith("playwright-driver.ts")) continue;
     if (/from "[^"]*playwright-driver/.test(readFileSync(join(root, entry), "utf8"))) users.push(entry);
   }
-  assert.deepEqual(users, ["index.ts"]);
+  assert.deepEqual(users.sort(), ["agents/search-parallel.ts", "index.ts"]);
 });

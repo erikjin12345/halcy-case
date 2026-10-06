@@ -167,9 +167,10 @@ export function candidateTools({ state, log }: StateToolDeps): RunnableTool[] {
       const o = state.objective;
       if (!o || !state.objectiveHash) return "No objective set yet.";
       // Anything recorded before the charge currency was known, in another currency, is not a price.
+      // The charge currency is one hotel's: never apply it to another hotel's rooms.
       const charge = state.chargeCurrency;
       if (charge) {
-        for (const c of state.store.candidates()) {
+        for (const c of state.store.candidates().filter((c) => c.hotel === state.goal?.hotel.name)) {
           const cur = c.features.currency?.value;
           if (typeof cur === "string" && !sameCurrency(charge, cur)) state.store.reject(c.id, "charge_currency", `priced in ${cur}, but the hotel charges in ${charge}`);
         }
