@@ -17,6 +17,7 @@ import { guardedDriver } from "./tools/guarded-driver.ts";
 import { lazyDriver } from "./tools/lazy-driver.ts";
 import { playwrightDriver } from "./tools/playwright-driver.ts";
 import { traceStep } from "./trace.ts";
+import { reachableHotels } from "./reachable.ts";
 import { newRunState } from "./types.ts";
 import { loadRates } from "./scoring/fx.ts";
 import { travellerCurrency } from "./agents/fx-tools.ts";
@@ -36,6 +37,11 @@ export const bookingAgent: Agent = async (message, chat, ctx) => {
     log.event("error", { reason: "no credential" });
     return;
   }
+
+  // Only hotels whose sites answer are offered and searched. Probed once per run, in parallel.
+  const { up, down } = await reachableHotels(ctx.hotels);
+  if (down.length) log.event("trace.note", { from: "hotels", text: `Not answering, so not offered or searched: ${down.join(", ")}` });
+  ctx = { ...ctx, hotels: up, unreachable: down };
 
   // The hotel is given by name; the orchestrator resolves it, but the boundary
   // needs an origin before any browser tool runs. Allow every known hotel site.

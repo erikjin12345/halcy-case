@@ -51,6 +51,8 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
         const base = a.state.goal;
         if (!base || !a.state.objective) return "Error: set_goal and run_objective first.";
         const names = hotels?.length ? hotels : [base.hotel.name];
+        const down = names.filter((n) => a.ctx.unreachable?.includes(n));
+        if (down.length) return `Error: ${down.join(", ")}: the site is not answering right now. Tell the traveller in those words if they asked for it; offer the others.`;
         const unknown = names.filter((n) => !a.ctx.hotels[n]);
         if (unknown.length) return `Error: not in the places database: ${unknown.join(", ")}.`;
         const goals = names.map((n) => ({ ...base, hotel: { name: n, url: a.ctx.hotels[n] } }));
@@ -138,6 +140,7 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
       `Today: ${a.ctx.today}`,
       `Traveller: ${t.first} ${t.last}`,
       `Known hotels (name -> booking site): ${JSON.stringify(a.ctx.hotels)}`,
+      ...(a.ctx.unreachable?.length ? [`Not answering right now, so not available: ${a.ctx.unreachable.join(", ")}. Do not offer them; only if the traveller names one, say its site is not answering right now.`] : []),
       `Traveller's message: ${message}`,
     ].join("\n"),
     tools: [...chatTools({ chat: a.chat, log: a.log }), ...goalTools({ state: a.state, log: a.log }), runObjectiveTool, searchInTurn, validationInTurn, priceChangeTool(a), overLimitTool(a), ...fxTools(a), approveTool],
