@@ -3,7 +3,7 @@
 How the payment part of the agent can look. `TRAPS.md` describes what the mock
 hotel does; this file describes what we build: the rule, the status contract,
 the hand-off sequence, the guards, and the traps `TRAPS.md` does not cover.
-Proposal, not yet decided. Open decisions are in section 8.
+Built in `halcy_case_material/starter/agent/payment/`; decisions are in section 8.
 
 ## 1. The rule
 
@@ -270,8 +270,11 @@ chat message to confirmed booking in 151 s. All run logs pass `audit:runs`.
 Failure paths run against the mock the same day: wrong bank code, decline
 then a second card, a rate that charges now, Cancel, a closed tab, silence
 until the deadline, the hold expiring before and during the hand-off
-(`docs/limitations/not-verified.md`, last section). Not yet run with a person
-paying in the visible window.
+(`docs/limitations/not-verified.md`, last section), and on a second mock hotel
+that sends the whole tab to its provider. The developer's own attempt in the
+visible window (run `2026-10-06T08-31-47-748Z-booking`) reached the hand-off
+and showed that "I'm done" pressed before paying ended the run; PR #51 sends
+the traveller back instead. No person has completed a payment yet.
 
 Not built: the recorder test (P5), reopening the page after `session_lost`
 (P10), the follow-up for `unconfirmed` beyond the question in the message, a
