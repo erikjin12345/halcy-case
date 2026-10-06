@@ -86,12 +86,10 @@ export function goalTools({ state, log }: StateToolDeps): RunnableTool[] {
   return [setGoal];
 }
 
-export function objectiveTools({ state, log }: StateToolDeps): RunnableTool[] {
-  const setObjective = betaZodTool({
-    name: "set_objective",
-    description: "Record the scoring objective derived from the goal.",
-    inputSchema: objectiveSchema,
-    run: async ({ explanation, notes, wants, currency, ...rest }) => {
+/** Record an objective in the run state. Used by the objective agent's single call and by the `set_objective` tool. */
+export function applyObjective(state: RunState, log: StateToolDeps["log"], input: z.infer<typeof objectiveSchema>): string {
+  const { explanation, notes, wants, currency, ...rest } = input;
+  {
       // The budget's currency comes from the goal if the objective agent left it out: a cap must never be unit-less.
       state.objective = { ...rest, wants: wants ?? {}, currency: currency ?? state.goal?.budget?.currency };
       state.objectiveHash = objectiveHash(state.objective);
@@ -103,7 +101,15 @@ export function objectiveTools({ state, log }: StateToolDeps): RunnableTool[] {
       }
       log.event("objective.set", { objective: state.objective, hash: state.objectiveHash, explanation, notes, readmitted });
       return `Objective recorded. Maximum possible score is ${maxScore(state.objective)}.`;
-    },
+  }
+}
+
+export function objectiveTools({ state, log }: StateToolDeps): RunnableTool[] {
+  const setObjective = betaZodTool({
+    name: "set_objective",
+    description: "Record the scoring objective derived from the goal.",
+    inputSchema: objectiveSchema,
+    run: async (input) => applyObjective(state, log, input),
   });
   return [setObjective];
 }
