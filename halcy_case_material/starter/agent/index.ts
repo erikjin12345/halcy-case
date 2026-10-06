@@ -8,7 +8,9 @@ import type { Agent } from "../types.ts";
 import { runOrchestrator } from "./agents/orchestrator.ts";
 import { HEADLESS, hasCredential, loadDotEnv } from "./config.ts";
 import { modelClassifier } from "./payment/classify.ts";
-import { runHandoff, termsFrom } from "./payment/handoff.ts";
+import { runValidation } from "./agents/validation.ts";
+import { runPayment } from "./payment/fresh-hold.ts";
+import { termsFrom } from "./payment/handoff.ts";
 import { PaymentBoundary } from "./tools/boundary.ts";
 import { guardedDriver } from "./tools/guarded-driver.ts";
 import { playwrightDriver } from "./tools/playwright-driver.ts";
@@ -36,21 +38,19 @@ export const bookingAgent: Agent = async (message, chat, ctx) => {
 
   try {
     const state = newRunState();
-    const approved = await runOrchestrator({ chat, ctx, log, state }, message, { driver, boundary });
+    const agents = { chat, ctx, log, state };
+    const approved = await runOrchestrator(agents, message, { driver, boundary });
     log.event("orchestrator.done", { approved });
     if (approved) {
       // Validation left the browser on the hotel's payment page. From here on
       // it is code, not a model: the traveller pays in the hotel's window.
       const validated = [...state.validations].reverse().find((v) => v.candidateId === approved && v.accepted);
-      await runHandoff({
-        driver,
-        boundary,
-        chat,
-        log,
-        hotel: state.goal?.hotel.name ?? "the hotel",
-        terms: termsFrom(validated?.observed ?? {}),
-        visible: !HEADLESS,
-        classify: modelClassifier(log),
+      const handoff = { driver, boundary, chat, log, hotel: state.goal?.hotel.name ?? "the hotel", terms: termsFrom(validated?.observed ?? {}), visible: !HEADLESS, classify: modelClassifier(log) };
+      // If the hold ran down or the page changed while the traveller was
+      // deciding, validate the same candidate once more for a fresh hold.
+      await runPayment(handoff, async () => {
+        const again = await runValidation(agents, { driver, boundary, candidateId: approved });
+        return again.accepted ? termsFrom(again.observed) : undefined;
       });
     }
   } catch (e) {

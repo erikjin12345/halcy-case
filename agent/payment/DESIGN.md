@@ -112,6 +112,11 @@ approved candidate
   chat buttons (trap P9).
 - A retry after `declined` is: reload the page, a new approval tap, step 5.
   Never automatic.
+- When step 1 or 4 fails because the hold ran down, the hotel released the
+  room, or an agreed amount is no longer on the page, the traveller is told
+  which, and the same candidate is validated once more for a fresh hold
+  (`payment/fresh-hold.ts`). Same figures: straight to step 5. Different
+  figures: a card with old and new, and nothing continues without a press.
 
 ## 4. Guards, in layers
 
@@ -231,6 +236,7 @@ industry security rules) are separate regimes; ask a specialist.
 | `page-facts.ts` | hold clock, amounts still on the page, amounts as the hotel writes them (pure) |
 | `signals.ts`    | wait on navigation, chat button, tab close, deadline; reminders |
 | `handoff.ts`    | the sequence in section 3; the only caller of `beginBlind`      |
+| `fresh-hold.ts` | hold ran down or page changed before the hand-over: validate once more, ask on a changed price |
 | `outcome.ts`    | redacted read after blind mode, `decide`, model-free fallback   |
 | `classify.ts`   | the one model call: propose a status from the hotel's page text |
 | `messages.ts`   | one traveller-facing template per status                        |
@@ -261,7 +267,11 @@ scrub for card numbers (P6) is in PR #9.
 Run against the mock (2026-10-06): the hand-off alone with a stand-in
 traveller, confirmed and declined; and one full run behind the orchestrator,
 chat message to confirmed booking in 151 s. All run logs pass `audit:runs`.
-Not yet run with a person paying in the visible window.
+Failure paths run against the mock the same day: wrong bank code, decline
+then a second card, a rate that charges now, Cancel, a closed tab, silence
+until the deadline, the hold expiring before and during the hand-off
+(`docs/limitations/not-verified.md`, last section). Not yet run with a person
+paying in the visible window.
 
 Not built: the recorder test (P5), reopening the page after `session_lost`
 (P10), the follow-up for `unconfirmed` beyond the question in the message, a

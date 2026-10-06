@@ -71,13 +71,23 @@ test("a declined card can be retried, and the retry reloads the page", async () 
 
 test("the traveller is never handed a page that changed or a hold that is about to run out", async () => {
   const short = setup({ "/payment": PAGES["/payment"].replace("14:20", "3:10") });
-  assert.equal((await runHandoff(short.deps)).status, "not_started");
+  const tooShort = await runHandoff(short.deps);
+  assert.deepEqual([tooShort.status, tooShort.cause], ["not_started", "hold_short"]);
+  assert.match(tooShort.reason ?? "", /^3 minutes are left on Casa Halcy's hold/);
+
+  const gone = setup({ "/payment": PAGES["/payment"].replace("We're holding this room for you for 14:20", "Your hold has expired") });
+  const expired = await runHandoff(gone.deps);
+  assert.deepEqual([expired.status, expired.cause], ["not_started", "hold_expired"], "an expired hold is not mistaken for a page without a clock");
+  assert.match(expired.reason ?? "", /no longer holding the room\. Its page says: "Your hold has expired"/);
+
   const moved = setup({ "/payment": PAGES["/payment"].replaceAll("420", "470") });
   const result = await runHandoff(moved.deps);
-  assert.match(result.reason ?? "", /no longer shows the amounts you agreed to \(420, 420\)/);
+  assert.equal(result.cause, "amounts_changed");
+  assert.equal(result.reason, "the page no longer matches what you agreed to. Total: you agreed to 420, the page now shows €470.00; Paid at the hotel: you agreed to 420, the page now shows €470.00");
+
   const headless = setup(PAGES, { visible: false });
-  assert.equal((await runHandoff(headless.deps)).status, "not_started");
-  for (const s of [short, moved, headless]) {
+  assert.deepEqual([(await runHandoff(headless.deps)).status, (await runHandoff(headless.deps)).cause], ["not_started", "no_window"]);
+  for (const s of [short, gone, moved, headless]) {
     assert.equal(s.l.types().includes("handoff.blind.start"), false, "blind mode never started");
     assert.equal(s.f.calls.front, 0);
     assert.match(s.c.said[0], /Nothing is booked and you have not been asked to pay/);

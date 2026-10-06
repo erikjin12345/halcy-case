@@ -31,6 +31,15 @@ export interface PaymentResult {
   holdSecondsLeft?: number;
   /** Why, for `not_started` and `session_lost`. Written by code. */
   reason?: string;
+  /** For `not_started`: which precondition failed. A fresh hold can cure the first three. */
+  cause?: "hold_short" | "hold_expired" | "amounts_changed" | "no_window" | "off_site" | "error" | "not_confirmed_again" | "change_declined";
+}
+
+/** One agreed figure that the page no longer shows, and what stands in its place if a labelled line says. */
+export interface ChangedAmount {
+  label: "Total" | "Charged now" | "Paid at the hotel";
+  agreed: string;
+  now?: string;
 }
 
 /** What ended the wait. None of these read page content. */
