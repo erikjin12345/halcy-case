@@ -87,8 +87,9 @@ is not quoted here because it has not been verified.
 
 ## 5. Cost per booking, measured
 
-Both groups on commit `6f5dd69`, run with `npm run scenarios -- 01 02 03`,
-so no human delay is in the wall time. Costs recomputed from each run's
+Both groups run with `npm run scenarios -- 01 02 03` on commit `6f5dd69`,
+except ask 3 on Opus, re-run on `c9dc33b` (see below). No human delay is in
+the wall time. Costs recomputed from each run's
 `llm.done` events. Per million tokens: Opus 5.5 $4 in, $20 out, $0.20 cache
 read, $5 cache write; Sonnet 5.5 $2, $10, $0.20, $2.50.
 
@@ -96,23 +97,24 @@ read, $5 cache write; Sonnet 5.5 $2, $10, $0.20, $2.50.
 | --- | ---------------------- | -------------------- | ----------------- |
 | 1   | $0.309, 27 turns, 116 s | $0.224, 25 turns, 85 s  | $0.124 to $0.058 |
 | 2   | $0.474, 44 turns, 181 s | $0.409, 46 turns, 176 s | $0.172 to $0.087 |
-| 3   | $0.511, 43 turns, 158 s | $0.274, 33 turns, 125 s | $0.130 to $0.083 |
+| 3   | $0.396, 30 turns, 123 s | $0.274, 33 turns, 125 s | $0.162 to $0.083 |
 
 Reports: `runs/scenarios/2026-10-06T05-07-16-021Z` and `...T05-14-58-249Z`.
 
 
 - **Sonnet 5.5 did the search job as well as Opus 5.5 here.** In all three
   asks it recorded the same candidates with the hotel's exact prices, and
-  every run reached the approval card. The search role cost 36% to 53% less.
-- **The whole booking gets $0.07 to $0.09 cheaper** on asks 1 and 2. Search
-  is about 40% of an Opus booking (ask 1: search $0.124, orchestrator $0.079,
-  validation $0.073, objective $0.033), so halving it moves the total by 14% to 27%.
-- **Ask 3 on Opus is not a fair figure.** The orchestrator started two
+  every run reached the approval card with the right room and rate. The
+  search role cost about half (49% to 53% less).
+- **The whole booking gets $0.07 to $0.12 cheaper**, 14% to 31%. Search is
+  about 40% of an Opus booking (ask 1: search $0.124, orchestrator $0.079,
+  validation $0.073, objective $0.033).
+- **Ask 3 on Opus was run twice.** On `6f5dd69` the orchestrator started two
   validations in one turn and both drove the same page: seven failed actions,
-  three validation calls for $0.261, and a wrong report that the Flexible rate
-  could not be booked. The traveller ended on the non-refundable rate. That
-  is a fault in the harness, not in the search model; fixed in PR #16. The
-  $0.24 gap between the two columns on ask 3 is mostly this accident.
+  $0.511, a wrong report that the Flexible rate could not be booked, and the
+  traveller ended on the non-refundable rate. That was a fault in the harness,
+  not in a model (fixed in PR #16). The figure above is the re-run after the
+  fix; the two commits do not differ in the search role.
 - **Validation is as large as search and less predictable.** Ask 2 runs
   objective, search and validation twice, because the traveller's breakfast
   answer triggers a re-check; that is why it is the dearest ask in both
@@ -137,26 +139,23 @@ asks what the tools got wrong. Single runs on older code cost $0.31 to $0.43.
 
 Decision rule: move search to the cheapest model whose completion rate on the
 example asks matches Opus 5.5 and whose validation rejections do not rise.
-The bar is "no worse", not "nearly as good": about $0.08 per booking is at
+The bar is "no worse", not "nearly as good": about $0.10 per booking is at
 stake, and one failed booking outweighs many of those.
 
 | Search model        | Reached approval | Right room | Validation rejections | Failed actions |
 | ------------------- | ---------------- | ---------- | --------------------- | -------------- |
-| `claude-opus-5-5`   | 3 of 3           | 3 of 3     | 1 (ask 3, the accident) | 0, 0, 7      |
+| `claude-opus-5-5`   | 3 of 3           | 3 of 3     | 0                     | 0, 0, 0        |
 | `claude-sonnet-5-5` | 3 of 3           | 3 of 3     | 0                     | 0, 0, 1        |
 | `claude-haiku-4-5`  | not run          | not run    | not run               | not run        |
 
-**Where that leaves the decision.** On this sample Sonnet 5.5 meets the rule.
-The default in `config.ts` is unchanged, because three runs on one hotel do
-not show "no worse": the next steps are to repeat each cell, re-run ask 3 on
-Opus after PR #16, and run both on a second hotel. Switching for the debrief
-is one line in `.env` (`MODEL_SEARCH=claude-sonnet-5-5`).
+Graded by `starter/agent/scenarios`; ask 3 on Opus is the re-run. The first
+run of that cell fails the grader (wrong rate, two agents on one page).
 
-A caution about "right room" on ask 3: the request names no rate. The Opus
-run ended on the non-refundable rate after the scripted traveller asked for
-Flexible, was told it could not be booked, and pressed the first button it
-was offered. The case passed because it did not check the rate. The scenario
-and the scripted traveller are being tightened so that this fails.
+**Where that leaves the decision.** On this sample Sonnet 5.5 meets the rule.
+The default in `config.ts` is unchanged, because one run per cell on one
+hotel does not show "no worse": the next steps are to repeat each cell and to
+run both on a second hotel. Switching for the debrief is one line in `.env`
+(`MODEL_SEARCH=claude-sonnet-5-5`).
 
 ## 7. When a model is wrong
 
@@ -192,7 +191,7 @@ is chosen.
 
 ## 8. Open
 
-- Repeat each cell; re-run ask 3 on Opus after PR #16.
+- Repeat each cell: one run each is all there is.
 - Run both configurations on a hotel site other than the mock.
 - Haiku 4.5 on search: not run.
 - Effort per role is the larger lever (output tokens are half the cost) and
