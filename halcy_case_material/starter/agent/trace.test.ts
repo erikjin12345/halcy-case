@@ -36,7 +36,8 @@ test("no trace step can carry a card number, a typed value or the traveller's de
     log.event("search.done", { hotel: "Casa Halcy", candidates: 1, text: "Number 4000000000000002 seen" });
     log.event("message", { message: "my card is 4242424242424242", traveller });
   });
-  const dump = JSON.stringify(steps);
+  // The text a person reads; `at` is a millisecond timestamp, 13 digits, which can pass a Luhn check by chance.
+  const dump = JSON.stringify(steps.map(({ at: _at, ...rest }) => rest));
   assert.equal(looksLikeCard(dump), false);
   for (const v of ["maja.lind@example.com", "+46 70 000 00 01", "Maja Lind", "hold=h1"]) assert.equal(dump.includes(v), false, v);
   assert.match(dump, /fill on http:\/\/localhost:4100\/details/);
