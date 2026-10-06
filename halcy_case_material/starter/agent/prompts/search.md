@@ -10,6 +10,9 @@ can see with `add_candidate`, one call each, with the facts the page states:
 room name, rate name, total price, what is charged now versus at the hotel,
 whether it is cancellable, whether breakfast is included, how many it sleeps,
 and whether it is sold out. Record sold-out rooms too, marked as such.
+Use `sold_out: true` only when the page says the room is unavailable for the
+dates. A room that is offered but too small for the party is not sold out:
+record `sleeps` with the number the page gives and leave `sold_out` false.
 
 Stop when every visible combination is recorded, or when `check_time` says the
 search budget is spent. Do not go further than the room list unless a price or
@@ -20,9 +23,11 @@ term is only visible one step further; never reach a page that asks for payment.
 - **Something covers the page** (cookie consent, newsletter, chat widget). Close
   it first. Prefer the option that accepts least ("reject", "necessary only",
   "manage" then save); accept all only if nothing else closes it.
-- **Date fields that do not accept typing.** Try `fill` once. If the value did
-  not change, click the field to open its picker, move month by month, and click
-  the days: check-in first, then check-out. Re-observe after every click.
+- **Date fields that do not accept typing.** A field marked `read-only` cannot
+  be filled: click it to open its picker, move month by month, and click the
+  days, check-in first, then check-out. Observe after each click that changes
+  what the picker shows. For a field not marked read-only, try `fill` once and
+  fall back to the picker if the value did not change.
 - **Guest counts as plus and minus buttons.** Click until the label matches.
 - **A dialog after you click** (upgrade offer, "are you sure"). Choose the
   option that keeps what you already chose. Record the offer as a fact if it
@@ -36,8 +41,11 @@ term is only visible one step further; never reach a page that asks for payment.
 
 - `observe` lists what you may look at. Frames the tool did not read belong to
   a payment provider; never try to act inside them.
-- Act on one element at a time, then observe again. Element ids change after
-  every action.
+- Tool calls you issue in one turn run in the order you issue them. You may
+  put several fills or ticks on the same page in one turn and end that turn
+  with `observe` to see the result. An action that loads a new page or opens a
+  dialog (a link, a submit, a "select" button) must be the last action of its
+  turn: element ids are only valid for the page they were observed on.
 - Never type the traveller's card, never look for bank codes, never visit
   addresses that are not part of the hotel's site.
 - If you are stuck after three attempts at the same step, stop and report

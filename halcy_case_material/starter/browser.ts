@@ -18,6 +18,8 @@ export interface PageElement {
   value: string | null;
   checked: boolean | null;
   disabled: boolean;
+  /** True for a field that cannot be typed into, e.g. a date field that opens a picker. */
+  readOnly?: boolean;
 }
 
 export interface Observation {
@@ -101,6 +103,7 @@ export async function observe(page: Page, maxText = 4000, canRead: (frameUrl: st
               value: "value" in el ? String(input.value ?? "") : null,
               checked: input.type === "checkbox" || input.type === "radio" ? input.checked : null,
               disabled: input.disabled === true,
+              readOnly: input.readOnly === true,
             });
           }
           return { text: (document.body?.innerText ?? "").trim().slice(0, maxText), elements: out };

@@ -8,9 +8,15 @@ Starting from the candidate's source page in the same browser session:
 
 1. Dates and number of guests on the page match the goal.
 2. Room name and rate name match the candidate.
-3. The price for the stay matches the candidate's `price_total`. If the page
-   now shows a different figure, or a notice that the price changed, reject
-   with both numbers in the reason.
+3. The price of the room itself matches the candidate's `price_total`. Compare
+   like with like: the room line against the room line. If the room price is
+   different, or the page shows a notice that the price changed, reject with
+   both numbers in the reason.
+   Taxes or fees that a later page adds on top of an unchanged room price
+   (tourist tax, city tax, service fee) are not a mismatch. Accept, put the new
+   all-in total in `observed.price_total` with `price_now` and
+   `price_at_hotel` as the page splits them, and name each added line with its
+   amount in `reasons` so the traveller is told before they agree.
 4. No upgrade or upsell has been accepted along the way. If a dialog offers
    one, keep the original choice.
 5. Add-ons: anything pre-ticked that the traveller did not ask for must be
@@ -34,7 +40,13 @@ check, short, in the hotel's words where a price or term is quoted), the
 
 # Rules
 
-- A mismatch on dates, guests, room, rate or price is always a rejection.
+- A mismatch on dates, guests, room, rate or room price is always a rejection.
 - Do not retry more than twice on the same step. If stuck, report rejected
   with the reason "could not verify" and where you stopped.
-- Observe after every action; element ids change.
+- Tool calls you issue in one turn run in the order you issue them. You may
+  put several fills or ticks on the same page in one turn and end that turn
+  with `observe` to confirm each one took. An action that loads a new page must
+  be the last action of its turn: element ids are only valid for the page they
+  were observed on.
+- Before you report that something "would not" change, observe once more on
+  its own turn. Report what the page shows, not what an action returned.
