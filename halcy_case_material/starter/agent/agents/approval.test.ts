@@ -28,5 +28,13 @@ test("the latest validation of a candidate decides", () => {
   state.validations.push(v("a", true), v("b", true), v("a", false, "sold out since"));
   assert.equal(latestValidation(state, "a")!.accepted, false);
   assert.notEqual(approvalBlocker(state, "a"), null);
-  assert.equal(approvalBlocker(state, "b"), null);
+});
+
+test("only the candidate validated last can be approved: the browser is on its page", () => {
+  const state = newRunState();
+  state.validations.push(v("flex", true), v("saver", true));
+  assert.match(approvalBlocker(state, "flex")!, /the browser is on saver/);
+  assert.equal(approvalBlocker(state, "saver"), null);
+  state.validations.push(v("flex", true));
+  assert.equal(approvalBlocker(state, "flex"), null);
 });
