@@ -17,7 +17,12 @@ export interface TraceStep {
   detail?: string;
   /** Milliseconds since the epoch, from the event. */
   at?: number;
+  /** Test-mode lines: "trap" (a trap avoided or hit), "decision" (why a choice was made), "checks" (the trap matrix). Shown only on the test-mode page. */
+  kind?: "trap" | "decision" | "checks";
 }
+
+/** Kinds that only the test-mode page receives. */
+export const TEST_KINDS = new Set(["trap", "decision", "checks"]);
 
 type Data = Record<string, unknown>;
 const str = (v: unknown) => (typeof v === "string" ? v : "");
@@ -106,6 +111,20 @@ export function traceStep(type: string, data: Data, blind: boolean, traveller?: 
     case "fx.compare":
     case "fx.estimate":
       return step("orchestrator", str(data.text) || "currency estimate");
+    case "trace.decision":
+      return { ...step(`decision${data.kind ? ` · ${str(data.kind)}` : ""}`, str(data.text), str(data.detail) || undefined), kind: "decision" };
+    case "trap.avoided":
+    case "trap.hit": {
+      const label = [`trap ${str(data.trap) || "-"}`, str(data.name)].filter(Boolean).join(" · ");
+      return { ...step(label, `${type === "trap.hit" ? "NOT avoided: " : ""}${str(data.text)}`, str(data.evidence) || undefined), kind: "trap" };
+    }
+    case "traps.result": {
+      const results = Array.isArray(data.results) ? (data.results as Data[]) : [];
+      const count = (v: string) => results.filter((r) => r.verdict === v).length;
+      const lines = results.map((r) => `${str(r.verdict).padEnd(4)}  trap ${str(r.trap)} ${str(r.name)}: ${str(r.evidence)}`);
+      if (data.recordAvailable === false) lines.push("(the hotel's own record was not available)");
+      return { ...step("trap checks", `${count("PASS")} pass, ${count("FAIL")} fail, ${count("n/a")} n/a`, lines.join("\n")), kind: "checks" };
+    }
     case "trace.note":
       return step(str(data.from) || "orchestrator", str(data.text));
     case "traveller.approved":
