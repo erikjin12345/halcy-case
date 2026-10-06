@@ -38,8 +38,13 @@ let stopping = false;
 function stopAll(code) {
   if (stopping) return;
   stopping = true;
-  for (const child of children) if (child.exitCode === null) child.kill("SIGTERM");
-  setTimeout(() => process.exit(code), 500).unref();
+  const alive = () => children.filter((c) => c.exitCode === null && c.signalCode === null);
+  for (const child of alive()) child.kill("SIGTERM");
+  // The chat does not always exit on SIGTERM (an open run, the browser); never leave it behind.
+  setTimeout(() => {
+    for (const child of alive()) child.kill("SIGKILL");
+    setTimeout(() => process.exit(code), 200);
+  }, 3000);
 }
 
 for (const s of SERVICES) {
