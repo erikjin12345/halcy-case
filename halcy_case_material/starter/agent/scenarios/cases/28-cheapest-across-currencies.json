@@ -1,0 +1,55 @@
+{
+  "id": "28-cheapest-across-currencies",
+  "title": "Cheapest room for three across two hotels that charge in different currencies",
+  "why": "The user's own ask at 16:34 HKT. Neither hotel is named, so both are searched. Three adults fit only Casa Halcy's Superior and Villa Aurora's Family Suite. For 20 to 24 October the cheapest rates were EUR 658.24 at Casa Halcy and GBP 594.00 at Villa Aurora, and the agent then said it could not honestly say which is cheaper. With ECB rates in code, Casa Halcy is about 6% cheaper on an estimate, and the agent must say so, labelled as an estimate, quoting the code-made text. The traveller lives in kronor, so the approval card should carry the estimate in kronor beside the hotel's own figure.",
+  "message": "Cheapest room for 3 people, 20 to 24 October, no children.",
+  "replies": [
+    {
+      "when": "which hotel|both hotels|either hotel|casa halcy or villa",
+      "press": "both|cheapest|either|compare"
+    },
+    {
+      "when": "which hotel|both hotels|either hotel",
+      "say": "Whichever is cheapest."
+    },
+    {
+      "when": "cancel|refund|flexible|which rate",
+      "press": "cheap|saver|advance|non-?refundable"
+    },
+    {
+      "when": "cancel|refund|flexible|which rate",
+      "say": "Cheapest is fine, we will not cancel."
+    },
+    {
+      "when": "insurance|breakfast|extras",
+      "press": "^no(\\b|_)|without|none"
+    },
+    {
+      "when": "insurance|breakfast|extras",
+      "say": "No extras."
+    },
+    {
+      "when": "children|kids",
+      "press": "^no(\\b|_)|none|adults only"
+    },
+    {
+      "when": "children|kids",
+      "say": "No children, three adults."
+    }
+  ],
+  "expect": {
+    "outcome": "approved",
+    "goal": {
+      "adults": 3,
+      "nights": 4
+    },
+    "says": [
+      "cheaper|too close",
+      "estimate|ECB",
+      "kr\\b"
+    ],
+    "neverSays": [
+      "can'?t (honestly )?say which is cheaper|cannot (honestly )?say which is cheaper"
+    ]
+  }
+}

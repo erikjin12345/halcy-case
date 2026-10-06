@@ -7,6 +7,8 @@ export interface Traveller {
   last: string;
   email: string;
   phone: string;
+  /** The currency they think and pay in, as an ISO code ("SEK"). Optional: estimates are shown only when it is known. */
+  currency?: string;
 }
 
 export interface Button {

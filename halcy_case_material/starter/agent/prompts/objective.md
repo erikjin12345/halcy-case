@@ -20,10 +20,10 @@ Call `set_objective` exactly once with:
   validation. Do not lower or raise it to allow for taxes yourself.
 - `currency`: the currency the traveller gave a budget or a price cap in, as
   a code if they named one ("SEK", "EUR"). Required whenever `hard` holds a
-  price. Code applies the cap only to prices the hotel shows in that
-  currency; otherwise the cap is left out and the traveller is asked. Never
-  convert a budget into another currency yourself, and never guess the
-  hotel's currency.
+  price. Code applies the cap to prices in that currency, and to an estimate
+  at today's ECB rate for prices in another, asking the traveller when it is
+  too close to call. Write the cap as the traveller gave it; code does any
+  conversion. Never guess the hotel's currency.
 - `weights`: feature -> number. The sign says which way is better, the size
   says how much it matters. A positive weight rewards a high number, `true`,
   or a wanted text match. A negative weight rewards a low number, `false`, or

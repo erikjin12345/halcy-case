@@ -15,6 +15,8 @@ import { PaymentBoundary } from "./tools/boundary.ts";
 import { guardedDriver } from "./tools/guarded-driver.ts";
 import { playwrightDriver } from "./tools/playwright-driver.ts";
 import { newRunState } from "./types.ts";
+import { loadRates } from "./scoring/fx.ts";
+import { travellerCurrency } from "./agents/fx-tools.ts";
 
 export const bookingAgent: Agent = async (message, chat, ctx) => {
   loadDotEnv();
@@ -45,7 +47,7 @@ export const bookingAgent: Agent = async (message, chat, ctx) => {
       // Validation left the browser on the hotel's payment page. From here on
       // it is code, not a model: the traveller pays in the hotel's window.
       const validated = [...state.validations].reverse().find((v) => v.candidateId === approved && v.accepted);
-      const handoff = { driver, boundary, chat, log, hotel: state.goal?.hotel.name ?? "the hotel", terms: termsFrom(validated?.observed ?? {}), holdReport: holdReportFrom(validated, state.store.candidate(approved)), visible: !HEADLESS, classify: modelClassifier(log) };
+      const handoff = { driver, boundary, chat, log, hotel: state.goal?.hotel.name ?? "the hotel", terms: termsFrom(validated?.observed ?? {}), holdReport: holdReportFrom(validated, state.store.candidate(approved)), visible: !HEADLESS, classify: modelClassifier(log), fx: { to: travellerCurrency(agents), rates: await loadRates() } };
       // If the hold ran down or the page changed while the traveller was
       // deciding, validate the same candidate once more for a fresh hold.
       await runPayment(handoff, async () => {

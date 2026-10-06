@@ -17,6 +17,7 @@ import { runObjective } from "./objective.ts";
 import { overLimitTool, priceChangeTool } from "./price-change.ts";
 import { runSearch } from "./search.ts";
 import { runValidation } from "./validation.ts";
+import { fxTools } from "./fx-tools.ts";
 
 export interface OrchestratorDeps {
   driver: PageDriver;
@@ -108,7 +109,7 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
       `Known hotels (name -> booking site): ${JSON.stringify(a.ctx.hotels)}`,
       `Traveller's message: ${message}`,
     ].join("\n"),
-    tools: [...chatTools({ chat: a.chat, log: a.log }), ...goalTools({ state: a.state, log: a.log }), runObjectiveTool, searchInTurn, validationInTurn, priceChangeTool(a), overLimitTool(a), approveTool],
+    tools: [...chatTools({ chat: a.chat, log: a.log }), ...goalTools({ state: a.state, log: a.log }), runObjectiveTool, searchInTurn, validationInTurn, priceChangeTool(a), overLimitTool(a), ...fxTools(a), approveTool],
     log: a.log,
   });
 

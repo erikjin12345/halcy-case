@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import { z } from "zod";
 import { memoryStore } from "../store.ts";
 import { newRunState } from "../types.ts";
+import { loadRates } from "../scoring/fx.ts";
 import { candidateTools, factsSchema, goalSchema, objectiveSchema, objectiveTools } from "./scoring.ts";
 
 const noLog = { event() {}, screenshot: () => "", dir: "" } as never;
@@ -86,7 +87,9 @@ test("a sold-out room is rejected as sold out, not for a fact the page never sta
   assert.equal(state.store.candidate("river")!.features.source_url.value, "http://h/rooms?a=1&b=2");
 });
 
-test("a budget in another currency than the hotel's is left out and reported, with the currency taken from the goal", async () => {
+test("a budget in another currency than the hotel's is applied to the ECB estimate, with the currency taken from the goal", async () => {
+  // Fixed rates for this file, so the test never reaches the network: 404 EUR is about 4,546 SEK.
+  await loadRates(async () => "<Cube time='2026-10-05'><Cube currency='SEK' rate='11.2525'/><Cube currency='GBP' rate='0.8472'/></Cube>");
   const state = newRunState(memoryStore());
   state.goal = { hotel: { name: "H", url: "http://h" }, checkin: "2026-10-20", checkout: "2026-10-22", adults: 2, mustHave: [], preferences: [], budget: { currency: "SEK", maxTotal: 3200 } };
   const deps = { state, log: noLog };
@@ -96,9 +99,9 @@ test("a budget in another currency than the hotel's is left out and reported, wi
   const tools = candidateTools(deps);
   await byName(tools, "add_candidate").run({ id: "superior-flex", features: { price_total: 404, currency: "€" }, sourceUrl: "http://h/rooms" } as never);
   const out = JSON.parse((await byName(tools, "score_candidates").run({} as never)) as string);
-  assert.deepEqual(out.ranking.map((e: { candidateId: string }) => e.candidateId), ["superior-flex"]);
-  assert.equal(out.rejected.length, 0);
-  assert.match(out.budgetNotApplied, /3200 SEK was NOT applied: the hotel prices in €/);
+  assert.equal(out.rejected.length, 1);
+  assert.match(out.rejected[0].reason, /about 4,546 kr at the ECB rate of 5 Oct, over the limit of 3,200 kr \(an estimate\)/);
+  assert.match(out.budgetNotApplied, /checked against an estimate .* at the ECB rate of 5 Oct/);
   assert.equal(state.budgetNotApplied, out.budgetNotApplied);
 });
 
