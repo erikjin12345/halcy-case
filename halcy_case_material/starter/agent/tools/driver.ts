@@ -16,7 +16,7 @@ export interface PageLocation {
 export type PageAction = Exclude<Action, { kind: "goto" }>;
 
 export interface PageDriver {
-  /** Everything visible in every frame. Raw drivers read all frames; the guard filters. */
+  /** What is visible on the page. Frames outside the hotel's site come back empty. */
   observe(): Promise<Observation>;
   /** One action on one element, then wait for the page to settle. */
   act(action: PageAction): Promise<void>;

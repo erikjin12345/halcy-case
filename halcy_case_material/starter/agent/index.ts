@@ -28,8 +28,9 @@ export const bookingAgent: Agent = async (message, chat, ctx) => {
   const { page } = await openBrowser({ headless: HEADLESS });
   const boundary = new PaymentBoundary(Object.values(ctx.hotels)[0] ?? "http://localhost", log);
   for (const url of Object.values(ctx.hotels)) boundary.allow(url);
-  // The raw driver reads every frame; only the guarded one leaves this function.
-  const driver = guardedDriver(playwrightDriver(page), boundary);
+  // The raw driver never enters a frame outside the hotel's site, and only the
+  // guarded one leaves this function.
+  const driver = guardedDriver(playwrightDriver(page, (url) => boundary.known(url)), boundary);
 
   try {
     const approved = await runOrchestrator({ chat, ctx, log, state: newRunState() }, message, { driver, boundary });

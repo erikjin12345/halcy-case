@@ -1,12 +1,16 @@
 // PageDriver over one Playwright page: the prototype's hands. This is the raw
-// driver. It reads every frame, so it must only ever be handed to
-// guardedDriver, never to an agent or a tool.
+// driver: it must only ever be handed to guardedDriver, never to an agent or
+// a tool. `canRead` keeps it out of frames it has no business in: a frame
+// that fails it is never entered, so nothing in it is read into this process.
 
 import type { Page } from "playwright";
-import { act, observe } from "../../browser.ts";
+import { act, frameUrlOf, observe } from "../../browser.ts";
 import { locationOf, type PageDriver, type PageLocation } from "./driver.ts";
 
-export function playwrightDriver(page: Page): PageDriver {
+/** Everything that embeds another document. All of it is masked in every screenshot. */
+export const EMBEDDED = "iframe, frame, object, embed";
+
+export function playwrightDriver(page: Page, canRead: (frameUrl: string) => boolean = () => true): PageDriver {
   const listeners = new Set<(to: PageLocation) => void>();
   page.on("framenavigated", (frame) => {
     if (frame !== page.mainFrame()) return;
@@ -15,19 +19,16 @@ export function playwrightDriver(page: Page): PageDriver {
   });
 
   return {
-    observe: () => observe(page),
+    observe: () => observe(page, 4000, canRead),
     // The starter's act waits for domcontentloaded after the action.
     act: (action) => act(page, action),
     goto: async (url) => {
       await page.goto(url);
     },
     location: () => locationOf(page.url()),
-    // Same index scheme as the starter's observe: "<frame index>:<n>".
-    frameUrlOf(id) {
-      const frame = page.frames()[Number(id.split(":")[0])];
-      return frame ? frame.url() : null;
-    },
-    screenshot: () => page.screenshot({ mask: [page.locator("iframe")] }),
+    // Resolved from the frame list of the last observe, the same one act uses.
+    frameUrlOf: (id) => frameUrlOf(page, id),
+    screenshot: () => page.screenshot({ mask: [page.locator(EMBEDDED)] }),
     bringToFront: () => page.bringToFront(),
     waitForNavigation(timeoutMs) {
       return new Promise((resolve) => {
