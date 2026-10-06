@@ -113,6 +113,8 @@ export interface RunState {
   store: Store;
   /** The currency the hotel says it charges in, once any page or validation has shown it. Prices in another currency are refused. */
   chargeCurrency?: string;
+  /** Searches already made in this session, by hotel, dates and party (agents/search-cache.ts). */
+  searchCache: Record<string, { at: number; summary: string }>;
   /** Text of the pages the agents observed on the hotel's site, by path, newest kept; code checks recorded prices against it. */
   pages: Record<string, string>;
   lastPage?: string;
@@ -126,7 +128,7 @@ export interface RunState {
 }
 
 export function newRunState(store: Store = memoryStore()): RunState {
-  return { store, validations: [], priceAcceptances: [], overLimitAcceptances: [], pages: {} };
+  return { store, validations: [], priceAcceptances: [], overLimitAcceptances: [], pages: {}, searchCache: {} };
 }
 
 /** Everything an agent run needs besides its own tools. */
