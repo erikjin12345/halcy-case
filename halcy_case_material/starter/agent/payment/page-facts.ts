@@ -25,6 +25,16 @@ export function holdSecondsFrom(text: string): number | undefined {
   return undefined;
 }
 
+const GONE = /expired|released|timed out|no longer (held|available|reserved)/i;
+
+/** The hotel's own line saying the hold or session is gone, if the page has one. */
+export function holdExpiredLine(text: string): string | undefined {
+  return text
+    .split("\n")
+    .map((line) => line.trim())
+    .find((line) => (HOLD_WORDS.test(line) || /session|room/i.test(line)) && GONE.test(line) && !CLOCK.test(line));
+}
+
 /** "1,234.56", "1.234,56", "358,00", "358" -> a number. Undefined if it is not money-shaped. */
 export function parseMoney(token: string): number | undefined {
   const s = token.replace(/[^\d.,]/g, "");
@@ -66,6 +76,16 @@ export function shownAs(text: string, value: string | number | undefined): strin
     const n = parseMoney(token);
     return n !== undefined && Math.abs(n - want) < 0.005;
   });
+}
+
+/** The first money figure on a line that starts with `label`, as written. Undefined if no line starts that way. */
+export function figureLabelled(text: string, label: RegExp): string | undefined {
+  for (const line of text.split("\n")) {
+    if (!label.test(line.trim())) continue;
+    const figure = line.match(MONEY)?.[0];
+    if (figure) return figure;
+  }
+  return undefined;
 }
 
 /** True if `quote` appears on the page, ignoring differences in whitespace. */

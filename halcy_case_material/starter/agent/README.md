@@ -22,6 +22,7 @@ is the code. Conventions: `../../../agent/CLAUDE.md`.
 | `tools/guarded-driver.ts` | The boundary applied to a driver: nothing reaches the page while blind, foreign frames emptied |
 | `tools/browser.ts`       | `observe`, `act`, `goto`, `screenshot` as tools on a guarded driver, iframes masked  |
 | `payment/handoff.ts`     | The payment step as a fixed sequence in code: last look, blind mode, wait, outcome, report |
+| `payment/fresh-hold.ts`  | When the hold ran down or the page changed before the hand-over: validate once more, ask on a changed price |
 | `payment/signals.ts`     | The wait while blind: main-tab navigation, chat buttons, tab closed, deadline, reminders |
 | `payment/outcome.ts`     | One redacted read after blind mode; `decide` turns a proposal into a `PaymentResult`  |
 | `payment/classify.ts`    | The one model call in the payment step: propose a status from the hotel's page text   |
@@ -89,7 +90,7 @@ cacheable minimum, so caching only starts once the history has grown.
 
 ## What is not here yet
 
-- The payment hand-off (blind mode exists in `tools/boundary.ts`, the flow does not).
 - Mid-run goal updates from the traveller (the chat server delivers them only
   through `wait_for_reply`).
-- Any test against the mock beyond `check.ts`.
+- A run with a person paying in the visible window, and anything on a hotel
+  other than the mock. The full list is in `../../../docs/limitations/`.

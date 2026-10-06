@@ -9,10 +9,10 @@ import type { PaymentBoundary } from "../tools/boundary.ts";
 import type { PageDriver } from "../tools/driver.ts";
 import { handoffCard, resultMessage, retryCard } from "./messages.ts";
 import { readOutcome, type Classify } from "./outcome.ts";
-import { holdSecondsFrom, missingAmounts, pageText, shownAs } from "./page-facts.ts";
+import { figureLabelled, holdExpiredLine, holdSecondsFrom, missingAmounts, pageText, shownAs } from "./page-facts.ts";
 import { waitForSignal } from "./signals.ts";
 import type { FeatureName, FeatureValue } from "../types.ts";
-import type { PaymentResult, Signal, Terms } from "./types.ts";
+import type { ChangedAmount, PaymentResult, Signal, Terms } from "./types.ts";
 
 export interface Timing {
   /** Do not hand over with less than this left on the hotel's hold. */
@@ -57,7 +57,27 @@ export function termsFrom(seen: Partial<Record<FeatureName, FeatureValue>>): Ter
   };
 }
 
-const notStarted = (reason: string): PaymentResult => ({ status: "not_started", retryable: true, reason });
+const notStarted = (reason: string, cause: PaymentResult["cause"] = "error"): PaymentResult => ({ status: "not_started", retryable: true, reason, cause });
+
+const minutesLeft = (seconds: number) => (seconds < 60 ? "less than a minute is" : seconds < 120 ? "1 minute is" : `${Math.floor(seconds / 60)} minutes are`);
+
+/** Lines that start with these words carry the figure for that part of the price. */
+const LABELS: [ChangedAmount["label"], keyof Terms, RegExp][] = [
+  ["Total", "total", /^total\b/i],
+  ["Charged now", "chargedNow", /^(charged|pay|payable|due|to pay) (now|today)\b/i],
+  ["Paid at the hotel", "dueAtHotel", /^(paid|pay|payable|due) (at|on) (the )?(hotel|property|arrival)\b/i],
+];
+
+/** Which agreed figures the page no longer shows, and what a labelled line shows instead. */
+export function changedAmounts(text: string, terms: Terms): ChangedAmount[] {
+  return LABELS.flatMap(([label, key, pattern]) => {
+    const agreed = terms[key] as string | number | undefined;
+    if (missingAmounts(text, [agreed]).length === 0) return [];
+    return [{ label, agreed: String(agreed), now: figureLabelled(text, pattern) }];
+  });
+}
+
+const describeChange = (c: ChangedAmount) => `${c.label}: you agreed to ${c.agreed}, ${c.now ? `the page now shows ${c.now}` : "the page no longer shows it"}`;
 
 /**
  * Never throws. A failure before the traveller was handed the page is
@@ -73,7 +93,7 @@ export async function runHandoff(deps: HandoffDeps): Promise<PaymentResult> {
     log.event("payment.error", { handedOver: progress.handedOver, error: String(e).slice(0, 300) });
     const result: PaymentResult = progress.handedOver
       ? { status: "unconfirmed", retryable: false, reason: "something failed on Halcy's side during the hand-off" }
-      : notStarted("something failed on my side before I could hand it over");
+      : notStarted("something failed on my side before I could hand it over", "error");
     const text = resultMessage(hotel, result);
     chat.say(text);
     log.event("payment.result", { ...result, said: text });
@@ -91,9 +111,9 @@ async function sequence(deps: HandoffDeps, progress: { handedOver: boolean }): P
     return result;
   };
 
-  if (!deps.visible) return say(notStarted("the browser is running without a window you can type in"));
+  if (!deps.visible) return say(notStarted("the browser is running without a window you can type in", "no_window"));
   const at = driver.location();
-  if (!boundary.known(at.origin)) return say(notStarted(`the browser is not on ${hotel}'s site`));
+  if (!boundary.known(at.origin)) return say(notStarted(`the browser is not on ${hotel}'s site`, "off_site"));
 
   let result: PaymentResult = notStarted("the hand-off did not run");
   for (let attempt = 1; attempt <= timing.maxAttempts; attempt++) {
@@ -101,12 +121,14 @@ async function sequence(deps: HandoffDeps, progress: { handedOver: boolean }): P
     const seen = await driver.observe();
     const text = pageText(seen);
     const holdSecondsLeft = holdSecondsFrom(text);
+    const released = holdExpiredLine(text);
+    if (released) return say(notStarted(`${hotel} is no longer holding the room. Its page says: "${released.slice(0, 200)}"`, "hold_expired"));
     if (holdSecondsLeft !== undefined && holdSecondsLeft < timing.minHoldSeconds) {
-      return say(notStarted(`only ${Math.floor(holdSecondsLeft / 60)} minutes are left on the hotel's hold, too little to pay safely; I'd rather start over`));
+      return say(notStarted(`${minutesLeft(holdSecondsLeft)} left on ${hotel}'s hold, too little to pay safely`, "hold_short"));
     }
-    const missing = missingAmounts(text, [terms.total, terms.chargedNow, terms.dueAtHotel]);
-    if (missing.length > 0) {
-      return say(notStarted(`the page no longer shows the amounts you agreed to (${missing.join(", ")})`));
+    const changed = changedAmounts(text, terms);
+    if (changed.length > 0) {
+      return say(notStarted(`the page no longer matches what you agreed to. ${changed.map(describeChange).join("; ")}`, "amounts_changed"));
     }
     // The traveller reads the hotel's own figures, currency included, not ours.
     const shown: Terms = { ...terms, total: shownAs(text, terms.total) ?? terms.total, chargedNow: shownAs(text, terms.chargedNow) ?? terms.chargedNow, dueAtHotel: shownAs(text, terms.dueAtHotel) ?? terms.dueAtHotel };
