@@ -1,1 +1,4 @@
-{ "Casa Halcy": "http://localhost:4100" }
+{
+  "Casa Halcy": "http://localhost:4100",
+  "Villa Aurora": "http://localhost:4500"
+}

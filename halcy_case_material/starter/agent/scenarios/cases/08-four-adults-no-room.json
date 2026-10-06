@@ -12,6 +12,14 @@
     {
       "when": "adult|guest|how many",
       "say": "Four adults, one room."
+    },
+    {
+      "when": "two rooms|no single room|sleeps (up to )?(3|three)",
+      "press": "stop|not now|^no"
+    },
+    {
+      "when": "two rooms|no single room|sleeps (up to )?(3|three)",
+      "say": "No, it has to be one room. Leave it."
     }
   ],
   "expect": {

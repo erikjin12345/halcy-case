@@ -1,9 +1,13 @@
 {
   "id": "13-swedish-request",
   "title": "A request written in Swedish",
-  "why": "Travellers write in their own language. The request is fully specified: the cheapest cancellable room midweek is the Classic on the Flexible rate. Answering in Swedish is preferred.",
+  "why": "Travellers write in their own language. The request is fully specified: the cheapest cancellable room midweek is the Classic on the Flexible rate. Answering in Swedish is preferred. The agent may show its cards in Swedish, so the script has a rule for a Swedish approval card; without it the scripted traveller once declined by accident and the run still passed.",
   "message": "Hej! Kan du boka ett rum på Casa Halcy för två vuxna, tisdag till torsdag nästa vecka? Vi vill kunna avboka gratis och vi vill inte ha frukost. Billigaste rummet räcker.",
   "replies": [
+    {
+      "when": "betalning|gå vidare|fortsätt",
+      "press": "^ja\\b|^yes$|gå till betalning|fortsätt"
+    },
     {
       "when": "adult|guest|vuxna|hur många",
       "press": "^2$|2 |två|two"

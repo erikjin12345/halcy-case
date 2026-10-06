@@ -26,7 +26,8 @@ npm run scenarios -- --grade 01 runs/<folder>
 ```
 
 **2. Scripted, no human.** A scripted traveller answers follow-ups and presses
-the approval button. Needs the hotel running and an API key in `.env`. Each
+the approval button. Needs an API key in `.env` and the hotels the selected
+cases name: `npm run hotel` for Casa Halcy, `npm run hotel2` for Villa Aurora. Each
 live run costs real money, about $0.30 on Opus 5.5 at the time of writing.
 
 ```bash
@@ -93,17 +94,22 @@ can see that the script needs a rule and read the verdict with that in mind.
 | 11 | "Can I pay Halcy instead" |
 | 12 | The traveller says no at the approval card |
 | 13 | A request in Swedish |
+| 20 to 24 | The second mock hotel, Villa Aurora (`mock-hotel-2/`): a site with another layout that charges in pounds, a room refused for long stays, a room taken on reserving, a budget in kronor |
 
 ## Limits, read before trusting a result
 
-- **"Correct" is correct for the mock hotel.** Expected rooms come from its
-  rules (river view sold out on Friday and Saturday nights, only the Superior
-  sleeps three, the long-stay price rise). On another hotel, write new cases.
+- **"Correct" is correct for the two mock hotels.** Expected rooms and
+  amounts come from their rules (`mock-hotel-2/README.md` lists Villa
+  Aurora's). On another hotel, write new cases.
 - **Text checks are patterns.** `says` can miss a good answer worded
   differently, and pass a bad one that uses the words. Read the report.
 - **Features come from what the agents recorded**, not from the hotel's
   booking list. The agent may not read `/__admin/bookings`, and neither does
   the grader.
+- **A fail is not always the agent's.** Of the first runs of cases 04 to 24,
+  four failures or near-failures were the script's: no rule for a question
+  the agent reasonably asked, an English-only approval pattern, a pattern
+  that matched the wrong button. Read which button was pressed and why.
 - **A pass is only as good as the case.** Case 03 once passed a run in which
   the agent wrongly said the Flexible rate could not be booked and the
   scripted traveller pressed "book the Saver rate anyway". The case did not
