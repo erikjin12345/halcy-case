@@ -108,6 +108,12 @@ test("two browser agents on the one page at the same time fail the run", () => {
   assert.equal(readOutcome(inTurn).overlaps, 0);
   const together = [start("orchestrator"), start("validation"), start("validation"), done("validation"), done("validation")].join("\n");
   assert.equal(readOutcome(together).overlaps, 1);
+  // Parallel search: each hotel in its own browser is not an overlap; two searches of one hotel are.
+  const s = (type: string, hotel: string) => ev(type, { role: "search", hotel });
+  const twoHotels = [s("llm.start", "Casa Halcy"), s("llm.start", "Villa Aurora"), s("llm.done", "Casa Halcy"), s("llm.done", "Villa Aurora")].join("\n");
+  assert.equal(readOutcome(twoHotels).overlaps, 0);
+  const sameHotel = [s("llm.start", "Casa Halcy"), s("llm.start", "Casa Halcy")].join("\n");
+  assert.equal(readOutcome(sameHotel).overlaps, 1);
   assert.ok(grade({ expect: {} }, readOutcome(together)).some((c) => c.name === "one browser agent at a time" && !c.pass));
 });
 

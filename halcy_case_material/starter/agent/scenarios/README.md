@@ -58,8 +58,8 @@ run and a scripted run are judged by the same code.
 - `prefer` holds the `should` checks. A miss is shown and does not fail it.
 - Three `must` checks run on every case whatever it says: the run log passes
   the payment-boundary audit (`../evidence/audit.ts`), the agent logged no
-  error, and no search or validation agent was started while another was
-  still driving the one shared page.
+  error, and no agent was started while another was still driving the same
+  browser (since parallel search, each hotel's search has its own).
 
 Fields of `expect` and `prefer` (`types.ts`): `outcome` (approved, declined,
 no_booking), `room` and `notRoom` (substring of the approved room name),
