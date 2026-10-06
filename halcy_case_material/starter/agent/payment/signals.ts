@@ -25,8 +25,11 @@ export interface WaitDeps {
 
 /**
  * Resolves with whatever ends the wait first. A main tab that leaves the
- * hotel's site (hosted payment page, bank check) is not an outcome: only its
- * return to the hotel's site on another page is (DESIGN.md P3).
+ * hotel's site (hosted payment page, bank check) is not an outcome: its
+ * return to the hotel's site is (DESIGN.md P3). A hotel that sends the whole
+ * tab to its provider may bring it back to the very page it left, with an
+ * error; so after having been away, any page on the hotel's site counts. A
+ * reload that never left the site does not.
  */
 export function waitForSignal(deps: WaitDeps): Promise<Signal> {
   const { driver, boundary, chat, log, paymentPath, card, deadlineMs } = deps;
@@ -53,10 +56,15 @@ export function waitForSignal(deps: WaitDeps): Promise<Signal> {
       );
     };
 
+    let away = false;
     driver.onNavigated((to) => {
       if (done) return;
-      if (!boundary.known(to.origin)) return void log.event("handoff.away", { origin: to.origin });
-      if (to.path !== paymentPath) finish({ kind: "navigated", to });
+      if (!boundary.known(to.origin)) {
+        if (!away) log.event("handoff.away", { origin: to.origin });
+        away = true;
+        return;
+      }
+      if (away || to.path !== paymentPath) finish({ kind: "navigated", to });
     });
     driver.onClosed(() => finish({ kind: "closed" }));
     void chat.choose(card).then((id) => {

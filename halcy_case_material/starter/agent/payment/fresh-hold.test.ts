@@ -36,7 +36,7 @@ function setup(payment: string, visible = true) {
 test("a hold that ran down is renewed and the traveller is handed the page without asking again", async () => {
   const s = setup(page("We're holding this room for you for 2:05"));
   let validations = 0;
-  const running = runPayment(s.deps, async () => (validations++, (s.pages["/payment"] = page(FRESH_CLOCK)), TERMS));
+  const running = runPayment(s.deps, async () => (validations++, (s.pages["/payment"] = page(FRESH_CLOCK)), { terms: TERMS }));
   await tick();
   assert.equal(validations, 1);
   assert.match(s.c.said[0], /2 minutes are left on Casa Halcy's hold/);
@@ -50,7 +50,7 @@ test("a hold that ran down is renewed and the traveller is handed the page witho
 test("a changed price is put in front of the traveller, old and new, and nothing continues without a press", async () => {
   const s = setup("Your hold has expired\nTotal €420.00\nCharged now €0.00\nPaid at the hotel €420.00");
   const fresh: Terms = { ...TERMS, total: "€470.00", dueAtHotel: "€470.00" };
-  const running = runPayment(s.deps, async () => ((s.pages["/payment"] = page(FRESH_CLOCK, "470")), fresh));
+  const running = runPayment(s.deps, async () => ((s.pages["/payment"] = page(FRESH_CLOCK, "470")), { terms: fresh }));
   await tick();
   const card = s.c.cards.find((c) => c.title === "Casa Halcy's price has changed");
   assert.deepEqual(card?.lines?.slice(0, 2), ["Total: was 420, is now €470.00", "Paid at the hotel: was 420, is now €470.00"]);
@@ -63,7 +63,7 @@ test("a changed price is put in front of the traveller, old and new, and nothing
   await running;
 
   const declined = setup(page("We're holding this room for you for 1:00"));
-  const second = runPayment(declined.deps, async () => ((declined.pages["/payment"] = page(FRESH_CLOCK, "470")), fresh));
+  const second = runPayment(declined.deps, async () => ((declined.pages["/payment"] = page(FRESH_CLOCK, "470")), { terms: fresh }));
   await tick();
   declined.c.press("Casa Halcy's price has changed", "stop");
   const result = await second;
@@ -84,9 +84,9 @@ test("if the room cannot be confirmed again the run stops and says so", async ()
 test("a fresh hold is asked for once, and only when it can help", async () => {
   let validations = 0;
   const noWindow = setup(page(FRESH_CLOCK), false);
-  assert.equal((await runPayment(noWindow.deps, async () => (validations++, TERMS))).cause, "no_window");
+  assert.equal((await runPayment(noWindow.deps, async () => (validations++, { terms: TERMS }))).cause, "no_window");
   const stillShort = setup(page("We're holding this room for you for 2:00"));
-  assert.equal((await runPayment(stillShort.deps, async () => (validations++, TERMS))).cause, "hold_short", "the second refusal is final");
+  assert.equal((await runPayment(stillShort.deps, async () => (validations++, { terms: TERMS }))).cause, "hold_short", "the second refusal is final");
   assert.equal(validations, 1);
 });
 

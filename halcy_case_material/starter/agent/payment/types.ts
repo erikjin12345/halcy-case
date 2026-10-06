@@ -35,6 +35,12 @@ export interface PaymentResult {
   cause?: "hold_short" | "hold_expired" | "amounts_changed" | "no_window" | "off_site" | "error" | "not_confirmed_again" | "change_declined";
 }
 
+/** How long the hold had left when someone last read it off the page, and when that was (ms since epoch). */
+export interface HoldReport {
+  secondsLeft: number;
+  at: number;
+}
+
 /** One agreed figure that the page no longer shows, and what stands in its place if a labelled line says. */
 export interface ChangedAmount {
   label: "Total" | "Charged now" | "Paid at the hotel";
