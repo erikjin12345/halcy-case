@@ -6,17 +6,23 @@ constraints and a threshold, not scores.
 
 Call `set_objective` exactly once with:
 
-- `hard`: feature values a candidate must match or it is infeasible. Use these
-  for things the traveller said they need, such as `cancellable: true` for
-  "we need to be able to cancel", or `sold_out: false` always.
-- `weights`: feature -> number. Positive rewards, negative penalises. Price is
-  normalised across candidates before weighting, so a weight of -1 on
-  `price_total` means "cheaper is better, with the same importance as a
-  preference weighted 1". Scale weights by how strongly the traveller spoke:
-  "would be nice" is about 0.5, a clear ask is 1, "must" belongs in `hard`.
-- `threshold`: the score a candidate needs to count as good enough. With the
-  weights above, a candidate that satisfies every preference scores the sum of
-  the positive weights. Set the threshold so that missing the single most
+- `hard`: feature values a candidate must satisfy or it is infeasible. Use
+  these for things the traveller said they need, such as `cancellable: true`
+  for "we need to be able to cancel", and `sold_out: false` always. Numbers
+  have a direction: `sleeps: 3` means at least 3, and a price such as
+  `price_total: 400` means at most 400 (a budget cap). Everything else must
+  match.
+- `weights`: feature -> number. The sign says which way is better, the size
+  says how much it matters. A positive weight rewards a high number, `true`,
+  or a wanted text match. A negative weight rewards a low number, `false`, or
+  the absence of the match. Each weight contributes between 0 and its absolute
+  size: `price_total: -1` gives the cheapest feasible candidate 1 and the
+  dearest 0; `breakfast_included: -0.5` gives 0.5 to a rate without breakfast.
+  Scale by how strongly the traveller spoke: "would be nice" is about 0.5, a
+  clear ask is 1, "must" belongs in `hard`.
+- `threshold`: the score a candidate needs to count as good enough. The best
+  possible score is the sum of the absolute weights, and `set_objective` tells
+  you that number. Set the threshold so that missing the single most
   important preference still passes if nothing better exists, roughly 60 to 70
   percent of the maximum. **If the traveller named a fallback** ("river view if
   they have it, otherwise whatever's nicest"), the fallback must pass on its
@@ -43,4 +49,8 @@ case-insensitive substring match done by code.
 - "No breakfast" is a preference against `breakfast_included`, weight about
   -0.5, unless the traveller insists. It is also a reminder for validation to
   untick a pre-ticked breakfast.
+- "The nicest room" has no feature of its own. When the traveller sets no
+  budget, a positive weight on `price_total` is an honest stand-in for room
+  category; say so in the explanation. Do not leave "nicest" unweighted, or
+  every room ties.
 - Keep the explanation to two sentences.

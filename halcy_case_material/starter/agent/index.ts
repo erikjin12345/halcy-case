@@ -37,7 +37,8 @@ export const bookingAgent: Agent = async (message, chat, ctx) => {
     }
   } catch (e) {
     log.event("error", { error: String(e).slice(0, 500) });
-    chat.say(`Something went wrong on my side: ${String(e).slice(0, 200)}`);
+    // The detail goes to the run log, never to the traveller.
+    chat.say("Something went wrong on my side and I had to stop. I had not started the payment step, so nothing has been booked or charged.");
   } finally {
     await browser.close();
     log.event("done", { dir: log.dir });

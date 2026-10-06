@@ -1,15 +1,29 @@
 // Deterministic scoring over Store candidates. A model sets the objective
 // once; this file turns candidates into scores the same way every time, with
 // components a human can read at the debrief.
+//
+// Every weight contributes between 0 and its absolute size, so a score is
+// always between 0 and maxScore(objective) and a threshold means the same
+// thing whatever mix of features it is built from:
+//   positive weight  rewards a high number, `true`, or a wanted text match
+//   negative weight  rewards a low number, `false`, or the absence of the match
 
 import { objectiveHash as storeHash, type Candidate, type Evaluation } from "../store.ts";
 import { FEATURES, type FeatureName, type FeatureValue, type Objective } from "../types.ts";
 
 export interface ScoredCandidate {
   evaluation: Omit<Evaluation, "at">;
-  /** Hard constraints that failed, as (constraint name, reason). Empty when feasible. */
+  /** Hard constraints that failed, most telling first. Empty when feasible. */
   failures: { constraint: string; reason: string }[];
 }
+
+/** Numeric hard constraints that mean "at least" rather than "exactly". */
+const AT_LEAST: FeatureName[] = ["sleeps"];
+/** Numeric hard constraints that mean "at most": a budget cap. */
+const AT_MOST: FeatureName[] = ["price_total", "price_now", "price_at_hotel"];
+
+type Range = { min: number; max: number };
+type Ranges = Partial<Record<FeatureName, Range>>;
 
 /** One hash for weights, hard constraints and wants together. */
 export function objectiveHash(o: Objective): string {
@@ -21,24 +35,32 @@ function value(c: Candidate, name: FeatureName): FeatureValue | undefined {
   return typeof v === "string" || typeof v === "number" || typeof v === "boolean" ? v : undefined;
 }
 
+function hardFailure(name: FeatureName, actual: FeatureValue | undefined, required: FeatureValue): string | null {
+  if (actual === undefined) return `${name} unknown, required ${String(required)}`;
+  if (typeof required === "number" && typeof actual === "number") {
+    if (AT_LEAST.includes(name)) return actual >= required ? null : `${name} is ${actual}, required at least ${required}`;
+    if (AT_MOST.includes(name)) return actual <= required ? null : `${name} is ${actual}, required at most ${required}`;
+  }
+  if (typeof required === "string" && typeof actual === "string") {
+    return actual.toLowerCase().includes(required.toLowerCase()) ? null : `${name} is "${actual}", required "${required}"`;
+  }
+  return actual === required ? null : `${name} is ${String(actual)}, required ${String(required)}`;
+}
+
 function hardFailures(c: Candidate, o: Objective): ScoredCandidate["failures"] {
   const out: ScoredCandidate["failures"] = [];
   for (const [name, required] of Object.entries(o.hard) as [FeatureName, FeatureValue][]) {
-    const actual = value(c, name);
-    if (actual === undefined) out.push({ constraint: name, reason: `${name} unknown, required ${String(required)}` });
-    else if (typeof required === "string" && typeof actual === "string") {
-      if (!actual.toLowerCase().includes(required.toLowerCase()))
-        out.push({ constraint: name, reason: `${name} is "${actual}", required "${required}"` });
-    } else if (actual !== required) out.push({ constraint: name, reason: `${name} is ${String(actual)}, required ${String(required)}` });
+    const reason = hardFailure(name, value(c, name), required);
+    if (reason) out.push({ constraint: name, reason });
   }
   // Most telling first: a sold-out room, then other definite mismatches, then facts the page never stated.
   const rank = (f: { constraint: string; reason: string }) => (f.constraint === "sold_out" ? 0 : f.reason.includes(" unknown, ") ? 2 : 1);
   return out.sort((a, b) => rank(a) - rank(b));
 }
 
-/** Min-max range per numeric feature across the candidate set. */
-function numericRanges(candidates: Candidate[]): Partial<Record<FeatureName, { min: number; max: number }>> {
-  const out: Partial<Record<FeatureName, { min: number; max: number }>> = {};
+/** Min-max range per numeric feature across the given candidates. */
+function numericRanges(candidates: Candidate[]): Ranges {
+  const out: Ranges = {};
   for (const name of FEATURES) {
     const values = candidates.map((c) => value(c, name)).filter((v): v is number => typeof v === "number");
     if (values.length) out[name] = { min: Math.min(...values), max: Math.max(...values) };
@@ -46,39 +68,48 @@ function numericRanges(candidates: Candidate[]): Partial<Record<FeatureName, { m
   return out;
 }
 
-function contribution(name: FeatureName, v: FeatureValue | undefined, weight: number, ranges: ReturnType<typeof numericRanges>, o: Objective): number {
+/** How well one feature value serves one weight, from 0 (not at all) to 1 (fully). */
+function fit(name: FeatureName, v: FeatureValue | undefined, wantHigh: boolean, ranges: Ranges, o: Objective): number {
   if (v === undefined) return 0;
-  if (typeof v === "boolean") return v ? weight : 0;
+  if (typeof v === "boolean") return v === wantHigh ? 1 : 0;
   if (typeof v === "number") {
     const r = ranges[name];
-    if (!r || r.max === r.min) return 0;
-    // Positive weight rewards high values, negative weight rewards low values.
-    return weight * ((v - r.min) / (r.max - r.min));
+    // Nothing to compare against, or every candidate is equal on this feature: it cannot hold anyone back.
+    if (!r || r.max === r.min) return 1;
+    const norm = Math.min(1, Math.max(0, (v - r.min) / (r.max - r.min)));
+    return wantHigh ? norm : 1 - norm;
   }
   const want = o.wants[name];
-  return want && v.toLowerCase().includes(want.toLowerCase()) ? weight : 0;
+  if (!want) return 0;
+  return v.toLowerCase().includes(want.toLowerCase()) === wantHigh ? 1 : 0;
 }
+
+const round = (n: number) => Math.round(n * 1000) / 1000;
 
 export function scoreCandidates(candidates: Candidate[], o: Objective): ScoredCandidate[] {
   const hash = objectiveHash(o);
-  const ranges = numericRanges(candidates);
+  const failed = new Map(candidates.map((c) => [c.id, hardFailures(c, o)]));
+  // Compare prices only among candidates the traveller could actually get.
+  const feasible = candidates.filter((c) => failed.get(c.id)!.length === 0);
+  const ranges = numericRanges(feasible.length ? feasible : candidates);
+
   return candidates.map((c) => {
-    const failures = hardFailures(c, o);
+    const failures = failed.get(c.id)!;
     const components: Record<string, number> = {};
     let score = 0;
     for (const [name, weight] of Object.entries(o.weights) as [FeatureName, number][]) {
-      const part = contribution(name, value(c, name), weight, ranges, o);
-      if (part !== 0) components[name] = Math.round(part * 1000) / 1000;
+      const part = Math.abs(weight) * fit(name, value(c, name), weight > 0, ranges, o);
+      if (part !== 0) components[name] = round(part);
       score += part;
     }
     return {
-      evaluation: { candidateId: c.id, objectiveHash: hash, score: Math.round(score * 1000) / 1000, components, feasible: failures.length === 0 },
+      evaluation: { candidateId: c.id, objectiveHash: hash, score: round(score), components, feasible: failures.length === 0 },
       failures,
     };
   });
 }
 
-/** The best possible score under this objective: every positive weight earned. */
+/** The best possible score under this objective: every weight fully earned. */
 export function maxScore(o: Objective): number {
-  return Object.values(o.weights).reduce((sum, w) => sum + Math.max(0, w ?? 0), 0);
+  return round(Object.values(o.weights).reduce((sum, w) => sum + Math.abs(w ?? 0), 0));
 }
