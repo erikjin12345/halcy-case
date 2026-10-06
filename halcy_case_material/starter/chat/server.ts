@@ -11,6 +11,7 @@ import { readFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { agent as starterAgent } from "../agent.ts";
 import { bookingAgent } from "../agent/index.ts";
+import { redactCardNumbers } from "../agent/evidence/card-number.ts";
 import type { Card, Chat, Context } from "../types.ts";
 
 const PORT = Number(process.env.CHAT_PORT ?? 4200);
@@ -84,8 +85,13 @@ async function run(text: string) {
   }
 }
 
-function travellerSays(text: string) {
+function travellerSays(raw: string) {
+  // A card number typed into the chat must not reach the history, a model or a log.
+  const { data: text, redacted } = redactCardNumbers(raw);
   emit({ type: "message", from: "traveller", text });
+  if (redacted) {
+    chat.say("I removed a card number from your message before anything read it. Please don't send card details here: you type them yourself on the hotel's own page.");
+  }
   if (!running) return void run(text);
   if (waitingReply) {
     const r = waitingReply;
