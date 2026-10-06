@@ -63,7 +63,7 @@ export function chatTools(deps: ChatToolDeps): RunnableTool[] {
     description: "Show a card with a title, a few lines and optionally a link. Use it for a summary the traveller should be able to re-read, such as a room option with its full price breakdown.",
     inputSchema: z.object({
       title: z.string(),
-      lines: z.array(z.string()).max(12),
+      lines: z.array(z.string()).max(8).describe("At most 8 short lines: facts, no narration"),
       link: z.object({ label: z.string(), url: z.string() }).optional(),
     }),
     run: async (card) => {
@@ -101,5 +101,15 @@ export function chatTools(deps: ChatToolDeps): RunnableTool[] {
     },
   });
 
-  return [say, showCard, askTraveller, waitForReply];
+  const note = betaZodTool({
+    name: "note",
+    description: "A short status line for the activity log beside the chat, such as 'validating Casa Halcy, Superior Saver'. It is not a chat message. Use it instead of telling the traveller what step you are on.",
+    inputSchema: z.object({ text: z.string() }),
+    run: async ({ text }) => {
+      log.event("trace.note", { text, from: "orchestrator" });
+      return "Noted.";
+    },
+  });
+
+  return [say, showCard, askTraveller, waitForReply, note];
 }
