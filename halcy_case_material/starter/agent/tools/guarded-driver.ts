@@ -34,12 +34,15 @@ export function guardedDriver(raw: PageDriver, boundary: PaymentBoundary): PageD
   const safe = (l: PageLocation): PageLocation => (boundary.known(l.origin) ? l : { origin: l.origin, path: "" });
   /** Ids of sensitive fields in the latest observation. */
   let sensitive = new Set<string>();
+  /** Labels of the latest observation's elements, already redacted. */
+  let labels = new Map<string, string>();
 
   return {
     async observe() {
       refuseIfBlind("observe");
       const redacted = redactObservation(filterObservation(await raw.observe(), boundary));
       sensitive = redacted.sensitive;
+      labels = new Map(redacted.seen.elements.filter((e) => !sensitive.has(e.id)).map((e) => [e.id, e.name.slice(0, 80)]));
       return redacted.seen;
     },
     async act(action) {
@@ -56,6 +59,7 @@ export function guardedDriver(raw: PageDriver, boundary: PaymentBoundary): PageD
       await raw.goto(url);
     },
     location: () => safe(raw.location()),
+    labelOf: (id) => (sensitive.has(id) ? null : labels.get(id) ?? null),
     frameUrlOf(id) {
       const url = raw.frameUrlOf(id);
       if (!url) return null;

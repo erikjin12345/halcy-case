@@ -149,7 +149,7 @@ async function sequence(deps: HandoffDeps, progress: { handedOver: boolean }): P
     // A hold nobody could put a number on gets a short wait, never the long default, and the traveller is told.
     const unknownWait = Math.min(timing.unknownHoldWaitSeconds, (hold.atMostSeconds ?? Infinity) - timing.marginSeconds);
     const waitSeconds = holdSecondsLeft !== undefined ? holdSecondsLeft - timing.marginSeconds : holdUnknown ? unknownWait : timing.defaultWaitSeconds;
-    log.event("handoff.start", { attempt, where: at, terms, holdSecondsLeft, holdUnknown, holdFromPage: hold.secondsLeft !== undefined, waitSeconds, foreignFrames: seen.text.filter((f) => !boundary.known(f.frameUrl)).length });
+    log.event("handoff.start", { attempt, where: at, terms, minHoldSeconds: timing.minHoldSeconds, marginSeconds: timing.marginSeconds, holdSecondsLeft, holdUnknown, holdFromPage: hold.secondsLeft !== undefined, waitSeconds, foreignFrames: seen.text.filter((f) => !boundary.known(f.frameUrl)).length });
 
     const deadline = Date.now() + waitSeconds * 1000;
     const card = handoffCard(hotel, shown, holdSecondsLeft, holdUnknown ? waitSeconds : undefined, deps.fx);
