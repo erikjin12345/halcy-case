@@ -4,12 +4,11 @@ Answers question 1 in `halcy_case_material/BRIEF.md`: which models do which
 jobs, why, what it costs per booking, what happens when a model is wrong, and
 what we measure to know the choice was right. Written 2026-10-06.
 
-**Status.** Decided: every role runs `claude-opus-5-5` today, with per-role
-overrides from the environment (`README.md`, Decisions). Proposed, not yet
-decided: move the search role to a cheaper model once it is measured. Nothing
-here has been run against the live API yet; there is no key in the
-environment. Every cost figure below is an estimate until section 6 is filled
-in from run logs.
+**Status.** Decided: every role runs `claude-opus-5-5`, with per-role
+overrides from the environment (`README.md`, Decisions). Measured: one
+completed booking on the mock hotel, all roles on Opus 5.5, cost $0.33
+(section 5). Not measured: any other model, any other ask, any other hotel.
+One run per configuration is an observation, not a measurement.
 
 ## 1. What runs today
 
@@ -43,9 +42,9 @@ refusal fallback, so neither is sent to it.
 model where the volume is high and an error is caught downstream.**
 
 Sizing by "how hard does the job sound" gives the wrong answer here. The
-search role is both the most expensive and the hardest, and it is still the
-right place for the cheaper model, because validation checks its result on
-the live page before the traveller sees anything.
+search role is both the largest and the hardest, and it is still the only
+place a cheaper model belongs, because validation checks its result on the
+live page before the traveller sees anything.
 
 ## 3. Role by role
 
@@ -53,7 +52,7 @@ the live page before the traveller sees anything.
 | ------------ | --------------- | -------------------------------------------------- | ------------------------------------------- | --------------------------------- |
 | Orchestrator | Low             | High: wrong words to the traveller, wrong approval | Nobody after it; the traveller reads it     | Keep Opus 5.5                     |
 | Objective    | Very low        | High: a need ("must cancel") scored as a wish      | Validation, late; a whole search is wasted  | Keep Opus 5.5 at low effort       |
-| Search       | Most of the run | Medium: wrong room, add-on left ticked, extra turns | Validation, on the live page                | Sonnet 5.5 first, then Haiku 4.5  |
+| Search       | Largest, 41% of cost | Medium: wrong room, add-on left ticked, extra turns | Validation, on the live page           | Candidate for Sonnet 5.5; see 5   |
 | Validation   | Low             | High: it reads the price the traveller approves    | The approval card, only if the traveller notices | Keep Opus 5.5 at low effort  |
 
 Notes:
@@ -89,37 +88,53 @@ a new runtime dependency with a written reason (`CLAUDE.md`). Its price is not
 quoted here because it has not been verified. The starter's `Model` seam
 (`starter/model.ts`) is single-shot, so it does not cover the tool loop.
 
-## 5. Cost per booking, estimated
+## 5. Cost per booking, measured
 
-Assumptions, to be replaced by measured numbers: a search run of about 25
-turns with an average context of about 15k tokens, so about 400k input and
-10k output tokens. The other three roles together about 60k input and 6k
-output on Opus 5.5. No caching counted.
+One completed booking: example ask 1 on the mock hotel, every role on
+`claude-opus-5-5`, run log `runs/2026-10-06T04-39-53-161Z-booking`. Recomputed
+from its `llm.done` events at $4 input, $20 output, $0.20 cache read and $5
+cache write per million tokens.
 
-| Search model        | Search  | Other roles | Per booking |
-| ------------------- | ------- | ----------- | ----------- |
-| `claude-opus-5-5`   | ~$1.80  | ~$0.36      | ~$2.2       |
-| `claude-sonnet-5-5` | ~$0.90  | ~$0.36      | ~$1.3       |
-| `claude-haiku-4-5`  | ~$0.45  | ~$0.36      | ~$0.8       |
+| Role         | Turns | Output | Cache read | Cache write | Cost   | Share |
+| ------------ | ----- | ------ | ---------- | ----------- | ------ | ----- |
+| Search       | 11    | 2,904  | 64,841     | 12,667      | $0.134 | 41%   |
+| Orchestrator | 9     | 2,492  | 44,865     | 4,418       | $0.081 | 25%   |
+| Validation   | 6     | 1,729  | 23,370     | 7,466       | $0.077 | 24%   |
+| Objective    | 2     | 1,005  | 1,963      | 2,654       | $0.034 | 10%   |
+| **Total**    | 28    | 8,130  | 135,039    | 27,205      | $0.326 |       |
 
-Two things move these more than the model does:
+Uncached input was 64 tokens in total. Wall clock 155 seconds, including the
+traveller's button presses.
 
-- **Caching the tool-loop history** (PR #5). The search run re-sends its
-  whole history every turn; cached reads are billed at a fraction of the
-  input price. On Haiku 4.5 caching starts later, because its smallest
-  cacheable prefix is 4096 tokens.
-- **Turns per booking.** Fewer, better-aimed actions beat a lower price per
-  token.
+What the run shows:
 
-The brief reimburses the agent's API spend up to $50. At the all-Opus
-estimate that is about 20 full runs, which is enough for the measurement in
-section 6 but not for careless reruns.
+- **Output tokens are half the bill** ($0.16), cache writes most of the rest
+  ($0.14), cache reads $0.03. The levers are effort and turns, in that order,
+  before model choice.
+- **Caching carries the input cost.** 135k of 162k input tokens were cache
+  reads.
+- **Turns matter more than price per token.** The run before this one
+  (`runs/2026-10-06T04-35-53-692Z-booking`) cost $0.41 with 21 search turns;
+  serialising the browser tools so the model could batch brought search to 11
+  turns and cut its cost by a third, with the model unchanged.
+- **A cheaper search model saves little here.** Search is $0.13 of $0.33. At
+  Sonnet 5.5 prices with the same turns that is about $0.07 saved per booking;
+  moving search to a free model would save $0.13. Derived, not run.
+
+**The estimate this replaces was wrong by a factor of seven.** The first
+version of this file put an all-Opus booking at about $2.2, assuming 25
+search turns, 400k uncached input tokens and no caching. The real run used 11
+search turns and almost no uncached input. Kept here because the debrief asks
+what the tools got wrong.
+
+The brief reimburses up to $50 of API spend. At $0.33 a run that is about 150
+runs, so the sweep in section 6 is affordable.
 
 ## 6. What we measure
 
-Run the example asks in `starter/examples.json` with the search role on each
-candidate, several runs each, everything else unchanged. Every number comes
-from the run log (`llm.turn`, `llm.done`, `act`, `observe`):
+Run each example ask in `starter/examples.json` with the search role on each
+candidate, everything else unchanged. Every number comes from the run log
+(`llm.turn`, `llm.done`, `act`, `observe`):
 
 | Metric                              | Why                                              |
 | ----------------------------------- | ------------------------------------------------ |
@@ -129,14 +144,21 @@ from the run log (`llm.turn`, `llm.done`, `act`, `observe`):
 | Cost per completed booking          | Not per request: retries and extra turns count   |
 | Same on a hotel site not seen before | The debrief runs one                            |
 
-Decision rule: take the cheapest search model whose completion rate on the
-example asks matches Opus 5.5, and whose validation rejections do not rise.
+Decision rule: move search to the cheapest model whose completion rate on the
+example asks matches Opus 5.5 and whose validation rejections do not rise.
+With at most $0.13 per booking at stake, a single extra failed booking in the
+sweep outweighs the saving, so the bar is "no worse", not "nearly as good".
 
-| Search model        | Completed | Rejections | Turns | Cost per booking |
-| ------------------- | --------- | ---------- | ----- | ---------------- |
-| `claude-opus-5-5`   | not run   | not run    | not run | not run        |
-| `claude-sonnet-5-5` | not run   | not run    | not run | not run        |
-| `claude-haiku-4-5`  | not run   | not run    | not run | not run        |
+Results so far, ask 1 only, one run each:
+
+| Search model        | Completed | Rejections | Turns (search) | Wall  | Cost   |
+| ------------------- | --------- | ---------- | -------------- | ----- | ------ |
+| `claude-opus-5-5`   | 1 of 1    | 1, false   | 28 (11)        | 155 s | $0.326 |
+| `claude-sonnet-5-5` | not run   | not run    | not run        | not run | not run |
+| `claude-haiku-4-5`  | not run   | not run    | not run        | not run | not run |
+
+The Opus row predates two fixes in PR #9 (validation prompt, read-only date
+fields) and has to be re-run after it merges before it is a baseline.
 
 ## 7. When a model is wrong
 
@@ -148,6 +170,15 @@ example asks matches Opus 5.5, and whose validation rejections do not rise.
 | Orchestrator | Says more than the page supports           | Every chat message and approval is in the run log          | The message itself; approval needs a button press |
 | Any          | The model declines the request             | `stop_reason: "refusal"`; server-side fallback where supported, otherwise the run stops | "Something went wrong on my side", nothing booked |
 
+Seen in the first runs, all on Opus 5.5:
+
+- Validation rejected a correct candidate once: it read the tourist tax on
+  the payment page as a price mismatch. The orchestrator still showed the
+  right breakdown and the traveller approved. Prompt changed in PR #9.
+- Search tried to `fill` read-only date fields twice per run, five seconds
+  lost each time, then used the calendar. Observation now marks read-only
+  fields (PR #9).
+
 Proposed and not built: after validation extracts an amount, check in code
 that the same figure appears verbatim in the page text, so a misread price
 cannot reach the approval card.
@@ -158,8 +189,11 @@ is chosen.
 
 ## 8. Open
 
-- Search on Sonnet 5.5 or Haiku 4.5: pending section 6.
+- Re-run the Opus baseline after PR #9, on all three example asks.
+- Search on Sonnet 5.5 and Haiku 4.5: not run. The cost case is weaker than
+  first estimated; the open question is whether quality holds, not how much
+  is saved.
+- Effort per role is the larger lever (output tokens are half the cost) and
+  has not been swept.
 - A second provider for search: named as a candidate, not built.
-- Validation on a smaller model: pending section 6.
-- Effort levels per role are first guesses and belong in the same sweep.
-- Everything in `llm/` is unverified against the live API.
+- Nothing has been run on a hotel site other than the mock.
