@@ -1,0 +1,144 @@
+# Unseen hotel rehearsal
+
+A rehearsal of the debrief's unseen hotel, run 2026-10-06 at 20:37 HKT on
+branch `test/unseen-hotels` (main `6b7d473`). Nothing in the agent was
+changed or tuned. Findings are recorded here first; the user decides what
+gets fixed.
+
+## The hotel
+
+Gasthof Alpenblick (`halcy_case_material/test-hotels/alpenblick/`, ports
+4600 and 4601), built by a subagent that read only the starter's README and
+never `starter/agent/`. Everything differs from the two mock hotels: German
+throughout; arrival as day and month dropdowns plus a nights count; rooms as
+cards whose rates open in a modal; CHF with a euro guide; a city tax
+(Kurtaxe) as a footnote and a pre-ticked service charge on the details page;
+card fields on the hotel's own page, not in a provider frame; the bank code
+in a pop-up window on the provider's origin; a 12-minute hold stated in
+words.
+
+**Drop-in test: passed.** Adding one line to `starter/hotels.json` was the
+only change. The boundary allowed the new origin, the currency code knew
+CHF, and the agent reached the site's payment page.
+
+## Results
+
+Three asks, scripted traveller, headless, every role on the defaults
+(search on Sonnet 5.5). Reports under `runs/scenarios/2026-10-06T12-37-38-962Z`.
+
+| Ask | Result | Time | Cost | What happened |
+| --- | --- | --- | --- | --- |
+| Cheapest room for two | **Agent fault** | 91 s | $0.24 | Approved the Doppelzimmer on the Flexibel rate (CHF 378.00 with Kurtaxe) instead of the cheaper Spartarif (CHF 316.80). Search never opened the rate modals: it recorded one price per room with no rate name. Validation then picked Flexibel because its price matched, and said the Spartarif was cheaper but not chosen. The card did offer "I'd rather have the Spartarif" |
+| A single room, must be cancellable | **Agent fault**, plus a script fault | 57 s | $0.13 | The objective required `room_name` to contain "single", an English word, on a German site that says "Einzelzimmer". Nothing passed scoring. The agent noticed and asked "Shall I check it on the hotel's live site?"; my scripted traveller answered No because a rule for extras matched the word "breakfast" |
+| Three people, budget 3000 kronor | **Pass** | 64 s | $0.14 | "Familienzimmer, Flexibel (2 nights): CHF 520.00 (≈ 6,284 kr) [...] That is well over your 3,000 kr. The budget check used an estimate". Nothing booked |
+
+Total $0.51 for the three runs. One failed browser action per run: the
+first attempt to pick a day in the arrival dropdown timed out, then worked.
+
+## The payment boundary on a page with inline card fields
+
+- **Run logs:** all four pass `npm run audit:runs`. The test card's digits
+  appear in none of them. Validation reached the payment page in one run
+  and did not act on any field there.
+- **No hand-off was run.** It needs a test harness that fills the card
+  fields in the agent's own browser, which does not exist, so the blind
+  interval on an inline card page is untested.
+- **Field redaction is English-only (code finding, no run needed).**
+  `payment/redact.ts` recognises card fields by label. On this site:
+
+  | Field | Treated as sensitive |
+  | --- | --- |
+  | "Kartennummer", empty | no |
+  | "Kartennummer" holding 4242 4242 4242 4242 | yes, by the Luhn check on its content |
+  | "Gültig bis (MM/JJ)" holding 12/30 | no; the expiry date is visible to a model |
+  | "Karteninhaber" | no |
+  | "Prüfnummer (CVC)" | yes, because of "CVC" |
+  | "Bestätigungscode" (bank code) | no |
+  | Portuguese labels ("Número do cartão", "Validade", "Código de segurança") | none |
+
+  A filled card number does not leak. But expiry, cardholder and the bank
+  code's label are not recognised, and the agent would not be refused if it
+  tried to act on an empty card number field. Only blind mode and the
+  prompts stand in the way. Before blind mode starts, the fields are empty.
+
+## What the rehearsal says
+
+1. Reaching the site, its dropdowns, its German pages and its currency
+   worked without any change.
+2. **Rates behind a modal are a blind spot.** Search records what the room
+   list shows and does not open the dialog, so on a site like this it can
+   miss the cheaper rate.
+3. **Wanted words are written in English** by the objective, so a hard
+   constraint on a room name can fail every room on a site in another
+   language.
+4. **Field redaction needs labels in other languages,** or a rule that does
+   not depend on labels (autocomplete attributes such as `cc-number`, or
+   every input on a page that takes a card).
+
+## After the fixes
+
+Re-run at 20:58 HKT on `test/unseen-hotels` `1b7b022`, which has the
+redaction fix (#62), the concise chat (#64) and the rate and room-type fixes
+(#65). Same three asks, same settings, headless. Reports under
+`runs/scenarios/2026-10-06T12-58-39-459Z`.
+
+| Ask | Before | After | Time | Cost |
+| --- | --- | --- | --- | --- |
+| Cheapest room for two | Agent fault: approved the dearer rate | **Still a fault, a different one** | 91 s to 75 s | $0.24 to $0.17 |
+| A single room, must be cancellable | Agent fault: "single" matched no room | **Pass**: Einzelzimmer, Flexibel, CHF 373.50 with Kurtaxe, service charge unticked | 57 s to 71 s | $0.13 to $0.19 |
+| Three people, budget 3000 kronor | Pass | **Pass**, unchanged | 64 s to 52 s | $0.14 to $0.12 |
+
+No failed browser action in any after-run; before, each run lost one select
+on the day dropdown.
+
+**What is left on "cheapest for two".** Search again recorded one price per
+room, but this time with the rate name "Standard", which the site never
+uses. A made-up rate name passes the new `ratesMissing` check, which only
+looks for a missing one. The orchestrator still found both rates and asked
+"Spartarif CHF 316.80 / Flexibel CHF 360.00". When the traveller chose the
+Spartarif it could not continue: it offered "Search again in a few minutes,
+when the saved list has expired" or "I'll book it myself" on the hotel's
+site. So the cheaper rate is now shown, but booking it dead-ends on the
+cached search. Two separate faults: search inventing a rate name, and no
+way to search again for a rate the traveller picked.
+
+**Hand-off, run with the stand-in harness** (a raw Playwright script stands
+in for validation and for the traveller; the real hand-off code and
+classifier run): **confirmed**, reference AB-43606, CHF 0.00 now and CHF
+378.00 at the hotel, 8 s. The four card fields reached the agent as
+"[withheld]". The run log (`runs/2026-10-06T13-02-22-681Z-handoff-alpenblick`)
+passes `npm run audit:runs`, and neither the card number, the expiry nor the
+cardholder's name appears in it. The blind interval lasted 3 s and ended on
+navigation. Not covered: the agent's own validation reaching the payment
+page, the Spartarif, a declined card.
+
+All after-run logs pass the audit; the test card's digits appear in none.
+
+## Second round: made-up rate names and the cached search
+
+Fixes in #69: `ratesMissing` also flags a generic rate name on a room's
+only rate and a name missing from the source page; `run_search` takes
+`fresh: true`; an unrecorded pick leads to a fresh search, never to "wait"
+or "book it yourself". Re-run at 21:05 HKT on `test/unseen-hotels` merged
+locally with #69.
+
+| Ask | Round 1 after | Round 2 | Time | Cost |
+| --- | --- | --- | --- | --- |
+| Cheapest room for two | Fault: cheaper rate shown, could not be booked | **Pass**: Doppelzimmer Seeblick, Spartarif, CHF 316.80 now and CHF 18.00 Kurtaxe at the hotel, "Keine Stornierung, keine Rückerstattung: no cancellation, no refund" on the card | 141 s | $0.42 |
+
+**Why it passed, honestly.** The new rate-name check did not fire. The
+first search named every room's rate "Frühstück inbegriffen" ("breakfast
+included"), a phrase that is on the page, so it is neither generic nor
+missing from the page text. What worked was the fresh search: the
+orchestrator searched the hotel again, not from the cache, and that search
+opened the rate dialog and recorded Flexibel and Spartarif per room. The
+run took 141 s and $0.42, against 75 s and $0.17 for the failed one,
+because the hotel was searched twice.
+
+**Still open.** A rate name copied from the wrong line of the page (an
+inclusion such as "breakfast included" instead of the rate's name) passes
+every check. Whether search opens rate dialogs on its first pass is left to
+the model.
+
+Casa Halcy (case 02) and Villa Aurora (case 20) on #69: both pass, 81 s and
+79 s, no rate flagged as incomplete.

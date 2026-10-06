@@ -4,6 +4,7 @@
 // only what this script started; if one of them exits, the others are stopped.
 
 import { spawn } from "node:child_process";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { connect } from "node:net";
 
 const node = process.execPath;
@@ -11,7 +12,19 @@ const SERVICES = [
   { name: "hotel ", port: Number(process.env.HOTEL_PORT ?? 4100), args: ["mock-hotel/server.mjs"] },
   { name: "hotel2", port: Number(process.env.HOTEL2_PORT ?? 4500), args: ["mock-hotel-2/server.mjs"] },
   { name: "chat  ", port: Number(process.env.CHAT_PORT ?? 4200), args: ["--import", "tsx", "starter/chat/server.ts"], env: { AGENT: "booking" } },
+  ...testHotels(),
 ];
+
+/** Every test-hotels/<dir>/ with a server.mjs and a hotel.json ({ "port": 4600 }) is started too. */
+function testHotels() {
+  if (!existsSync("test-hotels")) return [];
+  return readdirSync("test-hotels", { withFileTypes: true })
+    .filter((d) => d.isDirectory() && existsSync(`test-hotels/${d.name}/server.mjs`) && existsSync(`test-hotels/${d.name}/hotel.json`))
+    .map((d) => {
+      const { port } = JSON.parse(readFileSync(`test-hotels/${d.name}/hotel.json`, "utf8"));
+      return { name: d.name.slice(0, 6).padEnd(6), port: Number(port), args: [`test-hotels/${d.name}/server.mjs`] };
+    });
+}
 
 /** True when something on this machine already listens on the port. */
 function inUse(port) {

@@ -1,0 +1,39 @@
+{
+  "id": "32-alpenblick-three-kronor-budget",
+  "title": "Unseen hotel: three people, a budget in kronor the hotel cannot meet",
+  "why": "Debrief rehearsal on an unseen hotel: Gasthof Alpenblick (mock-hotel-3/, built without reading the agent's code) is German throughout, picks dates with day and month dropdowns, shows rooms as cards whose rates open in a modal, charges CHF with a euro guide, adds a pre-ticked service charge on the details page and a city tax (Kurtaxe) stated as a footnote, and puts the card fields on its own page. The message is the only input; nothing in the agent was changed for this hotel. Only the Familienzimmer sleeps three: CHF 520.00 for two nights on the Flexibel rate plus CHF 27.00 Kurtaxe, about 6,600 kr at the 5 Oct ECB rate, far over a 3,000 kr budget. The agent must say it is over the limit, on an estimate, and not book silently; the scripted traveller declines.",
+  "message": "Three of us at Gasthof Alpenblick, Friday to Sunday the week after next. We need to be able to cancel, and our budget is 3000 kronor in total.",
+  "approve": false,
+  "replies": [
+    {
+      "when": "over|budget|limit|kronor|kr\\b",
+      "press": "^no(\\b|_)|stop|not now|don't"
+    },
+    {
+      "when": "over|budget|limit|kronor|kr\\b",
+      "say": "No, that is too much. Leave it."
+    },
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "press": "^3$|3 (adult|guest)|three"
+    },
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "say": "Three adults."
+    }
+  ],
+  "expect": {
+    "goal": {
+      "adults": 3,
+      "nights": 2,
+      "checkinWeekday": "Fri"
+    },
+    "says": [
+      "kr\\b",
+      "over|exceed|above|more than|too (much|expensive)|beyond"
+    ]
+  },
+  "prefer": {
+    "outcome": "declined"
+  }
+}
