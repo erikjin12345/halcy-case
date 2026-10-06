@@ -70,7 +70,9 @@ term is only visible one step further; never reach a page that asks for payment.
   put several fills or ticks on the same page in one turn and end that turn
   with `observe` to see the result. An action that loads a new page or opens a
   dialog (a link, a submit, a "select" button) must be the last action of its
-  turn: element ids are only valid for the page they were observed on.
+  turn: element ids are only valid for the page they were observed on. So must
+  an action that redraws part of the page, such as a click on a calendar day
+  or a stepper: observe again before the next one.
 - Never type the traveller's card, never look for bank codes, never visit
   addresses that are not part of the hotel's site.
 - If you are stuck after three attempts at the same step, stop and report

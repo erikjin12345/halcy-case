@@ -140,6 +140,9 @@ export async function act(page: Page, action: Action): Promise<void> {
   const frame = frames.get(page)?.[Number(fi)];
   if (!frame) throw new Error(`no frame for ${action.id}; observe again`);
   const el = frame.locator(`[data-agent-id="${action.id}"]`);
+  // An id from an observation that has since been redrawn (a calendar month, a
+  // stepper) points at nothing. Say so at once instead of waiting 5 s for it.
+  if ((await el.count()) === 0) throw new Error(`element ${action.id} is gone; the page changed, observe again`);
   switch (action.kind) {
     case "click":
       await el.click({ timeout: 5000 });
