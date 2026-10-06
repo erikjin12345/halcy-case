@@ -47,9 +47,15 @@ cp .env.example .env     # then put your key in it
 npm run agent:check      # deterministic scoring test, then two tiny API calls
 ```
 
-To use it in the chat, change the import in `starter/chat/server.ts` from
-`../agent.ts` to `../agent/index.ts` and the export name from `agent` to
-`bookingAgent`.
+To use it in the chat (the mock hotel must be running, `npm run hotel`):
+
+```bash
+npm run chat:booking              # same as AGENT=booking npm run chat
+HEADLESS=1 npm run chat:booking   # no visible browser window
+```
+
+Plain `npm run chat` still runs the starter's one-look agent. Each run writes
+`runs/<timestamp>-booking/events.jsonl` and masked screenshots.
 
 ## Model choice
 
