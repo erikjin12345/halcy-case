@@ -64,7 +64,7 @@
   </head>
   <body>
     <div class="phone">
-      <header><span><button id="cases-toggle" title="Test cases to paste">Cases</button> <strong>Halcy</strong></span><button id="reset" title="Clear the conversation">Clear</button></header>
+      <header><span><button id="cases-toggle" title="Test cases to paste">Cases</button> <strong>Halcy</strong></span><span><button id="mode" title="Switch between the normal chat and test mode">Test mode</button> <button id="reset" title="Clear the conversation">Clear</button></span></header>
       <div id="log" aria-live="polite"></div>
       <div id="busy"></div>
       <div id="examples"></div>
@@ -75,6 +75,15 @@
       // Test mode: ?test=1. The normal chat is unchanged without it.
       const TEST = new URLSearchParams(location.search).get("test") === "1";
       if (TEST) document.body.classList.add("test");
+      // One click switches mode by reloading with or without ?test=1; the conversation is kept by the server.
+      const mode = document.getElementById("mode");
+      mode.textContent = TEST ? "Normal mode" : "Test mode";
+      mode.onclick = () => {
+        const url = new URL(location.href);
+        if (TEST) url.searchParams.delete("test");
+        else url.searchParams.set("test", "1");
+        location.href = url.toString();
+      };
       const log = document.getElementById("log");
       const cards = new Map();
       const post = (path, body) =>
