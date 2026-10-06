@@ -5,7 +5,7 @@ The case is capped at **8 hours**. The debrief will ask where the hours went.
 | Item            | Value                                          |
 | --------------- | ---------------------------------------------- |
 | Session start   | 2026-10-06 10:52 HKT (UTC+8)                   |
-| Hard deadline   | 2026-10-06 18:52 HKT, plus paused time (below) |
+| Hard deadline   | 2026-10-06 20:14 HKT (18:52 plus 1:22 paused)  |
 | Source          | Creation time of this Claude Code session file |
 
 ## Where the hours went
@@ -29,6 +29,7 @@ The case is capped at **8 hours**. The debrief will ask where the hours went.
 | 12:59      | 2:07    | Merged #9 into #7 and #11 ahead of time; review fixes; first full run behind the orchestrator: chat message to confirmed booking in 151 s |
 | 13:30      | 2:38    | PR #14 for the fix that missed #11; review of #15; `docs/limitations/` (trade-offs, limitations, not verified) and the two-hourly documentation review routine |
 | 13:41      | 2:49    | Break starts; the clock is paused (see Breaks)                |
+| 15:06      | 2:52    | Break ends; 1:22 paused, deadline moves to 20:14              |
 
 Add a row whenever a phase ends. Keep it honest; it is part of the submission.
 
@@ -41,6 +42,7 @@ break still counts. The hard deadline moves later by the total paused time, and
 
 | Start (HKT) | End (HKT) | Paused | Note |
 | ----------- | --------- | ------ | ---- |
-| 13:41       | open      | open   | 2:49 elapsed at the start. No open PRs. Every session's last activity was 13:28 to 13:30; only the mock hotel server was left running. A documentation review is scheduled for 14:03 and counts if it runs. |
+| 13:41       | 15:06     | 1:22   | 2:49 elapsed at the start. The window is 1:25; 3 minutes of it count as work: recording the break (13:41 to 13:43) and the scheduled documentation review, which fired at 14:33, saw the open break and skipped itself. No other session wrote anything in the window; only the mock hotel server kept running. |
 
-Fill in `End` and `Paused` when work resumes, from the session transcripts.
+Total paused: 1:22. `End` and `Paused` come from the timestamps in the session
+transcripts.
