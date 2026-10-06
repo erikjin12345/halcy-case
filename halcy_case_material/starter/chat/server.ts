@@ -21,18 +21,21 @@ const read = (p: string) => readFileSync(new URL(p, import.meta.url), "utf8");
 const PAGE = read("./page.html");
 const EXAMPLES = read("../examples.json");
 
-type Event =
+type Event = (
   | { type: "message"; from: "traveller" | "agent"; text: string }
   | { type: "card"; id: string; card: Omit<Card, "image"> & { image?: string } }
   | { type: "pressed"; card: string; button: string }
   | { type: "busy"; on: boolean }
-  | { type: "reset" };
+  | { type: "reset" }
+) & { at?: number };
 
 let history: Event[] = [];
 const listeners = new Set<http.ServerResponse>();
 function emit(e: Event) {
-  if (e.type !== "busy" && e.type !== "reset") history.push(e);
-  for (const res of listeners) res.write(`data: ${JSON.stringify(e)}\n\n`);
+  // Stamped once on the server, so a reload shows when each line was sent, not when it was redrawn.
+  const stamped: Event = { ...e, at: Date.now() };
+  if (e.type !== "busy" && e.type !== "reset") history.push(stamped);
+  for (const res of listeners) res.write(`data: ${JSON.stringify(stamped)}\n\n`);
 }
 
 let running = false;
