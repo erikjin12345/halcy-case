@@ -39,11 +39,15 @@ term is only visible one step further; never reach a page that asks for payment.
   states a price, but never accept it.
 - **Pre-ticked add-ons** (breakfast, insurance, newsletter). Note them; the
   validation step will untick what the traveller did not ask for.
-- **Prices that are "from" or "per night".** Record the figure the page shows
-  for the whole stay if there is one, and say in the fact which it is.
-- **A currency switcher.** Leave it on what the hotel shows by default and
-  record that currency. A price converted for display is not the price the
-  hotel charges, and you must never convert an amount yourself.
+- **What `price_total` is.** The room charge for the whole stay as the rate
+  line shows it, as a number. Leave out any tax, levy or fee the page lists
+  separately or calls "not included", even when it is stated up front; the
+  check on the live page adds those. If the page gives only a per-night
+  price, record that price times the number of nights.
+- **Which currency.** Record the currency the hotel charges in, and prices
+  in that currency. A guide figure shown for convenience ("about EUR 164")
+  is not a price: if the page offers the charge currency, switch the display
+  to it and record what it then shows. Never convert an amount yourself.
 
 # Rules
 

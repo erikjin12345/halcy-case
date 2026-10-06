@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { z } from "zod";
 import { memoryStore } from "../store.ts";
 import { newRunState } from "../types.ts";
-import { candidateTools, goalSchema, objectiveSchema, objectiveTools } from "./scoring.ts";
+import { candidateTools, factsSchema, goalSchema, objectiveSchema, objectiveTools } from "./scoring.ts";
 
 const noLog = { event() {}, screenshot: () => "", dir: "" } as never;
 type Tool = { name: string; inputSchema?: z.ZodType; run: (input: never) => Promise<unknown> };
@@ -100,4 +100,12 @@ test("a budget in another currency than the hotel's is left out and reported, wi
   assert.equal(out.rejected.length, 0);
   assert.match(out.budgetNotApplied, /3200 SEK was NOT applied: the hotel prices in €/);
   assert.equal(state.budgetNotApplied, out.budgetNotApplied);
+});
+
+test("a price recorded as text is refused by the schema, a number is taken", () => {
+  // Seen on the second hotel: price_total "GBP 190.00 for the stay (room only; ...)" could not be scored and every room was rejected.
+  assert.equal(factsSchema.safeParse({ price_total: "GBP 190.00 for the stay (room only)" }).success, false);
+  assert.equal(factsSchema.safeParse({ price_total: 190, currency: "GBP", cancellable: true }).success, true);
+  assert.equal(factsSchema.safeParse({ sold_out: "yes" }).success, false);
+  assert.equal(factsSchema.safeParse({ view: "river" }).success, true);
 });

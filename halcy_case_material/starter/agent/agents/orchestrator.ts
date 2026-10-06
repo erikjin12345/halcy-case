@@ -13,6 +13,7 @@ import { serialise } from "../tools/serial.ts";
 import type { AgentContext } from "../types.ts";
 import { approvalBlocker } from "./approval.ts";
 import { runObjective } from "./objective.ts";
+import { priceChangeTool } from "./price-change.ts";
 import { runSearch } from "./search.ts";
 import { runValidation } from "./validation.ts";
 
@@ -69,7 +70,7 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
 
   const approveTool = betaZodTool({
     name: "mark_approved",
-    description: "Record that the traveller pressed the button to continue to payment for this candidate. Call only after ask_traveller returned that choice.",
+    description: "Record that the traveller pressed the button to continue to payment for this candidate. Call only after ask_traveller returned that choice, or after ask_price_change returned accepted and run_validation then accepted the candidate.",
     inputSchema: z.object({ candidateId: z.string() }),
     run: async ({ candidateId }) => {
       const blocker = approvalBlocker(a.state, candidateId);
@@ -92,7 +93,7 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
       `Known hotels (name -> booking site): ${JSON.stringify(a.ctx.hotels)}`,
       `Traveller's message: ${message}`,
     ].join("\n"),
-    tools: [...chatTools({ chat: a.chat, log: a.log }), ...goalTools({ state: a.state, log: a.log }), runObjectiveTool, searchInTurn, validationInTurn, approveTool],
+    tools: [...chatTools({ chat: a.chat, log: a.log }), ...goalTools({ state: a.state, log: a.log }), runObjectiveTool, searchInTurn, validationInTurn, priceChangeTool(a), approveTool],
     log: a.log,
   });
 
