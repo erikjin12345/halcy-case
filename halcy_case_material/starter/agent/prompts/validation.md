@@ -95,6 +95,7 @@ decides, once they are told.
   put several fills or ticks on the same page in one turn and end that turn
   with `observe` to confirm each one took. An action that loads a new page must
   be the last action of its turn: element ids are only valid for the page they
-  were observed on.
+  were observed on. So must an action that redraws part of the page, such as a
+  click on a calendar day or a stepper: observe again before the next one.
 - Before you report that something "would not" change, observe once more on
   its own turn. Report what the page shows, not what an action returned.
