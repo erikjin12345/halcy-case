@@ -30,14 +30,24 @@ let cached: { day: string; rates: Rates | null } | undefined;
 
 /** Today's rates, fetched once per day per process; the bundled snapshot if the fetch fails; null if neither works. */
 /**
- * Under `node --test` (it sets NODE_TEST_CONTEXT) the live fetch is never
- * made, so every test sees the bundled snapshot, the same on every machine and
- * every day. A test that wants other rates passes its own `fetchText`.
+ * Under `node --test`, where Node sets NODE_TEST_CONTEXT, the live fetch is
+ * skipped. Not every Node version sets it in the test's own process, so tests
+ * that depend on rates pin them with useRates().
  */
 const underTest = () => process.env.NODE_TEST_CONTEXT !== undefined;
 const offline = async (): Promise<string> => {
   throw new Error("no network under test");
 };
+
+/**
+ * Pin today's rates, for tests: every later loadRates() call today returns
+ * these, whatever the network or the environment. The test runner's own
+ * marker (NODE_TEST_CONTEXT) is not set in every Node version's test
+ * processes, so a test that needs fixed rates must pin them itself.
+ */
+export function useRates(rates: Rates | null): void {
+  cached = { day: new Date().toISOString().slice(0, 10), rates };
+}
 
 export async function loadRates(fetchText: (url: string) => Promise<string> = underTest() ? offline : defaultFetch): Promise<Rates | null> {
   const day = new Date().toISOString().slice(0, 10);

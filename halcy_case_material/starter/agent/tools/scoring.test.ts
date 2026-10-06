@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { z } from "zod";
 import { memoryStore } from "../store.ts";
 import { newRunState } from "../types.ts";
-import { loadRates } from "../scoring/fx.ts";
+import { parseEcb, useRates } from "../scoring/fx.ts";
 import { candidateTools, factsSchema, goalSchema, objectiveSchema, objectiveTools } from "./scoring.ts";
 
 const noLog = { event() {}, screenshot: () => "", dir: "" } as never;
@@ -89,7 +89,7 @@ test("a sold-out room is rejected as sold out, not for a fact the page never sta
 
 test("a budget in another currency than the hotel's is applied to the ECB estimate, with the currency taken from the goal", async () => {
   // Fixed rates for this file, so the test never reaches the network: 404 EUR is about 4,546 SEK.
-  await loadRates(async () => "<Cube time='2026-10-05'><Cube currency='SEK' rate='11.2525'/><Cube currency='GBP' rate='0.8472'/></Cube>");
+  useRates(parseEcb("<Cube time='2026-10-05'><Cube currency='SEK' rate='11.2525'/><Cube currency='GBP' rate='0.8472'/></Cube>"));
   const state = newRunState(memoryStore());
   state.goal = { hotel: { name: "H", url: "http://h" }, checkin: "2026-10-20", checkout: "2026-10-22", adults: 2, mustHave: [], preferences: [], budget: { currency: "SEK", maxTotal: 3200 } };
   const deps = { state, log: noLog };
