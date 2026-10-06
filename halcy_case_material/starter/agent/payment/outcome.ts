@@ -54,12 +54,12 @@ const CONFIRMED_WORDS = /\bbooked\b|\bconfirmed\b|confirmation/i;
 
 /**
  * What code alone can say when the model is unavailable: a reference-shaped
- * token on or right after a line that labels it, on a page that talks about
- * a confirmation. `decide` still applies every other rule.
+ * token on a line that labels it, or on the next line with text, on a page
+ * that talks about a confirmation. `decide` still applies every other rule.
  */
 export function fallbackProposal(text: string): Proposal {
   if (!CONFIRMED_WORDS.test(text)) return { status: "unconfirmed" };
-  const lines = text.split("\n");
+  const lines = text.split("\n").filter((line) => line.trim());
   for (const [i, line] of lines.entries()) {
     if (!REFERENCE_LABEL.test(line)) continue;
     const reference = (line.replace(REFERENCE_LABEL, "").match(REFERENCE_TOKEN) ?? lines[i + 1]?.match(REFERENCE_TOKEN))?.[0];

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { decide, type Proposal } from "./outcome.ts";
+import { decide, fallbackProposal, type Proposal } from "./outcome.ts";
 import { HOTEL_MESSAGE_MAX, type Signal } from "./types.ts";
 
 const CONFIRMATION = "You're booked, Maja\nBooking reference\nCH-123456\nTotal €420.00\nThe card ending •••• is held as a guarantee. Nothing has been charged.";
@@ -33,6 +33,15 @@ test("a decline quotes the hotel, and only the hotel", () => {
   assert.equal(invented.hotelMessage, undefined, "text that is not on the page is never passed on");
   const long = "x".repeat(HOTEL_MESSAGE_MAX + 50);
   assert.equal(decide({ proposal: { status: "declined", hotelMessage: long }, text: long, signal: done, onPaymentPage: true }).hotelMessage?.length, HOTEL_MESSAGE_MAX);
+});
+
+test("the model-free fallback finds a labelled reference and nothing looser", () => {
+  // The mock's confirmation page as innerText gives it: a blank line between label and value.
+  assert.deepEqual(fallbackProposal("You're booked, Maja\n\nBooking reference\n\nCH-616892\n\nTotal €400.00"), { status: "confirmed", reference: "CH-616892" });
+  assert.deepEqual(fallbackProposal("Booking confirmed\nConfirmation number: 8841-AB"), { status: "confirmed", reference: "8841-AB" });
+  assert.equal(fallbackProposal("Guarantee your booking\nTotal €400.00\nBooking reference will be sent by email").status, "unconfirmed", "no confirmation wording");
+  assert.equal(fallbackProposal("Booking confirmed\nSee you in Lisbon").status, "unconfirmed", "no labelled reference");
+  assert.equal(fallbackProposal("Your card was declined by your bank.").status, "unconfirmed");
 });
 
 test("silence and expiry are their own statuses", () => {
