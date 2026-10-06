@@ -10,6 +10,7 @@ import type { PaymentBoundary } from "../tools/boundary.ts";
 import { chatTools } from "../tools/chat.ts";
 import { goalTools } from "../tools/scoring.ts";
 import type { AgentContext } from "../types.ts";
+import { approvalBlocker } from "./approval.ts";
 import { runObjective } from "./objective.ts";
 import { runSearch } from "./search.ts";
 import { runValidation } from "./validation.ts";
@@ -65,6 +66,11 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
     description: "Record that the traveller pressed the button to continue to payment for this candidate. Call only after ask_traveller returned that choice.",
     inputSchema: z.object({ candidateId: z.string() }),
     run: async ({ candidateId }) => {
+      const blocker = approvalBlocker(a.state, candidateId);
+      if (blocker) {
+        a.log.event("approval.refused", { candidateId, blocker });
+        return `Refused: ${blocker}`;
+      }
       approved = candidateId;
       a.log.event("traveller.approved", { candidateId });
       return "Recorded. Finish your turn now; the hand-off runs next.";

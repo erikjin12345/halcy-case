@@ -13,6 +13,9 @@ and whether it is sold out. Record sold-out rooms too, marked as such.
 Use `sold_out: true` only when the page says the room is unavailable for the
 dates. A room that is offered but too small for the party is not sold out:
 record `sleeps` with the number the page gives and leave `sold_out` false.
+When the page offers a room for the party you searched for but states no
+capacity, record `sleeps` as the party size: the hotel has just told you the
+room takes at least that many.
 
 Stop when every visible combination is recorded, or when `check_time` says the
 search budget is spent. Do not go further than the room list unless a price or

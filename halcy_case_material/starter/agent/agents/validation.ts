@@ -28,6 +28,7 @@ export async function runValidation(a: AgentContext, deps: ValidationDeps): Prom
     inputSchema: z.object({
       accepted: z.boolean(),
       reasons: z.array(z.string()),
+      unverified: z.array(z.string()).default([]).describe("What the traveller asked for that the site does not state either way, with where you looked"),
       observed: z.partialRecord(z.enum(FEATURES), z.union([z.string(), z.number(), z.boolean()])),
       holdSecondsLeft: z.number().optional(),
     }),

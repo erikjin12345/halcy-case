@@ -56,8 +56,11 @@ export interface Objective {
 
 export interface ValidationResult {
   candidateId: string;
+  /** False only when the site contradicts the candidate or the goal, or the page could not be reached. */
   accepted: boolean;
   reasons: string[];
+  /** Things the traveller asked for that the site does not state either way. The traveller must be told; it is not a rejection. */
+  unverified?: string[];
   /** What the live page showed at validation time. */
   observed: Partial<Record<FeatureName, FeatureValue>>;
   holdSecondsLeft?: number;
