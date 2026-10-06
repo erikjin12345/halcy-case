@@ -49,7 +49,9 @@ term is only visible one step further; never reach a page that asks for payment.
   stay"), record what it comes to for the whole stay and party in
   `fees_known`. Only what the page states; if you cannot work it out from
   the page, leave it out.
-- **Which currency.** Record the currency the hotel charges in, and prices
+- **Which currency.** If the page says which currency it charges in, record
+  that in `charge_currency`. Prices in any other currency are refused.
+  Record the currency the hotel charges in, and prices
   in that currency. A guide figure shown for convenience ("about EUR 164")
   is not a price: if the page offers the charge currency, switch the display
   to it and record what it then shows. Never convert an amount yourself.

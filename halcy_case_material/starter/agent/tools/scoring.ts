@@ -9,6 +9,8 @@ import type { RunnableTool } from "../llm/client.ts";
 import { budgetNote, maxScore, objectiveHash, scoreCandidates } from "../scoring/objective.ts";
 import { FEATURES, type RunState } from "../types.ts";
 import { cleanUrl } from "./serial.ts";
+import { sameCurrency } from "../scoring/currency.ts";
+import { checkPriceOnPage } from "../scoring/price-on-page.ts";
 
 const featureName = z.enum(FEATURES);
 const featureValue = z.union([z.string(), z.number(), z.boolean()]);
@@ -28,7 +30,8 @@ export const factsSchema = z
     price_now: amount("What is charged at booking"),
     price_at_hotel: amount("What is paid at the hotel"),
     fees_known: amount("Charges the page states as not included in the room price, for the whole stay and the whole party: city tax, visitor levy, cleaning fee. Only what the page states; never an estimate"),
-    currency: z.string().describe("The currency the hotel charges in, as the page writes it: a symbol or a code"),
+    currency: z.string().describe("The currency of the prices you record, as the page writes it: a symbol or a code"),
+    charge_currency: z.string().describe("The currency the page says the hotel charges in, when it says so (\"We charge in pounds sterling\", \"prices in EUR are a guide\"). Leave out if the page does not say"),
     cancellable: z.boolean(),
     breakfast_included: z.boolean(),
     view: z.string(),
@@ -112,6 +115,34 @@ export function candidateTools({ state, log }: StateToolDeps): RunnableTool[] {
       sourceUrl: z.string(),
     }),
     run: async ({ id, features, sourceUrl: rawUrl }) => {
+      // The number and its currency are checked against the text of the page the agent read, by code.
+      let pathOf = "";
+      try {
+        pathOf = new URL(cleanUrl(rawUrl)).pathname;
+      } catch {
+        // keep the last page
+      }
+      const page = state.pages[pathOf] ?? state.lastPage;
+      if (page && features.price_total !== undefined) {
+        const g = state.goal;
+        const nights = g ? Math.round((Date.parse(g.checkout) - Date.parse(g.checkin)) / 86_400_000) : undefined;
+        const seen = checkPriceOnPage(page, features.price_total, features.charge_currency ?? state.chargeCurrency, Number.isFinite(nights) ? nights : undefined);
+        if (!seen.ok) {
+          log.event("candidate.refused", { id, reason: seen.reason });
+          return `Refused: ${seen.reason}.`;
+        }
+        if (seen.currency && features.currency !== seen.currency) {
+          log.event("candidate.currency.corrected", { id, recorded: features.currency ?? null, onPage: seen.currency });
+          features.currency = seen.currency;
+        }
+      }
+      // A price is only a price in the currency the hotel charges in; a guide figure is not one.
+      if (features.charge_currency) state.chargeCurrency = features.charge_currency;
+      const charge = state.chargeCurrency;
+      if (charge && features.price_total !== undefined && (!features.currency || !sameCurrency(charge, features.currency))) {
+        log.event("candidate.refused", { id, currency: features.currency ?? null, chargeCurrency: charge });
+        return `Refused: the hotel charges in ${charge}, but this price is in ${features.currency ?? "an unstated currency"}. A converted or guide figure is not the price. Switch the page to ${charge} if it offers that, then record the price as shown in ${charge}.`;
+      }
       const sourceUrl = cleanUrl(rawUrl);
       state.store.observe(id, state.goal?.hotel.name ?? "unknown", { ...features, source_url: sourceUrl }, sourceUrl);
       log.event("candidate.add", { id, features, sourceUrl });
@@ -126,6 +157,14 @@ export function candidateTools({ state, log }: StateToolDeps): RunnableTool[] {
     run: async () => {
       const o = state.objective;
       if (!o || !state.objectiveHash) return "No objective set yet.";
+      // Anything recorded before the charge currency was known, in another currency, is not a price.
+      const charge = state.chargeCurrency;
+      if (charge) {
+        for (const c of state.store.candidates()) {
+          const cur = c.features.currency?.value;
+          if (typeof cur === "string" && !sameCurrency(charge, cur)) state.store.reject(c.id, "charge_currency", `priced in ${cur}, but the hotel charges in ${charge}`);
+        }
+      }
       const all = [...state.store.candidates(), ...state.store.rejected().map((r) => state.store.candidate(r.candidateId)!).filter(Boolean)];
       const scored = scoreCandidates(all, o);
       for (const { evaluation, failures } of scored) {

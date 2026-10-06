@@ -109,3 +109,42 @@ test("a price recorded as text is refused by the schema, a number is taken", () 
   assert.equal(factsSchema.safeParse({ sold_out: "yes" }).success, false);
   assert.equal(factsSchema.safeParse({ view: "river" }).success, true);
 });
+
+test("a guide price in another currency than the hotel charges in is refused, the charge currency is remembered", async () => {
+  // Seen on the second hotel with Sonnet search: "about EUR 164" recorded where the hotel charges GBP.
+  const state = newRunState(memoryStore());
+  state.goal = { hotel: { name: "Villa Aurora", url: "http://v" }, checkin: "a", checkout: "b", adults: 2, mustHave: [], preferences: [] };
+  const tools = candidateTools({ state, log: noLog });
+  const add = byName(tools, "add_candidate");
+  const refused = (await add.run({ id: "garden", features: { price_total: 164, currency: "EUR", charge_currency: "GBP" }, sourceUrl: "http://v/rooms" } as never)) as string;
+  assert.match(refused, /^Refused: the hotel charges in GBP, but this price is in EUR/);
+  assert.equal(state.store.candidate("garden"), undefined);
+  // Later calls that leave charge_currency out are held to it too.
+  assert.match((await add.run({ id: "loft", features: { price_total: 200, currency: "€" }, sourceUrl: "http://v/rooms" } as never)) as string, /^Refused/);
+  assert.match((await add.run({ id: "garden", features: { price_total: 140, currency: "£" }, sourceUrl: "http://v/rooms" } as never)) as string, /^Recorded garden/);
+});
+
+test("candidates recorded in another currency before the charge currency was known are rejected at scoring", async () => {
+  const state = newRunState(memoryStore());
+  state.goal = { hotel: { name: "Villa Aurora", url: "http://v" }, checkin: "a", checkout: "b", adults: 2, mustHave: [], preferences: [] };
+  const deps = { state, log: noLog };
+  await byName(objectiveTools(deps), "set_objective").run({ weights: { price_total: -1 }, hard: {}, threshold: 0, maxSearchMs: 1, extraAfterPassMs: 0, explanation: "x" } as never);
+  const tools = candidateTools(deps);
+  await byName(tools, "add_candidate").run({ id: "guide", features: { price_total: 164, currency: "EUR" }, sourceUrl: "http://v" } as never);
+  await byName(tools, "add_candidate").run({ id: "real", features: { price_total: 140, currency: "GBP", charge_currency: "GBP" }, sourceUrl: "http://v" } as never);
+  const out = JSON.parse((await byName(tools, "score_candidates").run({} as never)) as string);
+  assert.deepEqual(out.ranking.map((e: { candidateId: string }) => e.candidateId), ["real"]);
+  assert.equal(out.rejected[0].constraint, "charge_currency");
+});
+
+test("a recorded price is checked against the page the agent read: guide refused, currency taken from the page", async () => {
+  const state = newRunState(memoryStore());
+  state.goal = { hotel: { name: "Villa Aurora", url: "http://v" }, checkin: "a", checkout: "b", adults: 2, mustHave: [], preferences: [] };
+  state.pages["/rooms"] = "Garden double\n£140.00 for the stay (about €164 as a guide)\nWe charge in pounds sterling.";
+  const add = byName(candidateTools({ state, log: noLog }), "add_candidate");
+  assert.match((await add.run({ id: "g", features: { price_total: 164, currency: "EUR" }, sourceUrl: "http://v/rooms?x=1" } as never)) as string, /^Refused: 164 appears on the page only as a guide/);
+  // The model says EUR, the page writes £ next to 140: code wins.
+  assert.match((await add.run({ id: "g", features: { price_total: 140, currency: "EUR" }, sourceUrl: "http://v/rooms" } as never)) as string, /^Recorded g/);
+  assert.equal(state.store.candidate("g")!.features.currency.value, "£");
+  assert.match((await add.run({ id: "h", features: { price_total: 999 }, sourceUrl: "http://v/rooms" } as never)) as string, /not on the page you read/);
+});

@@ -13,6 +13,8 @@ import { originOf, showLocation, type PageDriver } from "./driver.ts";
 import { cleanUrl, serialise } from "./serial.ts";
 
 export interface BrowserToolDeps {
+  /** Called with the text the agent was shown, by path, so code can check what the agent records against it. */
+  onObserved?: (path: string, text: string) => void;
   driver: PageDriver;
   boundary: PaymentBoundary;
   log: RunLog;
@@ -52,6 +54,7 @@ export function browserTools(deps: BrowserToolDeps): RunnableTool[] {
       if (boundary.blind) return "Blind mode: the traveller is in control, nothing is observed.";
       const seen = await driver.observe();
       const text = renderObservation(seen, boundary);
+      deps.onObserved?.(driver.location().path, text);
       log.event("observe", { url: showLocation(driver.location()), title: seen.title, elements: seen.elements.length, hidden: seen.text.filter((f) => !boundary.allows(f.frameUrl)).length });
       return text;
     },

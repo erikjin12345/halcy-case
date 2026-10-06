@@ -158,6 +158,27 @@ or fails to reach the card, or a second hotel on which it gets stuck where
 Opus does not. Going back is one line in `.env`
 (`MODEL_SEARCH=claude-opus-5-5`).
 
+**Second hotel: the guide price (2026-10-06).** On Villa Aurora, which lists
+"about €164 as a guide" next to the pound price it charges, search on Sonnet
+5.5 recorded the euro guide figure as the price in 3 of 3 runs (cases 20, 22,
+24 on d5fec19); search on Opus 5.5 switched to pounds in 5 of 5. Code caught
+it every time: validation was overruled on currency and nothing wrong reached
+a traveller, but two runs needed a second search and one ended without a
+booking. This is the trigger the decision above names ("misreads a price").
+After PR #29 added "never a guide figure" to the search prompt, Sonnet
+recorded pounds in 3 of 3 (one search each). PR #34 then takes the decision
+out of the model's hands: code reads the currency written next to the
+recorded figure on the page, refuses a figure the page marks as a guide or
+that is not on the page, and makes Halcy search again itself after a
+currency rejection.
+
+**Recommendation: keep search on Sonnet 5.5.** The failure was real, but it
+is now caught twice in code before anything reaches the traveller, and with
+the prompt line Sonnet did not repeat it. What would change this: a run in
+which Sonnet's figure is refused by the page check and the second search
+fails too, or any wrong currency on an approval card. The decision is the
+user's.
+
 ## 7. When a model is wrong
 
 | Role         | Typical error                              | How it is detected                                         | What the traveller sees                         |
