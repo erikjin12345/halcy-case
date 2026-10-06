@@ -5,7 +5,7 @@ The case is capped at **8 hours**. The debrief will ask where the hours went.
 | Item            | Value                                          |
 | --------------- | ---------------------------------------------- |
 | Session start   | 2026-10-06 10:52 HKT (UTC+8)                   |
-| Hard deadline   | 2026-10-06 20:14 HKT (18:52 plus 1:22 paused)  |
+| Hard deadline   | 2026-10-06 23:29 HKT (18:52 plus 4:37 paused)  |
 | Source          | Creation time of this Claude Code session file |
 
 ## Where the hours went
@@ -32,7 +32,10 @@ The case is capped at **8 hours**. The debrief will ask where the hours went.
 | 15:06      | 2:52    | Break ends; 1:22 paused, deadline moves to 20:14              |
 | 15:40      | 3:23    | Payment failure paths run against the mock (wrong code, decline then second card, pay-now rate, cancel, closed tab, silence, hold expiring); clearer refusals and one fresh hold before the hand-over; review of the design document's payment sections |
 | 15:45      | 3:28    | Fresh hold run behind the real orchestrator (found and worked around the second validation rejecting an unchanged room), PR #27; closing note |
-| 17:00      | ~5:15   | Hold read in words and "until HH:MM", Villa Aurora payment runs, "site does not say" fix, submission run logs, lazy and tucked browser, parallel search, "I'm done" before paying; documentation review |
+| 16:20      | 4:06    | Currency checked in code against the page; second mock hotel and its cases; requests outside the feature list; design document and closing note merged; run logs for the submission in `docs/runs/` (PRs #32 to #39) |
+| 16:53      | 4:39    | Developer's own test in the chat found and fixed: typed answers to button questions, stale answers, children, cut-off cards, timestamps, `npm run dev`; speed (objective reused, parallel search, session cache), browser opened late and kept out of sight, estimated prices in the traveller's currency (PRs #40 to #51) |
+| 16:53      | 4:39    | Break starts: the Claude usage limit was reached; planned to resume at 18:40 (see Breaks) |
+| 20:11      | 4:42    | Break ends; 3:15 paused, deadline moves to 23:29              |
 
 Add a row whenever a phase ends. Keep it honest; it is part of the submission.
 
@@ -46,6 +49,7 @@ break still counts. The hard deadline moves later by the total paused time, and
 | Start (HKT) | End (HKT) | Paused | Note |
 | ----------- | --------- | ------ | ---- |
 | 13:41       | 15:06     | 1:22   | 2:49 elapsed at the start. The window is 1:25; 3 minutes of it count as work: recording the break (13:41 to 13:43) and the scheduled documentation review, which fired at 14:33, saw the open break and skipped itself. No other session wrote anything in the window; only the mock hotel server kept running. |
+| 16:53       | 20:11     | 3:15   | 4:39 elapsed at the start; the Claude usage limit was reached. The window is 3:18; 3 minutes of it count as work: recording the break and parking the three other sessions at a clean point (16:53 to 16:55), and the scheduled documentation review, which fired at 18:33 and stopped at once. No other session wrote anything in the window. PR #49 (estimated prices) and #54 (this break) were merged by the developer at 16:53 and 16:55. |
 
-Total paused: 1:22. `End` and `Paused` come from the timestamps in the session
+Total paused: 4:37. `End` and `Paused` come from the timestamps in the session
 transcripts.

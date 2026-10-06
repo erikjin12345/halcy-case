@@ -12,6 +12,8 @@ import { objectiveHash as storeHash, type Candidate, type Evaluation } from "../
 import { FEATURES, type FeatureName, type FeatureValue, type Objective } from "../types.ts";
 import { sameCurrency } from "./currency.ts";
 import { FREE_TEXT, says, unstated } from "./free-text.ts";
+import { judgeCap, type CapGap } from "./cap-estimate.ts";
+import type { Rates } from "./fx.ts";
 
 /** A price cap that was not applied because the cap and the price are not known to be in the same currency. */
 export interface CapNotApplied {
@@ -20,6 +22,8 @@ export interface CapNotApplied {
   capCurrency: string;
   /** As the hotel's page wrote it; undefined when the search did not record one. */
   priceCurrency?: string;
+  /** The price in the cap's currency at today's ECB rate, when one could be made. */
+  estimate?: number;
 }
 
 export interface ScoredCandidate {
@@ -28,6 +32,8 @@ export interface ScoredCandidate {
   failures: { constraint: string; reason: string }[];
   /** Caps left out for this candidate. Never a reason to reject or to accept; the traveller is asked. */
   capsNotApplied: CapNotApplied[];
+  /** Caps applied to an estimate in the cap's currency; the traveller must be told. */
+  capsEstimated: CapGap[];
 }
 
 /** Numeric hard constraints that mean "at least" rather than "exactly". */
@@ -74,11 +80,7 @@ function hardFailure(name: FeatureName, actual: FeatureValue | undefined, requir
   return actual === required ? null : `${name} is ${String(actual)}, required ${String(required)}`;
 }
 
-/**
- * A cap in one currency says nothing about a price in another, and no rate is
- * known here. When the objective names the cap's currency, the cap is applied
- * only to a candidate whose recorded currency can be the same one.
- */
+/** A cap and a price that are not known to be in the same currency, or null. cap-estimate.ts decides what to do. */
 function capCurrencyGap(c: Candidate, o: Objective, name: FeatureName, required: FeatureValue): CapNotApplied | null {
   if (!o.currency || !AT_MOST.includes(name) || typeof required !== "number") return null;
   const priced = value(c, "currency");
@@ -99,14 +101,22 @@ function overLimitWithFees(c: Candidate, name: FeatureName, required: FeatureVal
   return `price_total fits before fees only: room ${room} plus stated charges ${fees} is ${round(room + fees)}, required at most ${required}`;
 }
 
-function hardChecks(c: Candidate, o: Objective, skip: Set<string>): Pick<ScoredCandidate, "failures" | "capsNotApplied"> {
+function hardChecks(c: Candidate, o: Objective, skip: Set<string>, rates: Rates | null): Pick<ScoredCandidate, "failures" | "capsNotApplied" | "capsEstimated"> {
   const out: ScoredCandidate["failures"] = [];
   const capsNotApplied: CapNotApplied[] = [];
+  const capsEstimated: CapGap[] = [];
   for (const [name, required] of Object.entries(o.hard) as [FeatureName, FeatureValue][]) {
     if (skip.has(name)) continue;
     const gap = capCurrencyGap(c, o, name, required);
     if (gap) {
-      capsNotApplied.push(gap);
+      // A limit on the total covers the charges the room list already states.
+      const room = value(c, name);
+      const fees = value(c, "fees_known");
+      const price = typeof room === "number" ? room + (name === "price_total" && typeof fees === "number" ? fees : 0) : undefined;
+      const verdict = judgeCap(price, gap, rates);
+      if (verdict.kind === "ask") capsNotApplied.push({ ...gap, ...verdict.gap });
+      else capsEstimated.push(verdict.gap);
+      if (verdict.kind === "over") out.push({ constraint: name, reason: verdict.reason });
       continue;
     }
     const reason = hardFailure(name, value(c, name), required) ?? overLimitWithFees(c, name, required);
@@ -114,7 +124,7 @@ function hardChecks(c: Candidate, o: Objective, skip: Set<string>): Pick<ScoredC
   }
   // Most telling first: a sold-out room, then other definite mismatches, then facts the page never stated.
   const rank = (f: { constraint: string; reason: string }) => (f.constraint === "sold_out" ? 0 : f.reason.includes(" unknown, ") ? 2 : 1);
-  return { failures: out.sort((a, b) => rank(a) - rank(b)), capsNotApplied };
+  return { failures: out.sort((a, b) => rank(a) - rank(b)), capsNotApplied, capsEstimated };
 }
 
 /** Min-max range per numeric feature across the given candidates. */
@@ -145,17 +155,17 @@ function fit(name: FeatureName, v: FeatureValue | undefined, wantHigh: boolean, 
 }
 
 
-export function scoreCandidates(candidates: Candidate[], o: Objective): ScoredCandidate[] {
+export function scoreCandidates(candidates: Candidate[], o: Objective, rates: Rates | null = null): ScoredCandidate[] {
   const hash = objectiveHash(o);
   // A free-text requirement no room states is left out, never a reason to reject every room.
   const skip = new Set<string>(unstated(candidates, o).map((g) => g.feature));
-  const checked = new Map(candidates.map((c) => [c.id, hardChecks(c, o, skip)]));
+  const checked = new Map(candidates.map((c) => [c.id, hardChecks(c, o, skip, rates)]));
   // Compare prices only among candidates the traveller could actually get.
   const feasible = candidates.filter((c) => checked.get(c.id)!.failures.length === 0);
   const ranges = numericRanges(feasible.length ? feasible : candidates);
 
   return candidates.map((c) => {
-    const { failures, capsNotApplied } = checked.get(c.id)!;
+    const { failures, capsNotApplied, capsEstimated } = checked.get(c.id)!;
     const components: Record<string, number> = {};
     let score = 0;
     for (const [name, weight] of Object.entries(o.weights) as [FeatureName, number][]) {
@@ -167,16 +177,20 @@ export function scoreCandidates(candidates: Candidate[], o: Objective): ScoredCa
       evaluation: { candidateId: c.id, objectiveHash: hash, score: round(score), components, feasible: failures.length === 0 },
       failures,
       capsNotApplied,
+      capsEstimated,
     };
   });
 }
 
-/** One sentence for the orchestrator when a budget could not be applied, or null. Says what happened; converts nothing. */
+/** One sentence for the orchestrator when a budget could not be decided, or null. */
 export function budgetNote(scored: ScoredCandidate[]): string | null {
   const gap = scored.flatMap((s) => s.capsNotApplied)[0];
   if (!gap) return null;
+  if (gap.estimate !== undefined) {
+    return `The traveller's limit of ${gap.cap} ${gap.capCurrency} was NOT decided: on today's ECB rate the price comes within 3% of it, too close to call on an estimate. Show the hotel's figure with the estimate from estimate_prices and ask whether to go ahead.`;
+  }
   const priced = gap.priceCurrency ? `the hotel prices in ${gap.priceCurrency}` : "the search did not record which currency the hotel prices in";
-  return `The traveller's limit of ${gap.cap} ${gap.capCurrency} was NOT applied: ${priced}. No conversion was made and none may be presented as a price. Tell the traveller which currency the hotel charges in and ask for a limit in that currency, or whether to go on without one.`;
+  return `The traveller's limit of ${gap.cap} ${gap.capCurrency} was NOT applied: ${priced}, and no exchange rate was available. Tell the traveller which currency the hotel charges in and ask for a limit in that currency, or whether to go on without one.`;
 }
 
 /** The best possible score under this objective: every weight fully earned. */

@@ -4,7 +4,14 @@
 // money, and they quote the hotel.
 
 import type { Button, Card } from "../../types.ts";
+import { estimateText, type Rates } from "../scoring/fx.ts";
 import type { PaymentResult, Terms } from "./types.ts";
+
+/** What the hand-off card needs to add estimates: the traveller's currency and today's rates. */
+export interface Estimates {
+  to?: string;
+  rates: Rates | null;
+}
 
 export const HANDOFF_BUTTONS: Button[] = [
   { id: "done", label: "I'm done" },
@@ -18,15 +25,18 @@ const minutes = (seconds: number) => {
 };
 const shown = (v: string | number | undefined) => (v === undefined ? undefined : String(v));
 
-export function handoffCard(hotel: string, terms: Terms, holdSecondsLeft: number | undefined, unknownHoldWait?: number): Card & { buttons: Button[] } {
+export function handoffCard(hotel: string, terms: Terms, holdSecondsLeft: number | undefined, unknownHoldWait?: number, fx?: Estimates): Card & { buttons: Button[] } {
+  const est = (v: string | number | undefined, atHotel = false) =>
+    typeof v === "number" && terms.currency && fx ? estimateText(v, terms.currency, fx.to, fx.rates, atHotel) : null;
+  const withEst = (v: string | number | undefined, atHotel = false) => (v === undefined ? undefined : [shown(v), est(v, atHotel)].filter(Boolean).join(" "));
   const now = shown(terms.chargedNow);
   const later = shown(terms.dueAtHotel);
   const lines = [
     `${hotel}'s booking page is open in the browser window. You pay ${hotel} directly; Halcy never sees your card or your bank code.`,
     terms.room ? `Room: ${terms.room}` : undefined,
-    shown(terms.total) ? `Total: ${shown(terms.total)}` : undefined,
-    now !== undefined ? `Charged now: ${now}` : undefined,
-    later !== undefined ? `Paid at the hotel: ${later}` : undefined,
+    shown(terms.total) ? `Total: ${withEst(terms.total)}` : undefined,
+    now !== undefined ? `Charged now: ${withEst(terms.chargedNow)}` : undefined,
+    later !== undefined ? `Paid at the hotel: ${withEst(terms.dueAtHotel, true)}` : undefined,
     terms.cancellable === undefined ? undefined : terms.cancellable ? "Can be cancelled, on the hotel's conditions." : "Cannot be cancelled or refunded.",
     "In that window: enter your card, read and accept the hotel's booking conditions, and confirm with your bank.",
     now !== undefined ? `Your bank should ask you to approve ${now} to ${hotel}, or to save your card as a guarantee. If it shows anything else, stop.` : `Your bank should name ${hotel}. If it shows anything else, stop.`,

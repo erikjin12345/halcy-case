@@ -117,7 +117,7 @@ test("a text weight with a wanted value picks the named room", () => {
   assert.deepEqual(r.score, { classic: 3, superior: 0 });
 });
 
-test("a cap in one currency is never compared with a price in another", () => {
+test("without a rate, a cap in one currency is never compared with a price in another", () => {
   // 3200 SEK is far more than 404 EUR as a number, and 320 SEK far less; neither comparison means anything.
   const high = scoreCandidates(rooms({ superior: { price_total: 404, currency: "€" } }), { ...base, hard: { price_total: 3200 }, currency: "SEK" });
   const low = scoreCandidates(rooms({ superior: { price_total: 404, currency: "€" } }), { ...base, hard: { price_total: 320 }, currency: "SEK" });
@@ -126,7 +126,7 @@ test("a cap in one currency is never compared with a price in another", () => {
     assert.deepEqual(s.capsNotApplied, [{ constraint: "price_total", cap: s.capsNotApplied[0].cap, capCurrency: "SEK", priceCurrency: "€" }]);
   }
   assert.match(budgetNote(low)!, /320 SEK was NOT applied: the hotel prices in €/);
-  assert.match(budgetNote(low)!, /No conversion was made/);
+  assert.match(budgetNote(low)!, /no exchange rate was available/);
 });
 
 test("a cap in the hotel's own currency is applied, however the currency is written", () => {
