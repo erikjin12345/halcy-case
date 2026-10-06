@@ -56,4 +56,22 @@ export function roleConfig(role: AgentRole): RoleConfig {
   };
 }
 
+/** Models that reject `output_config.effort`. Matched by prefix. */
+const NO_EFFORT = ["claude-haiku-4-5", "claude-sonnet-4-5"];
+/** Models that accept the server-side refusal fallback in its "default" form. */
+const FALLBACKS = ["claude-opus-5-5", "claude-opus-5", "claude-sonnet-5-5", "claude-fable-5-1"];
+
+export interface ModelCapabilities {
+  /** Send `output_config.effort`. Sending it to a model without it is a 400. */
+  effort: boolean;
+  /** Send `fallbacks: "default"` with its beta header. */
+  fallbacks: boolean;
+}
+
+/** What a request to this model may contain, so a per-role override cannot break the call. */
+export function capabilities(model: string): ModelCapabilities {
+  const is = (ids: string[]) => ids.some((id) => model === id || model.startsWith(`${id}-`) || model.startsWith(`${id}@`));
+  return { effort: !is(NO_EFFORT), fallbacks: is(FALLBACKS) };
+}
+
 export const HEADLESS = process.env.HEADLESS === "1";

@@ -45,8 +45,27 @@ To use it in the chat, change the import in `starter/chat/server.ts` from
 Every role defaults to `claude-opus-5-5` with effort `medium` (orchestrator,
 search) or `low` (objective, validation). Override per role with
 `MODEL_<ROLE>` and `EFFORT_<ROLE>`. Moving a role to a cheaper model is a
-measured decision for the design document: run the same requests with
-`MODEL_VALIDATION=claude-haiku-4-5` and compare the run logs.
+measured decision for the design document: run the same requests with, say,
+`MODEL_SEARCH=claude-sonnet-5-5` and compare the run logs.
+
+`capabilities()` in `config.ts` decides what each request may carry, so an
+override cannot break the call:
+
+| Model               | `effort` sent | Refusal fallback sent | Smallest cacheable prefix |
+| ------------------- | ------------- | --------------------- | ------------------------- |
+| `claude-opus-5-5`   | yes           | yes                   | 512 tokens                |
+| `claude-sonnet-5-5` | yes           | yes                   | 512 tokens                |
+| `claude-haiku-4-5`  | no (rejected) | no                    | 4096 tokens               |
+
+## Caching
+
+Each tool-loop request has two cache breakpoints: an explicit one on the
+system prompt and the automatic one on the tail of the history. A search run
+re-sends its whole history every turn, so the second one is where the saving
+is. `llm.turn` and `llm.done` events carry `cache_read_input_tokens` and
+`cache_creation_input_tokens`; if reads stay at zero across turns, something
+in the prefix is changing. On Haiku 4.5 the system prompt alone is below the
+cacheable minimum, so caching only starts once the history has grown.
 
 ## What is not here yet
 

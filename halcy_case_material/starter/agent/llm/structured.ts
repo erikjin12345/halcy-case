@@ -6,7 +6,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
 import type { RunLog } from "../../log.ts";
-import { roleConfig } from "../config.ts";
+import { capabilities, roleConfig } from "../config.ts";
 import type { AgentRole } from "../types.ts";
 import { getClient } from "./client.ts";
 
@@ -31,7 +31,7 @@ export async function extract<S extends z.ZodType>(opts: ExtractOptions<S>): Pro
   const response = await getClient().messages.parse({
     model: cfg.model,
     max_tokens: 8000,
-    output_config: { format: zodOutputFormat(opts.schema), effort: cfg.effort },
+    output_config: { format: zodOutputFormat(opts.schema), ...(capabilities(cfg.model).effort ? { effort: cfg.effort } : {}) },
     system: opts.system,
     messages: [{ role: "user", content }],
   });
