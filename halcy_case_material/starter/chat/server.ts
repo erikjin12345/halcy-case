@@ -9,10 +9,14 @@
 import http from "node:http";
 import { readFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
-import { agent } from "../agent.ts";
+import { agent as starterAgent } from "../agent.ts";
+import { bookingAgent } from "../agent/index.ts";
+import { redactCardNumbers } from "../agent/evidence/card-number.ts";
 import type { Card, Chat, Context } from "../types.ts";
 
 const PORT = Number(process.env.CHAT_PORT ?? 4200);
+// AGENT=booking runs the real agent (starter/agent/); anything else keeps the starter's one-look agent.
+const agent = process.env.AGENT === "booking" ? bookingAgent : starterAgent;
 const read = (p: string) => readFileSync(new URL(p, import.meta.url), "utf8");
 const PAGE = read("./page.html");
 const EXAMPLES = read("../examples.json");
@@ -81,8 +85,13 @@ async function run(text: string) {
   }
 }
 
-function travellerSays(text: string) {
+function travellerSays(raw: string) {
+  // A card number typed into the chat must not reach the history, a model or a log.
+  const { data: text, redacted } = redactCardNumbers(raw);
   emit({ type: "message", from: "traveller", text });
+  if (redacted) {
+    chat.say("I removed a card number from your message before anything read it. Please don't send card details here: you type them yourself on the hotel's own page.");
+  }
   if (!running) return void run(text);
   if (waitingReply) {
     const r = waitingReply;
@@ -142,4 +151,4 @@ http
     res.writeHead(404);
     res.end();
   })
-  .listen(PORT, "127.0.0.1", () => console.log(`Chat   http://localhost:${PORT}`));
+  .listen(PORT, "127.0.0.1", () => console.log(`Chat   http://localhost:${PORT}   (agent: ${agent === bookingAgent ? "booking" : "starter"})`));

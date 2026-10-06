@@ -28,7 +28,7 @@ export async function runValidation(a: AgentContext, deps: ValidationDeps): Prom
     inputSchema: z.object({
       accepted: z.boolean(),
       reasons: z.array(z.string()),
-      observed: z.record(z.enum(FEATURES), z.union([z.string(), z.number(), z.boolean()])),
+      observed: z.partialRecord(z.enum(FEATURES), z.union([z.string(), z.number(), z.boolean()])),
       holdSecondsLeft: z.number().optional(),
     }),
     run: async (input) => {

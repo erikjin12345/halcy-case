@@ -13,6 +13,6 @@ export async function runObjective(a: AgentContext): Promise<string> {
     tools: objectiveTools({ state: a.state, log: a.log }),
     log: a.log,
   });
-  if (!a.state.objective) throw new Error("objective: the agent did not call set_objective");
+  if (!a.state.objective) throw new Error(`objective: set_objective never succeeded. The agent said: ${result.text.slice(0, 200)}`);
   return result.text;
 }
