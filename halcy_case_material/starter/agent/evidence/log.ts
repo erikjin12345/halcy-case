@@ -22,8 +22,17 @@ export function isObservation(type: string): boolean {
 
 export class BlindLogError extends Error {}
 
+/** Called with every event after it is scrubbed and written; `blind` is true for the whole blind interval, both ends included. */
+export type LogListener = (type: string, data: Record<string, unknown>, blind: boolean) => void;
+
 export class GuardedLog extends RunLog {
   private blindNow = false;
+  private readonly listeners: LogListener[] = [];
+
+  /** The run's events as they are written, already scrubbed. The only way anything else may see them live. */
+  subscribe(listener: LogListener): void {
+    this.listeners.push(listener);
+  }
 
   get blind(): boolean {
     return this.blindNow;
@@ -35,8 +44,17 @@ export class GuardedLog extends RunLog {
       throw new BlindLogError(`refusing to log "${type}" inside the blind interval`);
     }
     const { data: safe, redacted } = redactCardNumbers(data);
-    super.event(type, redacted ? { ...safe, redacted: true } : safe);
+    const written = redacted ? { ...safe, redacted: true } : safe;
+    super.event(type, written);
+    const blind = this.blindNow;
     if (type === BLIND_END) this.blindNow = false;
+    for (const l of this.listeners) {
+      try {
+        l(type, { at: new Date().toISOString(), ...written }, blind);
+      } catch {
+        // A listener must never break the run or the log.
+      }
+    }
   }
 
   override screenshot(png: Buffer, label = ""): string {

@@ -16,6 +16,7 @@ import { PaymentBoundary } from "./tools/boundary.ts";
 import { guardedDriver } from "./tools/guarded-driver.ts";
 import { lazyDriver } from "./tools/lazy-driver.ts";
 import { playwrightDriver } from "./tools/playwright-driver.ts";
+import { traceStep } from "./trace.ts";
 import { newRunState } from "./types.ts";
 import { loadRates } from "./scoring/fx.ts";
 import { travellerCurrency } from "./agents/fx-tools.ts";
@@ -23,6 +24,11 @@ import { travellerCurrency } from "./agents/fx-tools.ts";
 export const bookingAgent: Agent = async (message, chat, ctx) => {
   loadDotEnv();
   const log = new GuardedLog("booking");
+  // The trace panel sees the run log's own events, after GuardedLog has scrubbed them.
+  log.subscribe((type, data, blind) => {
+    const step = traceStep(type, data, blind, ctx.traveller);
+    if (step) chat.trace?.(step);
+  });
   log.event("message", { message, traveller: ctx.traveller, today: ctx.today });
 
   if (!hasCredential()) {
