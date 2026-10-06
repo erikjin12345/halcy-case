@@ -43,7 +43,8 @@ type PaymentStatus =
   | "cancelled"     // the traveller pressed Cancel in the chat
   | "timed_out"     // no signal before the deadline
   | "session_lost"  // tab closed, crash, "session not found", stuck on another site
-  | "unconfirmed";  // none of the above can be shown; we do not know
+  | "unconfirmed"   // none of the above can be shown; we do not know
+  | "not_started";  // a precondition failed; the traveller was never handed the page
 
 interface PaymentResult {
   status: PaymentStatus;
@@ -238,13 +239,18 @@ payment redirect.
 
 ## 8. Open decisions
 
-1. Hand-off surface: visible window, as section 6 recommends, or live view as
-   `TRAPS.md` trap 1 says. An outside review (2026-10-06) also says visible
-   window and drop the live view. Waiting for the developer's yes.
+1. Hand-off surface: **decided 2026-10-06, the visible browser window.** The
+   live view in `TRAPS.md` trap 1 is dropped (P7).
 2. Terms checkbox (`docs/concerns.md` A3): recommended that the traveller ticks
    it, which follows from the agent being read-only on a payment surface.
 3. Last four digits (P11): **decided 2026-10-06, mask them.**
 4. Thresholds: no hand-off under 5 minutes of hold, deadline 60 seconds before
    expiry. Guesses; tune against the mock.
-5. `beginBlind()` returning the release changes `tools/boundary.ts` and its
-   tests, both written in other sessions. Event names stay the same.
+5. `beginBlind()` returning the only function that ends blind mode:
+   **decided and built 2026-10-06** (PR #11). A second `beginBlind()` throws.
+
+Built so far (PR #11, `starter/agent/payment/`): sections 2 and 3, the field
+redaction (P1, P2, P11), P3, P4, P8, P9 and the retry reload. Not built: the
+chat scrub (P6), the recorder test (P5), the follow-up for `unconfirmed`
+beyond the question in the message, and reopening the page after
+`session_lost` (P10).

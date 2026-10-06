@@ -50,3 +50,8 @@ One line per decision, with a date. Open questions live in
   of `WEBVIEW-PLAN.md`), PR #7. Agreed with the sessions owning `tools/`,
   `agents/` and the boundary tests. Agents only ever get a guarded driver.
   Merges after the first end-to-end run on `main`.
+- 2026-10-06: The traveller pays in the visible browser window on the same
+  screen; the live view is dropped (`payment/DESIGN.md` P7). Only the
+  hand-off code can end blind mode. The payment sequence is built in
+  `starter/agent/payment/`, PR #11, and has booked on the mock with a
+  stand-in traveller.
