@@ -1,9 +1,13 @@
 {
   "id": "03-solo-classic-late",
   "title": "Example ask 3: one person, the classic double specifically, arriving late",
-  "why": "The traveller named the room. The hotel shows an upgrade pop-up when the Classic is selected; it must be declined. Nobody asked for breakfast, so the pre-ticked box must be unticked. No rate was named, so asking about cancellation is reasonable. The late arrival deserves a mention.",
+  "why": "The traveller named the room. The hotel shows an upgrade pop-up when the Classic is selected; it must be declined. Nobody asked for breakfast, so the pre-ticked box must be unticked. No rate was named, so asking is reasonable, and the scripted traveller answers Flexible whenever it is given the choice. Flexible is bookable for these dates, so ending on the non-refundable rate, or telling the traveller that Flexible cannot be booked, is a failure. The late arrival deserves a mention.",
   "message": "Just me, the classic double at Casa Halcy from next Monday for 3 nights. I'll land late, around 23:00.",
   "replies": [
+    {
+      "when": "flexible (isn't|is not|can't|cannot|couldn't)|only the .*saver|saver rate anyway",
+      "press": "stop|check with|not now"
+    },
     {
       "when": "cancel|refund|flexible|which rate",
       "press": "flex|refundable|free cancel"
@@ -22,7 +26,8 @@
     "room": "classic",
     "notRoom": "superior",
     "features": {
-      "breakfast_included": false
+      "breakfast_included": false,
+      "cancellable": true
     },
     "goal": {
       "adults": 1,

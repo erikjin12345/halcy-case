@@ -93,6 +93,38 @@ test("the scripted traveller answers from its rules, approves or declines, and f
   assert.equal(await no.chat.choose(APPROVAL), "stop");
 });
 
+test("an unscripted question never commits the traveller: the way out is taken when there is one", async () => {
+  // Seen in a real run: the agent wrongly said Flexible could not be booked and offered this card.
+  const { chat, asked } = scriptedChat({ replies: [], approve: true });
+  const pressed = await chat.choose({ title: "Flexible isn't bookable. What next?", buttons: [{ id: "pay_saver", label: "Book the Saver rate anyway" }, { id: "stop", label: "Stop, I'll check with the hotel first" }] });
+  assert.equal(pressed, "stop");
+  assert.equal(asked[0].scripted, false);
+});
+
+test("two browser agents on the one page at the same time fail the run", () => {
+  const start = (role: string) => ev("llm.start", { role });
+  const done = (role: string) => ev("llm.done", { role });
+  const inTurn = [start("orchestrator"), start("search"), done("search"), start("validation"), done("validation"), done("orchestrator")].join("\n");
+  assert.equal(readOutcome(inTurn).overlaps, 0);
+  const together = [start("orchestrator"), start("validation"), start("validation"), done("validation"), done("validation")].join("\n");
+  assert.equal(readOutcome(together).overlaps, 1);
+  assert.ok(grade({ expect: {} }, readOutcome(together)).some((c) => c.name === "one browser agent at a time" && !c.pass));
+});
+
+test("example ask 3 fails when the traveller ends on the non-refundable rate", () => {
+  const [s] = loadScenarios(["03"]);
+  const run = (id: string, cancellable: boolean) =>
+    [
+      ev("goal.set", { checkin: "2026-10-12", checkout: "2026-10-15", adults: 1 }),
+      ev("chat.ask", APPROVAL),
+      ev("chat.answer", { pressed: "approve" }),
+      ev("traveller.approved", { candidateId: id }),
+      ev("state.snapshot", { candidates: [cand(id, "Classic Double", cancellable)] }),
+    ].join("\n");
+  assert.equal(passed(grade(s, readOutcome(run("classic-flex", true)))), true);
+  assert.equal(passed(grade(s, readOutcome(run("classic-saver", false)))), false);
+});
+
 test("an agent that keeps asking is stopped", async () => {
   const { chat } = scriptedChat({ replies: [], approve: true }, 2);
   await chat.reply();

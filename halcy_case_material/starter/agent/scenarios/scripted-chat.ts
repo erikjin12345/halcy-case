@@ -19,7 +19,7 @@ export interface Asked {
 export class ScriptExhausted extends Error {}
 
 const APPROVE = /approve|continue (to|with)|proceed|go ahead|book it|confirm/i;
-const DECLINE = /stop|not now|decline|cancel|^no\b/i;
+const DECLINE = /stop|not now|decline|cancel|^no\b|check with/i;
 /** The answer to a free-text question no rule covers. */
 export const FALLBACK_SAY = "Please use your best judgement and tell me what you assumed.";
 
@@ -63,7 +63,10 @@ export function scriptedChat(scenario: Pick<Scenario, "replies" | "approve">, ma
         const no = card.buttons.find((b) => matches(b, DECLINE)) ?? card.buttons[card.buttons.length - 1];
         return record({ ...base, answer: (scenario.approve ? yes : no).id, scripted: true, approval: true });
       }
-      return record({ ...base, answer: card.buttons[0].id, scripted: false, approval: false });
+      // No rule covers this question. Do not commit to anything on the traveller's
+      // behalf: take the way out if there is one, otherwise the first button.
+      const out = card.buttons.find((b) => matches(b, DECLINE)) ?? card.buttons[0];
+      return record({ ...base, answer: out.id, scripted: false, approval: false });
     },
     async reply() {
       const rule = scenario.replies.find((r) => r.say !== undefined && re(r.when).test(lastSaid));
