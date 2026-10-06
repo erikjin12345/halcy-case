@@ -62,11 +62,11 @@ Plain `npm run chat` still runs the starter's one-look agent. Each run writes
 The reasoning (which model for which role, cost per booking, what to measure)
 is in `../../../agent/MODELS.md`. This section only says how the code behaves.
 
-Every role defaults to `claude-opus-5-5` with effort `medium` (orchestrator,
-search) or `low` (objective, validation). Override per role with
-`MODEL_<ROLE>` and `EFFORT_<ROLE>`. Moving a role to a cheaper model is a
-measured decision for the design document: run the same requests with, say,
-`MODEL_SEARCH=claude-sonnet-5-5` and compare the run logs.
+Search defaults to `claude-sonnet-5-5`; orchestrator, objective and validation
+default to `claude-opus-5-5`. Effort is `medium` for orchestrator and search,
+`low` for objective and validation. Override per role with `MODEL_<ROLE>` and
+`EFFORT_<ROLE>`: `MODEL_SEARCH=claude-opus-5-5` puts search back on Opus, which
+is the comparison the scenario runs were made against.
 
 `capabilities()` in `config.ts` decides what each request may carry, so an
 override cannot break the call:

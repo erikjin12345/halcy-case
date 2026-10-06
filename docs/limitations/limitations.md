@@ -32,7 +32,7 @@ would notice. State as of 2026-10-06; code under
 | #   | Limitation | Seen as | What would lift it |
 | --- | ---------- | ------- | ------------------ |
 | L19 | Everything has only ever run on Casa Halcy | Behaviour on another hotel's site is unknown; the debrief runs one | A second mock with a different layout |
-| L20 | About 150 seconds from the message to the approval card, all roles on Opus 5.5 | A long wait in a chat; the hotel's hold is 15 minutes | Cheaper or faster model for search; fewer turns |
+| L20 | 85 to 176 seconds from the message to the approval card on the three example asks (search on Sonnet 5.5, the rest on Opus 5.5) | A long wait in a chat; the hotel's hold is 15 minutes | Cheaper or faster model for search; fewer turns |
 | L21 | A message sent while the agent is working is only read when the agent next asks | The traveller cannot interrupt or correct a search in progress | A shared message queue (`docs/concerns.md` C2) |
 | L22 | One browser, one candidate validated at a time; validating a second abandons the first hold | Comparing two rooms at the payment-page price is slow | Parallel sessions, where a hotel allows it |
 | L23 | Validation staying on the payment page is asked for in the prompt | If it wanders, the hold runs down; the hand-off's checks catch a changed page | Enforce in code |

@@ -25,7 +25,7 @@ choosing as we did. State as of 2026-10-06.
 
 | #   | We chose | Instead of | Why | Cost we accept |
 | --- | -------- | ---------- | --- | -------------- |
-| T14 | Every role on `claude-opus-5-5` (`agent/MODELS.md`) | Cheaper models per role from the start | First make it work; the saving is at most about $0.13 of $0.33 per booking | Highest cost and latency per booking until the comparison is measured |
+| T14 | Search on `claude-sonnet-5-5`, the other three roles on `claude-opus-5-5` (`agent/MODELS.md`) | Opus on every role; or cheaper models on more roles | Search is the largest role and validation re-checks it on the live page; on the three example asks Sonnet found the same candidates and prices at about half the search cost. The other three roles speak to the traveller or read the price they approve, and are small | Decided on one run per ask on one hotel; search on a site it has never seen is where a weaker model is most likely to fall short, and that has not been run |
 | T15 | Scoring in code, a model only sets the weights | A model scoring each room | Explainable, repeatable, re-scoring without a new search | Wishes that do not map to a feature in the vocabulary are not scored |
 | T16 | Search inside the one hotel the traveller names | Cross-hotel search, aggregators | The brief: one hotel, booked directly with the hotel | The product vision in `agent/ARCHITECTURE.md` 1.2 is not built |
 | T17 | Text observation of the page, no vision | Screenshots to the model | Cheaper, faster, and nothing to mask | Content that exists only as an image or canvas is invisible to the agent |

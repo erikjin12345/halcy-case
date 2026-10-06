@@ -4,7 +4,8 @@ Answers question 1 in `halcy_case_material/BRIEF.md`: which models do which
 jobs, why, what it costs per booking, what happens when a model is wrong, and
 what we measure to know the choice was right. Written 2026-10-06.
 
-**Status.** Decided: every role runs `claude-opus-5-5`, with per-role
+**Status.** Decided 2026-10-06 by the user: search runs `claude-sonnet-5-5`;
+orchestrator, objective and validation run `claude-opus-5-5`; per-role
 overrides from the environment (`README.md`, Decisions). Measured: the three
 example asks on the mock hotel, once with every role on Opus 5.5 and once
 with Sonnet 5.5 on the search role, same code, scripted traveller (section
@@ -19,18 +20,17 @@ From `halcy_case_material/starter/agent/config.ts`:
 | ------------ | ----------------- | ------ | --------- | ----------------------------------------- |
 | Orchestrator | `claude-opus-5-5` | medium | 60        | Talks to the traveller, owns the goal     |
 | Objective    | `claude-opus-5-5` | low    | 10        | One call: goal to weights and constraints |
-| Search       | `claude-opus-5-5` | medium | 80        | Drives an unseen hotel site in a browser  |
+| Search       | `claude-sonnet-5-5` | medium | 80      | Drives an unseen hotel site in a browser  |
 | Validation   | `claude-opus-5-5` | low    | 30        | Re-checks one candidate on the live page  |
 
 Scoring is deterministic code, not a model (`scoring/objective.ts`). The
 payment hand-off is a controlled sequence, not an agent (`ARCHITECTURE.md`
 2.7).
 
-Switching a role needs no code change:
+Switching a role needs no code change. To put search back on Opus:
 
 ```bash
-MODEL_SEARCH=claude-sonnet-5-5
-EFFORT_SEARCH=medium
+MODEL_SEARCH=claude-opus-5-5
 ```
 
 `capabilities()` in `config.ts` (PR #5) keeps an override from breaking the
@@ -151,11 +151,14 @@ stake, and one failed booking outweighs many of those.
 Graded by `starter/agent/scenarios`; ask 3 on Opus is the re-run. The first
 run of that cell fails the grader (wrong rate, two agents on one page).
 
-**Where that leaves the decision.** On this sample Sonnet 5.5 meets the rule.
-The default in `config.ts` is unchanged, because one run per cell on one
-hotel does not show "no worse": the next steps are to repeat each cell and to
-run both on a second hotel. Switching for the debrief is one line in `.env`
-(`MODEL_SEARCH=claude-sonnet-5-5`).
+**Where that leaves the decision.** On this sample Sonnet 5.5 meets the rule,
+and the user decided on it: the default for search in `config.ts` is now
+`claude-sonnet-5-5`. The evidence is still one run per cell on one hotel,
+which does not show "no worse". What would change the decision back: a
+repeat of the six cells in which Sonnet misses a candidate, misreads a price
+or fails to reach the card, or a second hotel on which it gets stuck where
+Opus does not. Going back is one line in `.env`
+(`MODEL_SEARCH=claude-opus-5-5`).
 
 ## 7. When a model is wrong
 
