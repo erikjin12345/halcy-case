@@ -7,9 +7,9 @@ Everything to be submitted besides the code, per
 
 | File (planned)     | Content                                                                                   | Status      |
 | ------------------ | ----------------------------------------------------------------------------------------- | ----------- |
-| `design.md`        | The design document, about 4 pages plus diagrams                                          | not started |
-| `money-flow.*`     | The diagram from question 2: how card details and money move, and where Halcy stays out   | not started |
-| `closing-note.md`  | What we deliberately left out, what we are least sure about, what we would build next     | not started |
+| `design.md`        | The design document: architecture, the three questions, failure modes, how we would know it works | draft, in review; five results marked pending |
+| money-flow diagram | How card details and money move, and where Halcy stays out                                | in `design.md` section 3, as Mermaid |
+| `closing-note.md`  | What we deliberately left out, what we are least sure about, what we would build next     | not started; written last, from `limitations/` |
 | `ai-chat-logs/`    | Exports or screenshots of AI chats during the work                                        | ongoing     |
 | `runs/`            | Selected run logs from `halcy_case_material/runs/` that we want to show                   | later       |
 | `TIME-LOG.md`      | Session start, deadline and where the hours went                                          | started     |
