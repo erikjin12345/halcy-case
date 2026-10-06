@@ -171,7 +171,9 @@
         }
       }
 
-      // One folded trace block per agent run, appended where the run started.
+      // Trace blocks sit in the conversation where the work happened: a step goes into
+      // the block at the bottom, and a new block starts below any message or card that
+      // came after it, so each piece of work stays under what it answered.
       let trace = null;
       function traceRun() {
         trace = document.createElement("details");
@@ -186,7 +188,7 @@
         trace.querySelector("summary").textContent = `How Halcy worked on this · ${trace.count} step${trace.count === 1 ? "" : "s"}`;
       }
       function traceStep(s) {
-        if (!trace) traceRun();
+        if (!trace || !trace.isConnected || log.lastElementChild !== trace) traceRun();
         const li = document.createElement("li");
         if (s.kind) li.className = s.kind + (s.kind === "trap" && s.text.startsWith("NOT avoided") ? " hit" : "");
         const head = `${s.at ? clock(s.at) + "  " : ""}`;
