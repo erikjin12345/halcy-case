@@ -23,7 +23,8 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | typeof TIMEOUT> 
 
 export function chatTools(deps: ChatToolDeps): RunnableTool[] {
   const { chat, log } = deps;
-  const timeoutMs = deps.replyTimeoutMs ?? 10 * 60 * 1000;
+  // REPLY_TIMEOUT_MS shortens the wait, so the quiet-traveller path can be run without waiting ten minutes.
+  const timeoutMs = deps.replyTimeoutMs ?? Number(process.env.REPLY_TIMEOUT_MS ?? 10 * 60 * 1000);
 
   const say = betaZodTool({
     name: "say",
