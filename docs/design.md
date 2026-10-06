@@ -65,6 +65,17 @@ flowchart LR
 9. The traveller gets a templated message: booked with the hotel's reference,
    declined in the hotel's words, or "I can't see a booking".
 
+**Facts about the hotel rather than the room**, such as the nearest metro
+stop, parking or the neighbourhood, come in the product from Halcy's places
+database, which `hotels.json` stands in for. A hotel's site describes itself
+in its own favour, may say nothing, and says it differently everywhere; a
+places database holds the same fields for every hotel and can be checked
+against a map. The prototype has no such source, so it quotes the hotel and
+says so, or says the site does not say. On Villa Aurora it quoted "The
+nearest stop is Pier Gardens on tram line 2, about four minutes on foot"; on
+Casa Halcy, whose site says nothing about transport, it said "Metro: the site
+does not say" and did not guess.
+
 Production layout, not deployed: the same roles in a Cloud Run worker and the
 hotel's site in a WebView in the Halcy app, so the hotel session is the
 phone's own (`infrastructure.md`, `../agent/WEBVIEW-PLAN.md`).
@@ -93,7 +104,11 @@ Measured on the three example asks, message to approval card
 | 3 | $0.40, 123 s | $0.27, 125 s | $0.28, 108 s |
 
 Sonnet on search reached the card 6 of 6 with the same candidates and prices.
-Prompt caching carries the cost: 85% of input tokens are cache reads.
+On the second hotel it did read a euro guide figure as the price in 3 of 3
+runs where Opus did not; code caught it every time, and now checks every
+recorded price and its currency against the page text, so the choice no
+longer rests on the model. Prompt caching carries the cost: 85% of input
+tokens are cache reads.
 
 **What we measure:** bookings that reach the card; right room and rate;
 validation rejections and failed actions; turns and time (the hold is
