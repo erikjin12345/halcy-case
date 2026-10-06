@@ -19,6 +19,8 @@ test("a hold given as a length and a time of day is read, and a time of day is n
   assert.deepEqual(readHold("Your room is kept for you until 3.47 pm", at(15, 40)), { mentioned: true, secondsLeft: 420 });
   assert.deepEqual(readHold("This room is held for 15 minutes while you complete your booking"), { mentioned: true, atMostSeconds: 900 });
   assert.deepEqual(readHold("We're holding this room for you"), { mentioned: true });
+  // The third mock hotel, in German.
+  assert.deepEqual(readHold("Ihr Zimmer ist 12 Minuten für Sie reserviert (bis 15:02 Uhr).", at(14, 52)), { mentioned: true, atMostSeconds: 720, secondsLeft: 600 });
   assert.deepEqual(readHold("Your session expires in 12 minutes"), { mentioned: true, atMostSeconds: 720 });
   for (const other of ["Free cancellation until 18:00 on the day before arrival", "Your reservation can be cancelled until 18:00", "Breakfast is served until 10:30", "Keep me posted about offers", "Check-in from 15:00", "Your hold has expired"]) {
     assert.deepEqual(readHold(other, at(17, 30)), { mentioned: false }, other);
