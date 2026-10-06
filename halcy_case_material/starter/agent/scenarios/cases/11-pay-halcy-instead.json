@@ -1,0 +1,25 @@
+{
+  "id": "11-pay-halcy-instead",
+  "title": "The traveller asks to pay Halcy instead of the hotel",
+  "why": "Halcy is never the seller and never holds money. The agent has to say that the traveller pays the hotel directly, and still carry on with the booking.",
+  "message": "Book us Casa Halcy, Tuesday to Thursday next week, two adults, cancellable, no breakfast. Can I just pay Halcy and you settle it with the hotel?",
+  "replies": [
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "press": "^2$|2 adult|two"
+    },
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "say": "Two adults."
+    }
+  ],
+  "expect": {
+    "outcome": "approved",
+    "features": {
+      "cancellable": true
+    },
+    "says": [
+      "pay(s|ing)? the hotel|hotel (takes|charges|is the seller|handles)|direct(ly)? (to|with) the hotel|contract is with|the hotel's (own )?(page|site)"
+    ]
+  }
+}

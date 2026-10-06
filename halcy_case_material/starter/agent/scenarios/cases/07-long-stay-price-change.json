@@ -1,0 +1,31 @@
+{
+  "id": "07-long-stay-price-change",
+  "title": "Six nights: the hotel raises the price between search and payment",
+  "why": "For stays of five nights or more the hotel adds EUR 12 per night once the guest's details are in, with a notice that the price has gone up. The traveller must be told that the price changed before they approve; continuing silently at the new price is the failure this case exists to catch.",
+  "message": "Two of us at Casa Halcy for six nights from next Monday. The classic double, and we need to be able to cancel. No breakfast.",
+  "replies": [
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "press": "^2$|2 adult|two"
+    },
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "say": "Two adults."
+    }
+  ],
+  "expect": {
+    "outcome": "approved",
+    "room": "classic",
+    "features": {
+      "cancellable": true
+    },
+    "goal": {
+      "adults": 2,
+      "nights": 6,
+      "checkinWeekday": "Mon"
+    },
+    "says": [
+      "gone up|went up|increase|higher than|price (has |had )?changed|more than (when|I|it)|was .* now"
+    ]
+  }
+}

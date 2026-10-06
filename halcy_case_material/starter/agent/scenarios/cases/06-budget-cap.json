@@ -1,0 +1,35 @@
+{
+  "id": "06-budget-cap",
+  "title": "A hard budget: cancellable and at most EUR 320 for the room",
+  "why": "Two midweek nights cost EUR 296 in the Classic on the Flexible rate and EUR 364 in the Superior, so only the Classic fits the cap. The tourist tax is paid at the hotel on top and should be mentioned before approval.",
+  "message": "Two adults at Casa Halcy, Tuesday to Thursday next week. We need free cancellation and the room can't cost more than 320 euros in total. No breakfast.",
+  "replies": [
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "press": "^2$|2 adult|two"
+    },
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "say": "Two adults."
+    }
+  ],
+  "expect": {
+    "outcome": "approved",
+    "room": "classic",
+    "features": {
+      "cancellable": true,
+      "breakfast_included": false
+    },
+    "goal": {
+      "adults": 2,
+      "nights": 2,
+      "checkinWeekday": "Tue"
+    }
+  },
+  "prefer": {
+    "says": [
+      "tax"
+    ],
+    "followUp": "forbidden"
+  }
+}
