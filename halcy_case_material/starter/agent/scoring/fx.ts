@@ -1,8 +1,8 @@
 // Estimates of a hotel's price in the traveller's own currency, made in code
 // from the European Central Bank's euro reference rates. An estimate is never
 // the price: the hotel's own figure is what the traveller agrees to and pays,
-// and their bank's rate and fees decide the final amount. Every sentence that
-// shows an estimate is made here, so no model converts or rounds anything.
+// and their bank's rate and fees decide the final amount. Every ≈ figure and
+// note is made here, so no model converts or rounds anything.
 
 import { readFileSync } from "node:fs";
 import { currenciesOf } from "./currency.ts";
@@ -84,18 +84,23 @@ export function money(amount: number, currency: string): string {
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 export const rateDay = (r: Rates) => `${Number(r.date.slice(8, 10))} ${MONTHS[Number(r.date.slice(5, 7)) - 1]}`;
 
-/**
- * "≈ 7,450 kr (estimate at the ECB rate of 5 Oct; your bank's rate and fees
- * decide the final amount)". Null when no estimate can or need be made.
- * `atHotel` is for an amount paid later, at the rate of that day.
- */
-export function estimateText(amount: number, from: string, to: string | undefined, rates: Rates | null, atHotel = false): string | null {
+/** "(≈ 7,947 kr)": the estimate alone, to follow the hotel's figure. Null when none can or need be made. */
+export function shortEstimate(amount: number, from: string, to: string | undefined, rates: Rates | null): string | null {
   if (!rates || !to || amount === 0 || isoOf(from) === isoOf(to)) return null;
   const value = convert(amount, from, to, rates);
-  if (value === null) return null;
-  const old = rates.source === "snapshot" ? ", the latest rate available here" : "";
-  const when = atHotel ? "; you pay it at the hotel, at your bank's rate on that day" : "; your bank's rate and fees decide the final amount";
-  return `≈ ${money(value, to)} (estimate at the ECB rate of ${rateDay(rates)}${old}${when})`;
+  return value === null ? null : `(≈ ${money(value, to)})`;
+}
+
+/** The one short note that must follow any ≈ figure, once per card or message. */
+export function estimateNote(rates: Rates): string {
+  return `≈ estimate at the ECB rate of ${rateDay(rates)}${rates.source === "snapshot" ? " (latest available)" : ""}`;
+}
+
+/** The full explanation, for when the traveller asks how an ≈ figure was worked out. */
+export function explainText(rates: Rates | null, to: string | undefined): string {
+  if (!rates || !to) return "I have no exchange rate or no home currency for you, so I show only the hotel's own figures.";
+  const when = rates.source === "snapshot" ? `the latest I have, from ${rateDay(rates)}` : `published ${rateDay(rates)}`;
+  return `The ≈ figures convert the hotel's price into ${to} with the European Central Bank's euro reference rate, ${when}. They are estimates, not the price: you agree to and pay the hotel's own figure, and your bank's rate and card fees decide what it costs you. A part paid at the hotel is converted at your bank's rate on the day you pay it.`;
 }
 
 /** Below this difference two prices are too close to call on an estimate. */
@@ -112,7 +117,7 @@ export function compareText(options: { label: string; amount: number; currency: 
   const sorted = [...valued].sort((a, b) => a.value! - b.value!);
   const [low, next] = sorted;
   const gap = (next.value! - low.value!) / next.value!;
-  const basis = allSame ? "" : ` at the ECB rate of ${rateDay(rates!)} (an estimate; your bank's rate and fees decide the final amounts)`;
-  if (gap < TOO_CLOSE) return `${low.label} and ${next.label} are too close to call${basis}: within ${Math.max(1, Math.round(gap * 100))}% of each other.`;
-  return `${low.label} is about ${Math.round(gap * 100)}% cheaper than ${next.label}${basis}.`;
+  const mark = allSame ? "" : " (≈)";
+  if (gap < TOO_CLOSE) return `${low.label} and ${next.label} are too close to call${mark}.`;
+  return `${low.label} is about ${Math.round(gap * 100)}% cheaper than ${next.label}${mark}.`;
 }

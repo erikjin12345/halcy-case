@@ -4,7 +4,7 @@
 
 import { money } from "./price-change.ts";
 import type { RunState } from "../types.ts";
-import { estimateText, type Rates } from "../scoring/fx.ts";
+import { estimateNote, shortEstimate, type Rates } from "../scoring/fx.ts";
 
 export function searchProgress(state: RunState, fx?: { to?: string; rates: Rates | null }): string | null {
   const hotel = state.goal?.hotel.name;
@@ -19,8 +19,9 @@ export function searchProgress(state: RunState, fx?: { to?: string; rates: Rates
     const price = c.features.price_total?.value;
     const currency = c.features.currency?.value;
     if (typeof name !== "string" || typeof price !== "number") continue;
-    const est = fx && typeof currency === "string" ? estimateText(price, currency, fx.to, fx.rates) : null;
-    return `${hotel} checked: the best match there is the ${name}, ${money(price, typeof currency === "string" ? currency : undefined)}${stay}${est ? ` ${est}` : ""}, before any tax the hotel adds.`;
+    const est = fx && typeof currency === "string" ? shortEstimate(price, currency, fx.to, fx.rates) : null;
+    const note = est && fx?.rates ? ` ${estimateNote(fx.rates)}.` : "";
+    return `${hotel} checked: the best match there is the ${name}, ${money(price, typeof currency === "string" ? currency : undefined)}${est ? ` ${est}` : ""}${stay}, before any tax the hotel adds.${note}`;
   }
   return `${hotel} checked: nothing there fits what you asked for.`;
 }

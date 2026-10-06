@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { judgeCap } from "./cap-estimate.ts";
-import { compareText, convert, estimateText, loadRates, money, parseEcb, type Rates } from "./fx.ts";
+import { compareText, convert, estimateNote, explainText, loadRates, money, parseEcb, shortEstimate, type Rates } from "./fx.ts";
 
 const XML = `<gesmes:Envelope><Cube><Cube time='2026-10-05'>
 <Cube currency='USD' rate='1.1204'/><Cube currency='GBP' rate='0.84720'/><Cube currency='SEK' rate='11.2525'/>
@@ -23,22 +23,28 @@ test("conversion goes through the euro and refuses an ambiguous symbol", () => {
   assert.equal(money(640.2, "EUR"), "€640");
 });
 
-test("the estimate says what it is, and nothing is shown in the hotel's own currency", () => {
-  assert.equal(estimateText(594, "GBP", "SEK", rates), "≈ 7,890 kr (estimate at the ECB rate of 5 Oct; your bank's rate and fees decide the final amount)");
-  assert.match(estimateText(594, "GBP", "SEK", rates, true)!, /you pay it at the hotel, at your bank's rate on that day/);
-  assert.equal(estimateText(594, "GBP", "GBP", rates), null);
-  assert.equal(estimateText(0, "GBP", "SEK", rates), null, "nothing to estimate in nothing charged");
-  assert.equal(estimateText(594, "GBP", undefined, rates), null, "no traveller currency, no estimate");
-  assert.equal(estimateText(594, "GBP", "SEK", null), null, "no rates, no estimate");
-  const old: Rates = { ...rates, source: "snapshot" };
-  assert.match(estimateText(594, "GBP", "SEK", old)!, /the latest rate available here/);
+test("the estimate is short, and the note says once what it is", () => {
+  assert.equal(shortEstimate(706.24, "€", "SEK", rates), "(≈ 7,947 kr)");
+  assert.equal(shortEstimate(594, "GBP", "GBP", rates), null, "nothing in the hotel's own currency");
+  assert.equal(shortEstimate(0, "GBP", "SEK", rates), null, "nothing to estimate in nothing charged");
+  assert.equal(shortEstimate(594, "GBP", undefined, rates), null, "no traveller currency, no estimate");
+  assert.equal(shortEstimate(594, "GBP", "SEK", null), null, "no rates, no estimate");
+  assert.equal(estimateNote(rates), "≈ estimate at the ECB rate of 5 Oct");
+  assert.equal(estimateNote({ ...rates, source: "snapshot" }), "≈ estimate at the ECB rate of 5 Oct (latest available)");
+});
+
+test("the full explanation is there for when the traveller asks", () => {
+  const text = explainText(rates, "SEK");
+  for (const part of ["European Central Bank", "published 5 Oct", "your bank's rate and card fees", "at the hotel is converted at your bank's rate on the day"]) assert.ok(text.includes(part), part);
+  assert.match(explainText({ ...rates, source: "snapshot" } as Rates, "SEK"), /the latest I have, from 5 Oct/);
+  assert.match(explainText(null, "SEK"), /only the hotel's own figures/);
 });
 
 test("a comparison across currencies is an estimate, and under 3% too close to call", () => {
   const user = [{ label: "Casa Halcy", amount: 658.24, currency: "€" }, { label: "Villa Aurora", amount: 594, currency: "GBP" }];
-  assert.equal(compareText(user, "SEK", rates), "Casa Halcy is about 6% cheaper than Villa Aurora at the ECB rate of 5 Oct (an estimate; your bank's rate and fees decide the final amounts).");
+  assert.equal(compareText(user, "SEK", rates), "Casa Halcy is about 6% cheaper than Villa Aurora (≈).");
   const close = [{ label: "A", amount: 100, currency: "EUR" }, { label: "B", amount: 85, currency: "GBP" }];
-  assert.match(compareText(close, "SEK", rates)!, /too close to call/);
+  assert.equal(compareText(close, "SEK", rates), "A and B are too close to call (≈).");
   const same = [{ label: "A", amount: 300, currency: "EUR" }, { label: "B", amount: 400, currency: "EUR" }];
   assert.equal(compareText(same, undefined, null), "A is about 25% cheaper than B.", "same currency needs no rate");
   assert.equal(compareText(user, "SEK", null), null);
