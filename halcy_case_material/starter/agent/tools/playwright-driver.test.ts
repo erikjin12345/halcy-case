@@ -75,7 +75,9 @@ test("in the background a screenshot is refused rather than hanging, and the han
   await assert.rejects(driver.screenshot(), /background/);
   assert.equal(shots.length, 0);
   await driver.bringToFront();
-  assert.deepEqual(calls.slice(2), ["Browser.getWindowForTarget", "normal", "Browser.setWindowBounds", "bringToFront"], "restored, then given its full size, then shown");
+  const after = calls.slice(2);
+  assert.ok(after.indexOf("normal") >= 0 && after.indexOf("normal") < after.indexOf("maximized"), "restored, then maximised");
+  assert.equal(calls.at(-1), "bringToFront", "then shown");
   await driver.screenshot();
   assert.equal(shots.length, 1, "after the hand-off screenshots work again");
 });
