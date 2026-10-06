@@ -10,7 +10,7 @@ Everything to be submitted besides the code, per
 | `design.md`        | The design document: architecture, the three questions, failure modes, how we would know it works | done, PR #25 |
 | money-flow diagram | How card details and money move, and where Halcy stays out                                | in `design.md` section 3, as Mermaid |
 | `closing-note.md`  | What we deliberately left out, what we are least sure about, what we would build next     | written |
-| `ai-chat-logs/`    | Exports or screenshots of AI chats during the work                                        | ongoing     |
+| `ai-chat-logs/`    | What the AI chat logs hold and which session did what; the logs are handed in as a zip next to the repo | done        |
 | `runs/`            | Selected run logs from `halcy_case_material/runs/` that we want to show                   | done, `runs/README.md` |
 | `TIME-LOG.md`      | Session start, deadline and where the hours went                                          | ongoing     |
 | `infrastructure.md` | Where the agents run: local for the prototype, GCP layout for the design document        | done        |
