@@ -24,7 +24,7 @@ test("after a declined card, reading the hotel's error runs nothing inside the p
   const { log, events } = fakeLog();
   const { chat, said, press } = fakeChat();
   const boundary = new PaymentBoundary(HOTEL, log);
-  const driver = guardedDriver(playwrightDriver(page, (url) => boundary.known(url)), boundary);
+  const driver = guardedDriver(await playwrightDriver(page, (url) => boundary.known(url)), boundary);
   const running = runHandoff({
     driver,
     boundary,
