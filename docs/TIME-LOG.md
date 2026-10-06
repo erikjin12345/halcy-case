@@ -27,5 +27,6 @@ The case is capped at **8 hours**. The debrief will ask where the hours went.
 | 12:35      | 1:43    | Phase 0 of the WebView plan: `PageDriver` seam with a guarded driver, 6 tests, PR #7 |
 | 12:52      | 2:00    | Review fixes on PR #7; payment hand-off sequence built and run against the mock (confirmed and declined), PR #11 |
 | 12:59      | 2:07    | Merged #9 into #7 and #11 ahead of time; review fixes; first full run behind the orchestrator: chat message to confirmed booking in 151 s |
+| 13:30      | 2:38    | PR #14 for the fix that missed #11; review of #15; `docs/limitations/` (trade-offs, limitations, not verified) and the two-hourly documentation review routine |
 
 Add a row whenever a phase ends. Keep it honest; it is part of the submission.
