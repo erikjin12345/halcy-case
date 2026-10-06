@@ -9,9 +9,7 @@ only with a run log, a test or a source to point at. State as of 2026-10-06
 | #   | Claim | What exists instead | What would verify it |
 | --- | ----- | ------------------- | -------------------- |
 | N6  | Any ask other than example ask 1 through payment with the orchestrator in front, including a long stay with the price rise | Ask 3 reached the approval card in a run without a window, and the hand-off refused to start there, as designed | Runs with a window or the stand-in |
-| N8  | Anything on a hotel site other than the two mocks | A second mock (Villa Aurora) ran the scenarios and the payment step | The debrief's hotel |
-| N10 | Card fields on the hotel's own page are redacted in a real browser | Unit tests on observation objects | A mock variant with inline fields |
-| N11 | A non-English hotel site or request | One Swedish scenario case exists | Its result, once run |
+| N8  | Anything on a real hotel site | Three mock hotels, one built blind | The debrief's hotel |
 | N24 | The "price has changed" card when a fresh hold comes back with other figures | Unit tests | A mock that changes its price between two holds |
 | N25 | A change the open page does not show (room taken by someone else, price changed on the server) is caught before the traveller types a card | Nothing: the last look reads the page as it stands and does not reload it | A mock that changes state behind an open payment page |
 
@@ -56,6 +54,8 @@ A script stood in for the traveller in every run except the first row.
 | new | A hold that expired before the hand-over | Hotel's wording quoted, fresh hold, `confirmed` | `...T07-27-43-215Z-handoff-path-expired-then-fresh` |
 | N12 | A fresh hold through the real validation agent, behind the orchestrator, when the traveller is slow to approve | Hotel's "Your hold has expired" quoted, same room validated again, same figures, handed over, `confirmed` in 189 s. A first attempt failed and led to L36 | `...T07-35-26-649Z-booking-full-slow-approval-2` (failed attempt: `...T07-31-43-766Z-booking-full-slow-approval`) |
 | N9  | A hotel that sends the whole tab to its payment provider and back (second mock hotel, Villa Aurora: hold stated as "for 10 minutes, until 15:57", card on the provider's own page, pounds) | Hold read from the page (9 minutes), `confirmed` with VA reference and "charged now GBP 186.00"; a decline returns the tab to the same review page and is read as `declined` in the hotel's words. A script stood in for validation as well as the traveller | `...T07-47-55-766Z-handoff-villa-ok`, `...T07-49-41-133Z-handoff-villa-decline` |
+| N10 | Card fields on a hotel's own page are redacted in a real browser | On the third mock (German, fields on the hotel's own page): all four card fields reached the agent as withheld; confirmed AB-91759; no expiry, holder or digits in the run log | `...T12-51-04-675Z-handoff-alpenblick` |
+| N11 | A non-English hotel site | The German rehearsal hotel: card fields, the hold and room types read; scenarios run by halcy-case-60 on `test/unseen-hotels` | `docs/limitations/unseen-hotel-rehearsal.md` on that branch |
 | new | A hold too short, twice | Refused, fresh hold asked for once, refused again | `...T07-27-41-593Z-handoff-path-short-hold` |
 
 Two of these used a mock started with a 1-minute hold and shortened

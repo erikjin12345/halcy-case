@@ -47,7 +47,7 @@ export interface Chat {
   /** Wait for the next message, or the timeout. A message typed before the wait began is marked `early`. */
   next?(timeoutMs: number): Promise<Answer>;
   /** One step of how the agent is working, for a panel apart from the conversation. */
-  trace?(step: { who: string; text: string; detail?: string; at?: number }): void;
+  trace?(step: { who: string; text: string; detail?: string; at?: number; kind?: string }): void;
 }
 
 export interface Context {
@@ -57,6 +57,8 @@ export interface Context {
   /** Hotel name to booking-site address (starter/hotels.json). Stands in for
    *  Halcy's places database: at the debrief we add a hotel your agent hasn't seen. */
   hotels: Record<string, string>;
+  /** Known hotels whose sites did not answer when the run started. Not offered, not searched. */
+  unreachable?: string[];
 }
 
 /** Runs once per new conversation turn: the traveller wrote `message` while the agent was idle. */

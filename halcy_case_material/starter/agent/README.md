@@ -38,6 +38,15 @@ is the code. Conventions: `../../../agent/CLAUDE.md`.
 | `agents/objective.ts`    | One call: goal to weights, hard constraints, threshold                              |
 | `agents/search.ts`       | Drives the hotel site, records candidates, scores them                              |
 | `agents/validation.ts`   | Re-verifies one candidate on the live page, stops before anything that books       |
+| `agents/search-parallel.ts` | `runSearches`: one headless browser per hotel, up to three at once, each with its own boundary |
+| `agents/search-cache.ts` | Re-ranks a hotel already searched for the same dates and party (10 minutes) instead of searching again |
+| `agents/fx-tools.ts`     | `estimate_prices`, `compare_prices`: amounts in the traveller's currency as labelled ECB estimates, in code |
+| `agents/unverified.ts`   | Rewords "the site does not say" to "not found on the pages checked" unless an information page was opened |
+| `scoring/rates.ts`       | Lists rooms recorded without a rate, so rates behind a button or dialog get opened |
+| `scoring/room-type.ts`   | Matches room types (single, double, family, ...) across languages |
+| `tools/lazy-driver.ts`   | Opens the visible browser on first use, so a run that ends early opens none |
+| `reachable.ts`           | Probes each hotel's site once per run; one that does not answer is not offered or searched |
+| `trace.ts`               | The activity log beside the chat: one line per step from the scrubbed run log |
 | `check.ts`               | Smoke test: `npm run agent:check`                                                   |
 | `*.test.ts`              | Unit tests: `npm test`                                                              |
 

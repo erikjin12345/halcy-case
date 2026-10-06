@@ -17,7 +17,7 @@ import { runObjective } from "./objective.ts";
 import { progressLines } from "./progress.ts";
 import { overLimitTool, priceChangeTool } from "./price-change.ts";
 import { runSearches } from "./search-parallel.ts";
-import { cachedSearch, rememberSearch } from "./search-cache.ts";
+import { cachedSearch, rememberSearch, forgetSearch } from "./search-cache.ts";
 import { scoreAll } from "../tools/scoring.ts";
 import { runValidation } from "./validation.ts";
 import { fxTools, travellerCurrency } from "./fx-tools.ts";
@@ -45,15 +45,24 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
     name: "run_search",
     description:
       "Search hotel sites for rooms and rates matching the goal and score them. Pass `hotels` (names) to search several in one call; leave it out for the goal's hotel. A hotel searched for the same dates and party in the last minutes is not searched again: its rooms are re-scored against the current objective. Returns the ranking and the rejected candidates. The traveller has already been told the best match at each hotel; do not repeat it.",
-    inputSchema: z.object({ hotels: z.array(z.string()).optional() }),
-    run: async ({ hotels }) => {
+    inputSchema: z.object({
+      hotels: z.array(z.string()).optional(),
+      fresh: z
+        .boolean()
+        .optional()
+        .describe("Read the site again now, ignoring this session's earlier search: when the traveller picked a room or rate that is not among the recorded candidates, or validation says the recorded rates are incomplete"),
+    }),
+    run: async ({ hotels, fresh: again }) => {
       try {
         const base = a.state.goal;
         if (!base || !a.state.objective) return "Error: set_goal and run_objective first.";
         const names = hotels?.length ? hotels : [base.hotel.name];
+        const down = names.filter((n) => a.ctx.unreachable?.includes(n));
+        if (down.length) return `Error: ${down.join(", ")}: the site is not answering right now. Tell the traveller in those words if they asked for it; offer the others.`;
         const unknown = names.filter((n) => !a.ctx.hotels[n]);
         if (unknown.length) return `Error: not in the places database: ${unknown.join(", ")}.`;
         const goals = names.map((n) => ({ ...base, hotel: { name: n, url: a.ctx.hotels[n] } }));
+        if (again) for (const g of goals) forgetSearch(a.state, g);
         const fresh = goals.filter((g) => cachedSearch(a.state, g));
         const todo = goals.filter((g) => !cachedSearch(a.state, g));
         for (const g of fresh) a.log.event("search.cached", { hotel: g.hotel.name });
@@ -89,6 +98,13 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
     description: "Verify one candidate on the live site. Returns accepted or rejected with reasons and what the page showed. There is one browser: calls run one after another, and the browser ends on the candidate validated last.",
     inputSchema: z.object({ candidateId: z.string() }),
     run: async ({ candidateId }) => {
+      // A room or rate the traveller picked that the search never recorded: the
+      // way on is to read the site again now, not to wait or to send them off.
+      if (!a.state.store.candidate(candidateId)) {
+        const hotel = a.state.goal?.hotel.name ?? "the hotel";
+        a.log.event("validation.unknown", { candidateId, hotel });
+        return `Not recorded: ${candidateId} is not among the recorded rooms and rates at ${hotel}. Call run_search with fresh: true for ${hotel} now, then validate the candidate that matches what the traveller chose. Do not ask the traveller to wait or to book it themselves.`;
+      }
       // With several hotels searched, the goal must name the hotel of the candidate being checked.
       const hotel = a.state.store.candidate(candidateId)?.hotel;
       if (a.state.goal && hotel && a.ctx.hotels[hotel] && a.state.goal.hotel.name !== hotel) a.state.goal = { ...a.state.goal, hotel: { name: hotel, url: a.ctx.hotels[hotel] } };
@@ -139,6 +155,7 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
       `Today: ${a.ctx.today}`,
       `Traveller: ${t.first} ${t.last}`,
       `Known hotels (name -> booking site): ${JSON.stringify(a.ctx.hotels)}`,
+      ...(a.ctx.unreachable?.length ? [`Not answering right now, so not available: ${a.ctx.unreachable.join(", ")}. Do not offer them; only if the traveller names one, say its site is not answering right now.`] : []),
       `Traveller's message: ${message}`,
     ].join("\n"),
     tools: [...chatTools({ chat: a.chat, log: a.log }), ...goalTools({ state: a.state, log: a.log }), runObjectiveTool, searchInTurn, validationInTurn, priceChangeTool(a), overLimitTool(a), ...fxTools(a), approveTool],

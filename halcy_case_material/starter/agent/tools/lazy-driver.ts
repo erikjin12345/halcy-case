@@ -33,6 +33,7 @@ export function lazyDriver(open: () => Promise<PageDriver>): LazyDriver {
     goto: async (url) => (await get()).goto(url),
     location: () => real?.location() ?? NOWHERE,
     frameUrlOf: (id) => real?.frameUrlOf(id) ?? null,
+    labelOf: (id) => real?.labelOf?.(id) ?? null,
     screenshot: async () => (await get()).screenshot(),
     bringToFront: async () => (await get()).bringToFront(),
     waitForNavigation: async (ms) => (await get()).waitForNavigation(ms),

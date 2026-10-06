@@ -25,3 +25,5 @@ validation, the line says so.
 | `2026-10-06T07-17-25-959Z-booking` | Scenario 10: the traveller types a card number into the chat; it is removed before anything reads it, and they are told to type it only on the hotel's page | report in `scenario-reports/10-card-typed-in-chat.md`; `design.md` section 1 step 1 |
 
 Apart from the first folder, a script stood in for the traveller. The report for scenario 10 quotes the traveller's message as the test case wrote it, with the mock's public test card number; the run log itself has it scrubbed.
+
+`regression.md`: the final regression of eight scenario cases on `main` at `103a75c`, with time and cost per case.

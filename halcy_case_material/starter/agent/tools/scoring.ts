@@ -2,6 +2,7 @@
 // Store of candidates and evaluations. Scoring is deterministic
 // (scoring/objective.ts); the model only sets the parameters.
 
+import { decide, objectiveDecision, scoringDecisions } from "../agents/decisions.ts";
 import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 import type { RunLog } from "../../log.ts";
@@ -104,6 +105,7 @@ export function applyObjective(state: RunState, log: StateToolDeps["log"], input
         if (!stillHard.has(constraint) && constraint !== "validation") readmitted += state.store.readmit(constraint);
       }
       log.event("objective.set", { objective: state.objective, hash: state.objectiveHash, explanation, notes, readmitted });
+      decide(log, objectiveDecision(state.objective, explanation));
       return `Objective recorded. Maximum possible score is ${maxScore(state.objective)}.`;
   }
 }
@@ -197,9 +199,18 @@ export async function scoreAll(state: RunState, log: StateToolDeps["log"]): Prom
       const budgetNotApplied = [budgetNote(scored), estimateNote(scored.flatMap((s) => s.capsEstimated), rates)].filter(Boolean).join(" ") || null;
       state.budgetNotApplied = budgetNotApplied ?? undefined;
       const notStated = [unstatedNote(unstated(all, o)), roomTypeNote(unmatchedRoomType(all, o))].filter(Boolean).join(" ") || null;
-      const ratesMissing = missingRatesNote(missingRates(all));
+      const pageOf = (c: { features: Record<string, { value: unknown } | undefined> }) => {
+        const url = c.features.source_url?.value;
+        try {
+          return typeof url === "string" ? state.pages[new URL(url).pathname] : undefined;
+        } catch {
+          return undefined;
+        }
+      };
+      const ratesMissing = missingRatesNote(missingRates(all, pageOf));
       state.notStated = notStated ?? undefined;
       const out = { threshold: o.threshold, max: maxScore(o), ranking: state.store.ranked(state.objectiveHash), rejected: state.store.rejected(), ...(budgetNotApplied ? { budgetNotApplied } : {}), ...(notStated ? { notStated } : {}), ...(ratesMissing ? { ratesMissing } : {}) };
       log.event("candidates.scored", out);
+      for (const d of scoringDecisions(state, out.ranking, out.rejected, o.threshold)) decide(log, d);
       return JSON.stringify(out, null, 1);
 }

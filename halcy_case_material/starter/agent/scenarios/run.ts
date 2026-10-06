@@ -15,6 +15,7 @@ import { redactCardNumbers } from "../evidence/card-number.ts";
 import { grade, passed, type Check } from "./grade.ts";
 import { loadScenarios } from "./load.ts";
 import { readOutcome, type Outcome } from "./outcome.ts";
+import { trapsForRun } from "../evidence/traps-cli.ts";
 import { renderReport, renderSummary } from "./report.ts";
 import { scriptedChat } from "./scripted-chat.ts";
 import type { Scenario } from "./types.ts";
@@ -35,9 +36,13 @@ export async function runScenario(agent: Agent, s: Scenario, ctx: Context): Prom
   return { runDir: join("runs", created[created.length - 1]), unscripted: asked.filter((a) => !a.scripted).map((a) => `${a.question} -> ${a.answer}`) };
 }
 
-function judge(s: Scenario, runDir: string): { outcome: Outcome; checks: Check[] } {
+async function judge(s: Scenario, runDir: string): Promise<{ outcome: Outcome; checks: Check[] }> {
   const outcome = readOutcome(readFileSync(join(runDir, "events.jsonl"), "utf8"));
-  return { outcome, checks: grade(s, outcome) };
+  // Every trap the run log and the hotel's own record can decide is a must-check.
+  // A trap that cannot be decided (no booking, record gone) is left out, not passed.
+  const traps = (await trapsForRun(runDir)).filter((t) => t.verdict !== "n/a");
+  const trapChecks: Check[] = traps.map((t) => ({ level: "must", name: `trap ${t.trap}: ${t.name}`, pass: t.verdict === "PASS", detail: t.evidence }));
+  return { outcome, checks: [...grade(s, outcome), ...trapChecks] };
 }
 
 async function main(args: string[]): Promise<number> {
@@ -47,9 +52,9 @@ async function main(args: string[]): Promise<number> {
   }
   const outDir = join("runs", "scenarios", new Date().toISOString().replace(/[:.]/g, "-"));
   const rows: { scenario: Scenario; outcome: Outcome; checks: Check[] }[] = [];
-  const finish = (s: Scenario, runDir: string, unscripted: string[] = []) => {
+  const finish = async (s: Scenario, runDir: string, unscripted: string[] = []) => {
     const note = unscripted.length ? `  (${unscripted.length} question(s) answered by the fallback)` : "";
-    const { outcome, checks } = judge(s, runDir);
+    const { outcome, checks } = await judge(s, runDir);
     rows.push({ scenario: s, outcome, checks });
     mkdirSync(outDir, { recursive: true });
     writeFileSync(join(outDir, `${s.id}.md`), renderReport(s, outcome, checks, runDir, unscripted));
@@ -60,7 +65,7 @@ async function main(args: string[]): Promise<number> {
   if (args[0] === "--grade") {
     const [s] = loadScenarios([args[1] ?? ""]);
     if (!s || !args[2] || !existsSync(join(args[2], "events.jsonl"))) throw new Error("usage: --grade <case id> <run dir with events.jsonl>");
-    finish(s, args[2]);
+    await finish(s, args[2]);
   } else {
     const scenarios = loadScenarios(args);
     if (!scenarios.length) throw new Error(`no case matches ${args.join(", ")}`);
@@ -73,7 +78,7 @@ async function main(args: string[]): Promise<number> {
     for (const s of scenarios) {
       console.log(`...   ${s.id}`);
       const { runDir, unscripted } = await runScenario(bookingAgent, s, ctx);
-      finish(s, runDir, unscripted);
+      await finish(s, runDir, unscripted);
     }
   }
   writeFileSync(join(outDir, "summary.md"), renderSummary(rows));

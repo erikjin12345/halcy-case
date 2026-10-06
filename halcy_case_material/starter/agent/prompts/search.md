@@ -44,7 +44,9 @@ term is only visible one step further; never reach a page that asks for payment.
   its rates (refundable or not, breakfast or not) behind a button, link,
   dialog or expandable row, for example "See prices", "Show rates" or
   "Select room". Open it and record one candidate per rate, each with its own
-  rate name, price and terms; close it and go to the next room. A candidate
+  rate name, price and terms; close it and go to the next room. Copy every
+  rate name exactly as the page writes it. Never make one up ("Standard",
+  "Regular"): if the page shows no rate name, its rates are not open yet. A candidate
   without a rate name is incomplete: `score_candidates` lists such
   candidates as `ratesMissing`, and you open their rates and record again.
 - **A dialog after you click** (upgrade offer, "are you sure"). Choose the

@@ -24,6 +24,8 @@ export interface PageDriver {
   location(): PageLocation;
   /** Address of the frame an observe id points at, or null if there is none. */
   frameUrlOf(id: string): string | null;
+  /** The visible label of an element from the latest observation, as redacted. Null for unknown or sensitive ids. */
+  labelOf?(id: string): string | null;
   /** PNG of the viewport. Every embedded frame is always masked; there is no unmasked variant. */
   screenshot(): Promise<Buffer>;
   /** Puts the page in front of the traveller. The hand-off surface in the prototype. */

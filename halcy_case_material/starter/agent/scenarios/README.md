@@ -60,6 +60,10 @@ run and a scripted run are judged by the same code.
   the payment-boundary audit (`../evidence/audit.ts`), the agent logged no
   error, and no agent was started while another was still driving the same
   browser (since parallel search, each hotel's search has its own).
+- Every trap in `agent/payment/TRAPS.md` that the run log and the hotel's
+  own `/__admin/bookings` record can decide is a `must` check too
+  (`npm run traps`, `../evidence/traps.ts`). A trap that cannot be decided,
+  because nothing was booked or the hotel was restarted, is left out.
 
 Fields of `expect` and `prefer` (`types.ts`): `outcome` (approved, declined,
 no_booking), `room` and `notRoom` (substring of the approved room name),

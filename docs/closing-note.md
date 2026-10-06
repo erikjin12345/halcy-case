@@ -16,10 +16,10 @@ State on 2026-10-06. Row numbers (L, T, N) point into `limitations/`.
 
 ## What we are least sure about
 
-1. **A hotel we have not seen.** A second mock with a full-page checkout took
-   the payment step through a booking and a decline, with scripts in place of
-   the agents, and exposed a hold format we could not read (fixed). The
-   debrief runs a third (L19, N8).
+1. **A hotel we have not seen.** Two mocks and a third built blind in German
+   each exposed something the first could not: a hold format, a currency
+   guide, card fields labelled in German, rates behind a dialog. All were
+   fixed as patterns, but the debrief's hotel will have its own (L19, N8).
 2. **Whether this shape may be the product's.** Halcy never holds money. Whether
    operating the browser a card is typed into is outside the card-data rules
    needs a specialist (N17, N18).
@@ -36,16 +36,16 @@ State on 2026-10-06. Row numbers (L, T, N) point into `limitations/`.
 
 ## What we would build next
 
-1. More mock hotels to fail on, with the scenarios and payment paths run on
-   each.
-2. The traveller's own run, and the window details it exposes (L2, L3).
-3. Close what a prompt or luck holds: no agent action on a payment page (L17),
-   search price kept apart from payment-page amounts (L36), amounts checked
-   next to their labels (L8).
-4. A follow-up for `unconfirmed` (L10).
-5. The phone path, starting with what a WebView can read (N19, N20).
-6. Ask the people who would know: card-data scope, licence, hotels' terms
+1. Real hotel sites, read-only, and more mocks to fail on, with the scenarios
+   and payment paths run on each.
+2. Close what a prompt or luck holds: no agent action on a payment page (L17),
+   amounts checked next to their labels (L8), a hold's time zone (L37).
+3. A follow-up for `unconfirmed` (L10).
+4. The phone path, starting with what a WebView can read (N19, N20).
+5. Ask the people who would know: card-data scope, licence, hotels' terms
    (N17, N18, N21).
+6. Score prices in one currency, converted in code, so ranking across
+   currencies does not lean on the orchestrator's comparison (L41).
 
 ## Where the tools were wrong
 
