@@ -18,7 +18,11 @@ Call `set_objective` exactly once with:
   weights above, a candidate that satisfies every preference scores the sum of
   the positive weights. Set the threshold so that missing the single most
   important preference still passes if nothing better exists, roughly 60 to 70
-  percent of the maximum.
+  percent of the maximum. **If the traveller named a fallback** ("river view if
+  they have it, otherwise whatever's nicest"), the fallback must pass on its
+  own: set the threshold at or below what a candidate scores when it misses the
+  first choice but satisfies the fallback. A threshold the accepted fallback
+  cannot reach sends the traveller a question they already answered.
 - `maxSearchMs` and `extraAfterPassMs`: how long the search may run, and how
   long to keep looking after the first candidate passes. Defaults of 180000 and
   20000 are fine unless the traveller is in a hurry.

@@ -31,7 +31,9 @@ function hardFailures(c: Candidate, o: Objective): ScoredCandidate["failures"] {
         out.push({ constraint: name, reason: `${name} is "${actual}", required "${required}"` });
     } else if (actual !== required) out.push({ constraint: name, reason: `${name} is ${String(actual)}, required ${String(required)}` });
   }
-  return out;
+  // Most telling first: a sold-out room, then other definite mismatches, then facts the page never stated.
+  const rank = (f: { constraint: string; reason: string }) => (f.constraint === "sold_out" ? 0 : f.reason.includes(" unknown, ") ? 2 : 1);
+  return out.sort((a, b) => rank(a) - rank(b));
 }
 
 /** Min-max range per numeric feature across the candidate set. */

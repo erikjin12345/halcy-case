@@ -9,6 +9,7 @@ import { act, observe, type Observation } from "../../browser.ts";
 import type { RunLog } from "../../log.ts";
 import type { RunnableTool } from "../llm/client.ts";
 import type { PaymentBoundary } from "./boundary.ts";
+import { cleanUrl, serialise } from "./serial.ts";
 
 export interface BrowserToolDeps {
   page: Page;
@@ -29,7 +30,7 @@ export function renderObservation(seen: Observation, boundary: PaymentBoundary):
   lines.push("--- elements (id | tag/type | name | value | state) ---");
   for (const el of seen.elements) {
     if (!boundary.allows(el.frameUrl)) continue;
-    const state = [el.disabled ? "disabled" : "", el.checked === true ? "checked" : el.checked === false ? "unchecked" : ""]
+    const state = [el.disabled ? "disabled" : "", el.readOnly ? "read-only" : "", el.checked === true ? "checked" : el.checked === false ? "unchecked" : ""]
       .filter(Boolean)
       .join(",");
     const type = el.type ? `${el.tag}/${el.type}` : el.role ? `${el.tag}/${el.role}` : el.tag;
@@ -58,7 +59,7 @@ export function browserTools(deps: BrowserToolDeps): RunnableTool[] {
   const actTool = betaZodTool({
     name: "act",
     description:
-      "Do one thing on the page: click an element, fill a text field, select an option by its label, or check/uncheck a box. Use ids from the latest observe. Observe again afterwards.",
+      "Do one thing on the page: click an element, fill a text field, select an option by its label, or check/uncheck a box. Use ids from the latest observe. Several calls in one turn run in the order you issue them.",
     inputSchema: z.object({
       kind: z.enum(["click", "fill", "select", "check"]),
       id: z.string().describe("Element id from observe, e.g. 0:12"),
@@ -90,7 +91,8 @@ export function browserTools(deps: BrowserToolDeps): RunnableTool[] {
     name: "goto",
     description: "Navigate to a URL on the hotel's own site. Other sites are refused.",
     inputSchema: z.object({ url: z.string() }),
-    run: async ({ url }) => {
+    run: async (input) => {
+      const url = cleanUrl(input.url);
       if (!boundary.allows(url)) return `Refused: ${url} is not on the hotel's site.`;
       await page.goto(url);
       log.event("goto", { url });
@@ -110,7 +112,8 @@ export function browserTools(deps: BrowserToolDeps): RunnableTool[] {
     },
   });
 
-  return [observeTool, actTool, gotoTool, screenshotTool];
+  // Calls issued in one turn run in order, never concurrently: see serial.ts.
+  return serialise([observeTool, actTool, gotoTool, screenshotTool]);
 }
 
 /** Resolves which frame an observe id points at, using the same index scheme as browser.ts. */

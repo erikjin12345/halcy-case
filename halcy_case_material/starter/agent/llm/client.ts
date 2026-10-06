@@ -68,7 +68,8 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     totals.cacheReadTokens += message.usage.cache_read_input_tokens ?? 0;
     totals.cacheWriteTokens += message.usage.cache_creation_input_tokens ?? 0;
     const toolNames = message.content.filter((b) => b.type === "tool_use").map((b) => b.name);
-    opts.log.event("llm.turn", { role: opts.role, stop: message.stop_reason, tools: toolNames, usage: message.usage });
+    const said = message.content.filter((b) => b.type === "text").map((b) => b.text).join(" ").slice(0, 400);
+    opts.log.event("llm.turn", { role: opts.role, stop: message.stop_reason, tools: toolNames, said, usage: message.usage });
 
     if (message.stop_reason === "refusal") {
       opts.log.event("llm.refusal", { role: opts.role, details: message.stop_details ?? null });
