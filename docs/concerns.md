@@ -11,7 +11,7 @@ closing note), **resolved** (decision taken, see where).
 
 | # | Concern | Source | Status |
 |---|---------|--------|--------|
-| A1 | The starter's `observe` reads every frame, including the payment provider's iframe. Card numbers would land in `events.jsonl`. | `agent/payment/TRAPS.md` 2 | open: needs origin allowlist + blind mode in code |
+| A1 | The starter's `observe` reads every frame, including the payment provider's iframe. Card numbers would land in `events.jsonl`. | `agent/payment/TRAPS.md` 2 | resolved in code: `tools/boundary.ts` + `tools/browser.ts` filter frames and mask iframes; the hand-off flow itself is still open |
 | A2 | Relaying the traveller's keystrokes through Halcy's process (live view) is close to "Halcy handles card data". | `infrastructure.md` 4 | accepted for the prototype; production answer is the in-app WebView |
 | A3 | Who ticks the terms checkbox decides who proved consent. | `agent/payment/TRAPS.md` 9 | open: traveller ticks (safer) vs agent after logged chat approval (faster) |
 | A4 | The bank approves even after the hotel's hold expired: money taken, no booking. | `agent/payment/TRAPS.md` 3 | open: read timer before hand-off, threshold to decide |
@@ -22,7 +22,7 @@ closing note), **resolved** (decision taken, see where).
 
 | # | Concern | Source | Status |
 |---|---------|--------|--------|
-| B1 | The hotel is given by name; cross-hotel search (Booking.com, scraping) is product vision, not the 8-hour build. | `agent/ARCHITECTURE.md` 2.1 | open: decision 1 |
+| B1 | The hotel is given by name; cross-hotel search (Booking.com, scraping) is product vision, not the 8-hour build. | `agent/ARCHITECTURE.md` 2.1 | resolved: one hotel site, see `agent/README.md` decisions |
 | B2 | A middle provider as booking channel would move the contract and the money away from the hotel. Metadata only. | `agent/ARCHITECTURE.md` 2.2 | accepted: write the sentence in the design doc |
 | B3 | "No real hotels in your prototype" rules out any Booking.com call during the build. | `BRIEF.md` constraints | accepted |
 
@@ -30,11 +30,11 @@ closing note), **resolved** (decision taken, see where).
 
 | # | Concern | Source | Status |
 |---|---------|--------|--------|
-| C1 | Validation needs the same browser as search, and reaching the payment page creates a 15-minute hold per candidate. | `agent/ARCHITECTURE.md` 2.4 | open: decision 3 (one candidate at a time) |
+| C1 | Validation needs the same browser as search, and reaching the payment page creates a 15-minute hold per candidate. | `agent/ARCHITECTURE.md` 2.4 | resolved: `agents/validation.ts` takes one candidateId on the shared page |
 | C2 | The chat server delivers mid-run messages only through `chat.reply()`; "continuously update the goal" needs polling or a server change. | `agent/ARCHITECTURE.md` 2.5 | open: decision 4 |
 | C3 | Search time limits must be expressed against the hold clock once a hold exists. | `agent/ARCHITECTURE.md` 2.6 | open |
-| C4 | `chat.choose` and `chat.reply` wait forever; a quiet traveller leaves a browser open until the hold dies. | `agent/payment/TRAPS.md` 12 | open: deadlines in the module, possibly a server change |
-| C5 | LLM-only scoring is not reproducible or comparable across goal changes. | `agent/ARCHITECTURE.md` 2.3, research doc | open: decision 2 (deterministic with LLM-set weights) |
+| C4 | `chat.choose` and `chat.reply` wait forever; a quiet traveller leaves a browser open until the hold dies. | `agent/payment/TRAPS.md` 12 | partly: `tools/chat.ts` races waits against a timeout; the chat server still keeps a dead `waitingPress` |
+| C5 | LLM-only scoring is not reproducible or comparable across goal changes. | `agent/ARCHITECTURE.md` 2.3, research doc | resolved: `scoring/objective.ts` is deterministic; model only calls `set_objective` |
 | C6 | Cloud Run throttles CPU after the response; the agent loop must run inside one request behind Cloud Tasks. Not a prototype issue. | `infrastructure.md` 2 | accepted for the design doc |
 | C7 | A cloud browser draws bot checks and CAPTCHAs on real hotel sites. | research doc, `infrastructure.md` 4 | accepted: WebView is the production path |
 

@@ -25,6 +25,14 @@ One line per decision, with a date. Open questions live in
 
 - 2026-10-06: Folder renamed from `payment-module/` to `agent/` with
   `payment/` as a subfolder, since the design covers the whole agent.
+- 2026-10-06: The four-agent design is kept (ARCHITECTURE.md section 1).
+  Decisions 1 to 3 and 5 from section 3 taken as recommended: search inside
+  one hotel site; deterministic scoring with model-set weights; validation on
+  the shared browser, one candidate at a time; every role on `claude-opus-5-5`
+  with per-role env overrides. Decision 4 (mid-run goal updates) deferred.
+- 2026-10-06: Code scaffolding written under
+  `halcy_case_material/starter/agent/` (see its README). Typechecks. Not yet
+  run against the mock; no API key in the environment.
 - 2026-10-06: Agent state is an in-memory `Store` (`starter/agent/store.ts`)
   in the 2.9 three-table shape. No sqlite or Docker for the prototype: the
   hold and browser session die with the run anyway, and evidence is in
