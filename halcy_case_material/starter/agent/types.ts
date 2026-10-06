@@ -15,6 +15,8 @@ export interface SearchGoal {
   checkin: string;
   checkout: string;
   adults: number;
+  /** Ages of any children, when the traveller has said. Empty or absent: no children. */
+  children?: number[];
   /** Hard constraints in plain words, e.g. "free cancellation". */
   mustHave: string[];
   /** Soft preferences, most important first, e.g. "river view", "no breakfast". */

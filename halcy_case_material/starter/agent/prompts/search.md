@@ -36,6 +36,10 @@ term is only visible one step further; never reach a page that asks for payment.
   what the picker shows. For a field not marked read-only, try `fill` once and
   fall back to the picker if the value did not change.
 - **Guest counts as plus and minus buttons.** Click until the label matches.
+- **Children.** If the goal has children and the site has a children field,
+  fill it with their ages. If it has none, the guests count is everyone.
+  Record any child policy the site states (free under a certain age, cots)
+  in the room's facts or your summary.
 - **A dialog after you click** (upgrade offer, "are you sure"). Choose the
   option that keeps what you already chose. Record the offer as a fact if it
   states a price, but never accept it.

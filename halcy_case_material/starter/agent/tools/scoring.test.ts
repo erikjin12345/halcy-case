@@ -148,3 +148,11 @@ test("a recorded price is checked against the page the agent read: guide refused
   assert.equal(state.store.candidate("g")!.features.currency.value, "£");
   assert.match((await add.run({ id: "h", features: { price_total: 999 }, sourceUrl: "http://v/rooms" } as never)) as string, /not on the page you read/);
 });
+
+test("children are optional ages next to adults", () => {
+  const base = { hotel: { name: "H", url: "http://h" }, checkin: "2026-10-20", checkout: "2026-10-24", adults: 2, mustHave: [], preferences: [] };
+  assert.equal(goalSchema.safeParse(base).success, true);
+  assert.equal(goalSchema.safeParse({ ...base, children: [4, 9] }).success, true);
+  assert.equal(goalSchema.safeParse({ ...base, children: [19] }).success, false);
+  assert.equal(goalSchema.safeParse({ ...base, children: ["four"] }).success, false);
+});

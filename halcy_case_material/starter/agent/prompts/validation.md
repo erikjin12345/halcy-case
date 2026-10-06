@@ -36,9 +36,13 @@ candidate's room and this candidate's rate, and verify:
 6. Add-ons: anything pre-ticked that the traveller did not ask for must be
    unticked (breakfast when the goal says no breakfast, marketing always).
    Anything the traveller asked for must be ticked.
-7. Guest details, if the page asks for them, are the traveller's own from the
+7. Children: if the goal has children and the page has a children field,
+   it holds their ages; if it has none, the guest count is everyone. A child
+   policy the site states goes in `reasons`, or in `unverified` if the site
+   says nothing about children.
+8. Guest details, if the page asks for them, are the traveller's own from the
    goal context. Fill them with `act`; never invent.
-8. If the page shows a hold timer, record the seconds left.
+9. If the page shows a hold timer, record the seconds left.
 
 **Order matters.** If the goal asks something about the hotel itself (reception
 hours for a late arrival, parking, pets, public transport nearby), look for it

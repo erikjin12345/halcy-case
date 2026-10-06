@@ -48,6 +48,7 @@ export const goalSchema = z.object({
   checkin: z.string().describe("YYYY-MM-DD"),
   checkout: z.string().describe("YYYY-MM-DD"),
   adults: z.number().int().min(1),
+  children: z.array(z.number().int().min(0).max(17)).optional().describe("Ages of children in the party, if any. Leave out when the traveller said adults or no children"),
   mustHave: z.array(z.string()),
   preferences: z.array(z.string()),
   budget: z.object({ currency: z.string(), maxTotal: z.number().optional() }).optional(),
