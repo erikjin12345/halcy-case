@@ -42,6 +42,9 @@ To use it in the chat, change the import in `starter/chat/server.ts` from
 
 ## Model choice
 
+The reasoning (which model for which role, cost per booking, what to measure)
+is in `../../../agent/MODELS.md`. This section only says how the code behaves.
+
 Every role defaults to `claude-opus-5-5` with effort `medium` (orchestrator,
 search) or `low` (objective, validation). Override per role with
 `MODEL_<ROLE>` and `EFFORT_<ROLE>`. Moving a role to a cheaper model is a
