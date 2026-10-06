@@ -113,3 +113,32 @@ navigation. Not covered: the agent's own validation reaching the payment
 page, the Spartarif, a declined card.
 
 All after-run logs pass the audit; the test card's digits appear in none.
+
+## Second round: made-up rate names and the cached search
+
+Fixes in #69: `ratesMissing` also flags a generic rate name on a room's
+only rate and a name missing from the source page; `run_search` takes
+`fresh: true`; an unrecorded pick leads to a fresh search, never to "wait"
+or "book it yourself". Re-run at 21:05 HKT on `test/unseen-hotels` merged
+locally with #69.
+
+| Ask | Round 1 after | Round 2 | Time | Cost |
+| --- | --- | --- | --- | --- |
+| Cheapest room for two | Fault: cheaper rate shown, could not be booked | **Pass**: Doppelzimmer Seeblick, Spartarif, CHF 316.80 now and CHF 18.00 Kurtaxe at the hotel, "Keine Stornierung, keine Rückerstattung: no cancellation, no refund" on the card | 141 s | $0.42 |
+
+**Why it passed, honestly.** The new rate-name check did not fire. The
+first search named every room's rate "Frühstück inbegriffen" ("breakfast
+included"), a phrase that is on the page, so it is neither generic nor
+missing from the page text. What worked was the fresh search: the
+orchestrator searched the hotel again, not from the cache, and that search
+opened the rate dialog and recorded Flexibel and Spartarif per room. The
+run took 141 s and $0.42, against 75 s and $0.17 for the failed one,
+because the hotel was searched twice.
+
+**Still open.** A rate name copied from the wrong line of the page (an
+inclusion such as "breakfast included" instead of the rate's name) passes
+every check. Whether search opens rate dialogs on its first pass is left to
+the model.
+
+Casa Halcy (case 02) and Villa Aurora (case 20) on #69: both pass, 81 s and
+79 s, no rate flagged as incomplete.
