@@ -14,7 +14,7 @@ import type { AgentContext } from "../types.ts";
 import { approvalBlocker, overLimit } from "./approval.ts";
 import { sameCurrency } from "../scoring/currency.ts";
 import { runObjective } from "./objective.ts";
-import { searchProgress } from "./progress.ts";
+import { progressLines } from "./progress.ts";
 import { overLimitTool, priceChangeTool } from "./price-change.ts";
 import { runSearches } from "./search-parallel.ts";
 import { cachedSearch, rememberSearch } from "./search-cache.ts";
@@ -66,10 +66,11 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
           summaries.push(r);
           // A visible step for the traveller, from code, without a model turn.
           a.state.goal = g;
-          const progress = r.error ? `${r.hotel}: I could not search the site this time.` : searchProgress(a.state, { to: travellerCurrency(a), rates });
-          if (progress) {
-            a.chat.say(progress);
-            a.log.event("chat.say", { text: progress, from: "code" });
+          const lines = r.error ? { chat: `${r.hotel}: could not search the site.`, trace: `${r.hotel}: search failed: ${r.error}` } : progressLines(a.state, { to: travellerCurrency(a), rates });
+          if (lines) {
+            a.chat.say(lines.chat);
+            a.log.event("chat.say", { text: lines.chat, from: "code" });
+            a.log.event("trace.note", { text: lines.trace, from: "progress" });
           }
         }
         a.state.goal = goals[goals.length - 1];

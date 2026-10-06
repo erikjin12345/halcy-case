@@ -93,7 +93,7 @@ export function shortEstimate(amount: number, from: string, to: string | undefin
 
 /** The one short note that must follow any ≈ figure, once per card or message. */
 export function estimateNote(rates: Rates): string {
-  return `≈ estimate at the ECB rate of ${rateDay(rates)}${rates.source === "snapshot" ? " (latest available)" : ""}`;
+  return `≈ ECB rate, ${rateDay(rates)}${rates.source === "snapshot" ? " (latest available)" : ""}`;
 }
 
 /** The full explanation, for when the traveller asks how an ≈ figure was worked out. */

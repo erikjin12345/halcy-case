@@ -147,7 +147,7 @@ test("without a clock on the page the hold comes from validation, and an unknown
   const reported = setup({ ...PAGES, "/payment": worded }, { holdReport: { secondsLeft: 540, at: Date.now() - 180_000 } });
   const endReported = await begin(reported);
   assert.deepEqual([start(reported)?.holdSecondsLeft, start(reported)?.waitSeconds, start(reported)?.holdFromPage], [360, 300, false]);
-  assert.ok(reported.c.cards[0].lines?.includes("The hotel holds the room for about 6 minutes more."));
+  assert.ok(reported.c.cards[0].lines?.includes("Room held for about 6 minutes."));
   await endReported();
 
   // The stated length caps a report that is too generous, and too little time is still a refusal.
@@ -158,7 +158,7 @@ test("without a clock on the page the hold comes from validation, and an unknown
   const unknown = setup({ ...PAGES, "/payment": PAGES["/payment"].replace("We're holding this room for you for 14:20", "We're holding this room for you") });
   const endUnknown = await begin(unknown);
   assert.deepEqual([start(unknown)?.holdUnknown, start(unknown)?.waitSeconds], [true, 300]);
-  assert.ok(unknown.c.cards[0].lines?.some((line) => line.startsWith("Casa Halcy is holding the room, but its page does not say for how long. I'll wait about 5 minutes")));
+  assert.ok(unknown.c.cards[0].lines?.some((line) => line.startsWith("Hold time not stated; I'll wait about 5 minutes")));
   await endUnknown();
 
   // A page that says nothing about a hold keeps the long default.
@@ -173,7 +173,7 @@ test("silence ends at the deadline, with reminders, and claims nothing about mon
   const result = await runHandoff(deps); // deadline = 300 s - 299.9 s = 100 ms
   assert.equal(result.status, "timed_out");
   assert.equal(c.said.length, 3, "two reminders and the result");
-  assert.match(c.said[2], /I can't see a booking on Casa Halcy's site\. I can't see your card or your bank/);
+  assert.match(c.said[2], /I can't see a booking on Casa Halcy's site\. If you confirmed a payment/);
   assert.equal(c.said[2].includes("nothing was charged"), false);
   assert.deepEqual(l.events.find((e) => e.type === "handoff.blind.end")?.data.outcome, "deadline");
 });
@@ -197,7 +197,7 @@ test("a closed window, a cancel and a crash all close the blind interval", async
   assert.equal((await runHandoff(crashed.deps)).status, "unconfirmed", "after the hand-off began, a failure is never 'nothing was paid'");
   assert.equal(crashed.boundary.blind, false);
   assert.deepEqual(crashed.l.events.find((e) => e.type === "handoff.blind.end")?.data.outcome, "aborted");
-  assert.match(crashed.c.said.at(-1) ?? "", /I can't see your card or your bank/);
+  assert.match(crashed.c.said.at(-1) ?? "", /check with Casa Halcy before trying again/);
 
   const early = setup();
   early.f.raw.observe = async () => Promise.reject(new Error("page crashed"));

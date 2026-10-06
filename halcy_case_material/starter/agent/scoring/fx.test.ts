@@ -29,8 +29,8 @@ test("the estimate is short, and the note says once what it is", () => {
   assert.equal(shortEstimate(0, "GBP", "SEK", rates), null, "nothing to estimate in nothing charged");
   assert.equal(shortEstimate(594, "GBP", undefined, rates), null, "no traveller currency, no estimate");
   assert.equal(shortEstimate(594, "GBP", "SEK", null), null, "no rates, no estimate");
-  assert.equal(estimateNote(rates), "≈ estimate at the ECB rate of 5 Oct");
-  assert.equal(estimateNote({ ...rates, source: "snapshot" }), "≈ estimate at the ECB rate of 5 Oct (latest available)");
+  assert.equal(estimateNote(rates), "≈ ECB rate, 5 Oct");
+  assert.equal(estimateNote({ ...rates, source: "snapshot" }), "≈ ECB rate, 5 Oct (latest available)");
 });
 
 test("the full explanation is there for when the traveller asks", () => {

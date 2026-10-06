@@ -6,11 +6,17 @@ import { money } from "./price-change.ts";
 import type { RunState } from "../types.ts";
 import { estimateNote, shortEstimate, type Rates } from "../scoring/fx.ts";
 
+/** The line for the chat: hotel, room, price, nights. Nothing else. */
 export function searchProgress(state: RunState, fx?: { to?: string; rates: Rates | null }): string | null {
+  return progressLines(state, fx)?.chat ?? null;
+}
+
+/** The chat line, and the longer version for the trace beside the chat. */
+export function progressLines(state: RunState, fx?: { to?: string; rates: Rates | null }): { chat: string; trace: string } | null {
   const hotel = state.goal?.hotel.name;
   if (!hotel || !state.objectiveHash) return null;
   const nights = state.goal ? Math.round((Date.parse(state.goal.checkout) - Date.parse(state.goal.checkin)) / 86_400_000) : NaN;
-  const stay = Number.isFinite(nights) && nights > 0 ? ` for ${nights} night${nights === 1 ? "" : "s"}` : "";
+  const stay = Number.isFinite(nights) && nights > 0 ? `${nights} night${nights === 1 ? "" : "s"}` : "";
   const ranked = state.store.ranked(state.objectiveHash).filter((e) => e.feasible);
   for (const e of ranked) {
     const c = state.store.candidate(e.candidateId);
@@ -20,8 +26,12 @@ export function searchProgress(state: RunState, fx?: { to?: string; rates: Rates
     const currency = c.features.currency?.value;
     if (typeof name !== "string" || typeof price !== "number") continue;
     const est = fx && typeof currency === "string" ? shortEstimate(price, currency, fx.to, fx.rates) : null;
+    const amount = `${money(price, typeof currency === "string" ? currency : undefined)}${est ? ` ${est}` : ""}`;
     const note = est && fx?.rates ? ` ${estimateNote(fx.rates)}.` : "";
-    return `${hotel} checked: the best match there is the ${name}, ${money(price, typeof currency === "string" ? currency : undefined)}${est ? ` ${est}` : ""}${stay}, before any tax the hotel adds.${note}`;
+    return {
+      chat: `${hotel}: ${name}, ${amount}${stay ? `, ${stay}` : ""}.${note}`,
+      trace: `${hotel} searched. Best feasible match by score: ${name} (${c.id}), ${amount}${stay ? ` for ${stay}` : ""}, room price before any tax the hotel adds later. Score ${e.score}.`,
+    };
   }
-  return `${hotel} checked: nothing there fits what you asked for.`;
+  return { chat: `${hotel}: nothing that fits.`, trace: `${hotel} searched. No candidate passed the hard constraints.` };
 }

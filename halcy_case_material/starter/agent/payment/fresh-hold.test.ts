@@ -40,7 +40,7 @@ test("a hold that ran down is renewed and the traveller is handed the page witho
   await tick();
   assert.equal(validations, 1);
   assert.match(s.c.said[0], /2 minutes are left on Casa Halcy's hold/);
-  assert.match(s.c.said[1], /hold the same room again and check the price once more/);
+  assert.match(s.c.said[1], /Asking Casa Halcy to hold the same room again/);
   assert.equal(s.boundary.blind, true, "same figures: straight to the hand-off");
   assert.equal(s.c.cards.some((card) => card.title.includes("price has changed")), false);
   s.f.navigate(`${HOTEL}/confirmation/CH-123456`);
@@ -75,7 +75,7 @@ test("if the room cannot be confirmed again the run stops and says so", async ()
   const s = setup(page("We're holding this room for you for 0:40"));
   const result = await runPayment(s.deps, async () => undefined);
   assert.deepEqual([result.status, result.cause], ["not_started", "not_confirmed_again"]);
-  assert.match(s.c.said.at(-1) ?? "", /could not confirm the same room at Casa Halcy again\. Nothing is booked/);
+  assert.match(s.c.said.at(-1) ?? "", /Could not confirm the same room at Casa Halcy again\. Nothing is booked/);
 
   const threw = setup(page("We're holding this room for you for 0:40"));
   assert.equal((await runPayment(threw.deps, async () => Promise.reject(new Error("model down")))).cause, "not_confirmed_again");
