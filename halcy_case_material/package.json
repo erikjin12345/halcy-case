@@ -8,6 +8,7 @@
   },
   "scripts": {
     "hotel": "node mock-hotel/server.mjs",
+    "hotel2": "node mock-hotel-2/server.mjs",
     "chat": "tsx starter/chat/server.ts",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test \"starter/**/*.test.ts\"",

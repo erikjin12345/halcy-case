@@ -65,7 +65,9 @@ async function main(args: string[]): Promise<number> {
     const scenarios = loadScenarios(args);
     if (!scenarios.length) throw new Error(`no case matches ${args.join(", ")}`);
     const ctx: Context = { traveller: read("../../traveller.json"), today: new Date().toISOString().slice(0, 10), hotels: read("../../hotels.json") };
-    for (const url of Object.values(ctx.hotels)) await fetch(url).catch(() => Promise.reject(new Error(`cannot reach ${url}: start the mock hotel with \`npm run hotel\``)));
+    // Only the hotels the selected cases name have to be up.
+    const named = Object.entries(ctx.hotels).filter(([name]) => scenarios.some((s) => s.message.toLowerCase().includes(name.toLowerCase())));
+    for (const [name, url] of named) await fetch(url).catch(() => Promise.reject(new Error(`cannot reach ${name} at ${url}: start it with \`npm run hotel\` or \`npm run hotel2\``)));
     process.env.HEADLESS ??= "1";
     const { bookingAgent } = await import("../index.ts");
     for (const s of scenarios) {

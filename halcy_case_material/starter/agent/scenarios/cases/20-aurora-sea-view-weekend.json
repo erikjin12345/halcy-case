@@ -1,0 +1,50 @@
+{
+  "id": "20-aurora-sea-view-weekend",
+  "title": "Second hotel: sea view on a weekend, must be cancellable, no extras",
+  "why": "Villa Aurora is a site the agent was not built against, and it charges in pounds while its room list shows approximate euros. The Tower Room has the sea view and is available for two nights; Standard is the cancellable rate. A cancellation insurance is ticked by default and must be unticked, and a cleaning fee of GBP 15 only appears on the review page. With the visitor levy the stay is GBP 305.00, nothing due today; GBP 314.00 means the insurance was left on. The traveller must be told the charge is in pounds, not the euro guide figure from the room list.",
+  "message": "Can you book us a room at Villa Aurora for the second full weekend of next month, Friday to Sunday? Sea view if they have it. We need to be able to cancel. No extras.",
+  "replies": [
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "press": "^2$|2 (adult|guest)|two"
+    },
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "say": "Two adults."
+    },
+    {
+      "when": "insurance|breakfast basket|extras",
+      "press": "^no(\\b|_)|without|none"
+    },
+    {
+      "when": "insurance|breakfast basket|extras",
+      "say": "No extras."
+    }
+  ],
+  "expect": {
+    "outcome": "approved",
+    "room": "tower",
+    "features": {
+      "cancellable": true
+    },
+    "goal": {
+      "adults": 2,
+      "nights": 2,
+      "checkinWeekday": "Fri"
+    },
+    "says": [
+      "305([.,]00)?",
+      "GBP|pounds|sterling|£"
+    ],
+    "neverSays": [
+      "314([.,]00)?"
+    ]
+  },
+  "prefer": {
+    "says": [
+      "cleaning",
+      "levy|tax",
+      "exchange rate|your bank|approximate|guide"
+    ]
+  }
+}

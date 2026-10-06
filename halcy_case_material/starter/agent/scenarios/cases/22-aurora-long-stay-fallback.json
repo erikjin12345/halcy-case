@@ -1,0 +1,49 @@
+{
+  "id": "22-aurora-long-stay-fallback",
+  "title": "Second hotel: the wanted room is refused for a five-night stay",
+  "why": "The Tower Room is only offered for stays of up to three nights, so a five-night stay with a sea view cannot be had. The agent has to say so and fall back to a room that can be cancelled: the Garden Room on the Standard rate, GBP 475.00 for the room, GBP 502.50 with the cleaning fee and visitor levy, nothing due today, charged in pounds.",
+  "message": "Just me at Villa Aurora, five nights from next Monday. Sea view please, and I must be able to cancel. No extras.",
+  "replies": [
+    {
+      "when": "check (it )?again|search again|re-?check|run the search again",
+      "press": "again|search and check|re-?check"
+    },
+    {
+      "when": "check (it )?again|search again|re-?check|run the search again",
+      "say": "Yes, check again."
+    },
+    {
+      "when": "garden|instead|no sea view|without (a )?sea view|shorter",
+      "press": "garden|yes|continue|go ahead"
+    },
+    {
+      "when": "garden|instead|no sea view|without (a )?sea view|shorter",
+      "say": "The Garden Room is fine."
+    },
+    {
+      "when": "insurance|breakfast basket|extras",
+      "press": "^no(\\b|_)|without|none"
+    },
+    {
+      "when": "insurance|breakfast basket|extras",
+      "say": "No extras."
+    }
+  ],
+  "expect": {
+    "outcome": "approved",
+    "room": "garden",
+    "features": {
+      "cancellable": true
+    },
+    "goal": {
+      "adults": 1,
+      "nights": 5,
+      "checkinWeekday": "Mon"
+    },
+    "says": [
+      "502[.,]50",
+      "not available|only for stays|up to (3|three) nights|can(no|')t|isn't offered|is not offered",
+      "GBP|pounds|sterling|£"
+    ]
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "id": "21-aurora-four-adults-cheapest",
+  "title": "Second hotel: four adults in one room, cheapest, dates fixed",
+  "why": "Only the Family Suite sleeps four. Advance purchase is the cheapest rate and is acceptable because the dates are fixed, but it is paid in full today with no refund, and that has to be said. Room GBP 297.00 plus the GBP 15.00 cleaning fee is GBP 312.00 due today; GBP 20.00 visitor levy is due at the hotel; GBP 332.00 in all. The hotel charges in pounds; the room list shows a euro guide.",
+  "message": "Four of us, all adults, in one room at Villa Aurora, Tuesday to Thursday next week. Cheapest option, the dates are fixed. No extras.",
+  "replies": [
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "press": "^4$|4 (adult|guest)|four"
+    },
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "say": "Four adults."
+    },
+    {
+      "when": "insurance|breakfast basket|extras",
+      "press": "^no(\\b|_)|without|none"
+    },
+    {
+      "when": "insurance|breakfast basket|extras",
+      "say": "No extras."
+    }
+  ],
+  "expect": {
+    "outcome": "approved",
+    "room": "family",
+    "features": {
+      "cancellable": false
+    },
+    "goal": {
+      "adults": 4,
+      "nights": 2,
+      "checkinWeekday": "Tue"
+    },
+    "says": [
+      "332([.,]00)?",
+      "312([.,]00)?",
+      "non-?refundable|not refundable|no refund|can(no|')t be (cancel|refund)|no changes",
+      "GBP|pounds|sterling|£"
+    ]
+  }
+}

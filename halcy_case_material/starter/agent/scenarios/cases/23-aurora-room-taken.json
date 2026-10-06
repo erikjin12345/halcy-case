@@ -1,0 +1,57 @@
+{
+  "id": "23-aurora-room-taken",
+  "title": "Second hotel: the room is taken by someone else between the list and reserving",
+  "why": "For a three-night stay the Tower Room is listed as available, and the moment anyone tries to reserve it the hotel says another guest has just taken it. Nothing the agent recorded from the room list is true any more. It has to tell the traveller that the room went, in the hotel's sense, and fall back to what is still free: the Garden Room on the Standard rate, GBP 285.00 for the room, GBP 315.00 with the cleaning fee and visitor levy.",
+  "message": "Two of us at Villa Aurora, three nights from next Tuesday. Sea view if possible, and we must be able to cancel. No extras.",
+  "replies": [
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "press": "^2$|2 (adult|guest)|two"
+    },
+    {
+      "when": "adult|guest|how many (people|of you)|party",
+      "say": "Two adults."
+    },
+    {
+      "when": "garden|instead|no sea view|without (a )?sea view|shorter|another room",
+      "press": "garden|^yes|continue|go ahead"
+    },
+    {
+      "when": "garden|instead|no sea view|without (a )?sea view|shorter|another room",
+      "say": "The Garden Room is fine."
+    },
+    {
+      "when": "insurance|breakfast basket|extras",
+      "press": "^no(\\b|_)|without|none"
+    },
+    {
+      "when": "insurance|breakfast basket|extras",
+      "say": "No extras."
+    },
+    {
+      "when": "pounds|GBP|sterling|exchange|currency|kronor|SEK|euro",
+      "press": "continue|go ahead|^yes|fine|approve"
+    },
+    {
+      "when": "pounds|GBP|sterling|exchange|currency|kronor|SEK|euro",
+      "say": "That is fine, go ahead."
+    }
+  ],
+  "expect": {
+    "outcome": "approved",
+    "room": "garden",
+    "features": {
+      "cancellable": true
+    },
+    "goal": {
+      "adults": 2,
+      "nights": 3,
+      "checkinWeekday": "Tue"
+    },
+    "says": [
+      "315([.,]00)?",
+      "taken|no longer available|just (been )?(reserved|booked)|another guest|someone else|gone",
+      "GBP|pounds|sterling|£"
+    ]
+  }
+}
