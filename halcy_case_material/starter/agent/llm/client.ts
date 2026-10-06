@@ -4,7 +4,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import type { RunLog } from "../../log.ts";
-import { loadDotEnv, roleConfig } from "../config.ts";
+import { capabilities, loadDotEnv, roleConfig } from "../config.ts";
 import { systemPrompt } from "../prompts/index.ts";
 import type { AgentRole } from "../types.ts";
 
@@ -36,32 +36,37 @@ export interface AgentRunResult {
   inputTokens: number;
   outputTokens: number;
   cacheReadTokens: number;
+  cacheWriteTokens: number;
   turns: number;
 }
 
 /** Runs one agent to completion. Throws on refusal or when no turn finished. */
 export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
   const cfg = roleConfig(opts.role);
+  const caps = capabilities(cfg.model);
   const runner = getClient().beta.messages.toolRunner({
     model: cfg.model,
     max_tokens: 16000,
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
-    output_config: { effort: cfg.effort },
+    ...(caps.fallbacks ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
+    ...(caps.effort ? { output_config: { effort: cfg.effort } } : {}),
+    // Two breakpoints: an explicit one on the stable system prompt, and the
+    // automatic one that follows the tail of the growing tool-loop history.
+    cache_control: { type: "ephemeral" },
     system: [{ type: "text", text: systemPrompt(opts.role), cache_control: { type: "ephemeral" } }],
     tools: opts.tools,
     messages: [{ role: "user", content: opts.user }],
     max_iterations: opts.maxIterations ?? cfg.maxIterations,
   });
 
-  const totals = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, turns: 0 };
-  opts.log.event("llm.start", { role: opts.role, model: cfg.model, effort: cfg.effort });
+  const totals = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, turns: 0 };
+  opts.log.event("llm.start", { role: opts.role, model: cfg.model, effort: caps.effort ? cfg.effort : null, fallbacks: caps.fallbacks });
 
   for await (const message of runner) {
     totals.turns += 1;
     totals.inputTokens += message.usage.input_tokens;
     totals.outputTokens += message.usage.output_tokens;
     totals.cacheReadTokens += message.usage.cache_read_input_tokens ?? 0;
+    totals.cacheWriteTokens += message.usage.cache_creation_input_tokens ?? 0;
     const toolNames = message.content.filter((b) => b.type === "tool_use").map((b) => b.name);
     opts.log.event("llm.turn", { role: opts.role, stop: message.stop_reason, tools: toolNames, usage: message.usage });
 
