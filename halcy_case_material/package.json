@@ -7,6 +7,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "dev": "node scripts/dev.mjs",
     "hotel": "node mock-hotel/server.mjs",
     "hotel2": "node mock-hotel-2/server.mjs",
     "chat": "tsx starter/chat/server.ts",

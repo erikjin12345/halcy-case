@@ -48,7 +48,9 @@ cp .env.example .env     # then put your key in it
 npm run agent:check      # deterministic scoring test, then two tiny API calls
 ```
 
-To use it in the chat (the mock hotel must be running, `npm run hotel`):
+To use it in the chat, `npm run dev` starts both mock hotels and the chat with
+this agent in one terminal (a server already running is left alone). Or one at
+a time, with the mock hotel running (`npm run hotel`):
 
 ```bash
 npm run chat:booking              # same as AGENT=booking npm run chat
