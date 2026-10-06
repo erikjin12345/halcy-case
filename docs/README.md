@@ -9,7 +9,7 @@ Everything to be submitted besides the code, per
 | ------------------ | ----------------------------------------------------------------------------------------- | ----------- |
 | `design.md`        | The design document, about 4 pages plus diagrams                                          | draft, PR #25 |
 | `money-flow.*`     | The diagram from question 2: how card details and money move, and where Halcy stays out   | inside `design.md`, PR #25 |
-| `closing-note.md`  | What we deliberately left out, what we are least sure about, what we would build next     | next |
+| `closing-note.md`  | What we deliberately left out, what we are least sure about, what we would build next     | written |
 | `ai-chat-logs/`    | Exports or screenshots of AI chats during the work                                        | ongoing     |
 | `runs/`            | Selected run logs from `halcy_case_material/runs/` that we want to show                   | later       |
 | `TIME-LOG.md`      | Session start, deadline and where the hours went                                          | started     |

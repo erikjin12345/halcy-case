@@ -31,6 +31,7 @@ The case is capped at **8 hours**. The debrief will ask where the hours went.
 | 13:41      | 2:49    | Break starts; the clock is paused (see Breaks)                |
 | 15:06      | 2:52    | Break ends; 1:22 paused, deadline moves to 20:14              |
 | 15:40      | 3:23    | Payment failure paths run against the mock (wrong code, decline then second card, pay-now rate, cancel, closed tab, silence, hold expiring); clearer refusals and one fresh hold before the hand-over; review of the design document's payment sections |
+| 15:45      | 3:28    | Fresh hold run behind the real orchestrator (found and worked around the second validation rejecting an unchanged room), PR #27; closing note |
 
 Add a row whenever a phase ends. Keep it honest; it is part of the submission.
 
