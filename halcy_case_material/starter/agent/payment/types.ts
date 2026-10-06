@@ -62,6 +62,8 @@ export interface Terms {
   chargedNow?: string | number;
   dueAtHotel?: string | number;
   cancellable?: boolean;
+  /** The currency the hotel charges in, as the page writes it. */
+  currency?: string;
 }
 
 export const HOTEL_MESSAGE_MAX = 300;

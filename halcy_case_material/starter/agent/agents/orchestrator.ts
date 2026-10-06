@@ -18,6 +18,8 @@ import { searchProgress } from "./progress.ts";
 import { overLimitTool, priceChangeTool } from "./price-change.ts";
 import { runSearch } from "./search.ts";
 import { runValidation } from "./validation.ts";
+import { fxTools, travellerCurrency } from "./fx-tools.ts";
+import { loadRates } from "../scoring/fx.ts";
 
 export interface OrchestratorDeps {
   driver: PageDriver;
@@ -45,7 +47,7 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
       try {
         const summary = await runSearch(a, deps);
         // A visible step for the traveller, from code, without a model turn.
-        const progress = searchProgress(a.state);
+        const progress = searchProgress(a.state, { to: travellerCurrency(a), rates: await loadRates() });
         if (progress) {
           a.chat.say(progress);
           a.log.event("chat.say", { text: progress, from: "code" });
@@ -115,7 +117,7 @@ export async function runOrchestrator(a: AgentContext, message: string, deps: Or
       `Known hotels (name -> booking site): ${JSON.stringify(a.ctx.hotels)}`,
       `Traveller's message: ${message}`,
     ].join("\n"),
-    tools: [...chatTools({ chat: a.chat, log: a.log }), ...goalTools({ state: a.state, log: a.log }), runObjectiveTool, searchInTurn, validationInTurn, priceChangeTool(a), overLimitTool(a), approveTool],
+    tools: [...chatTools({ chat: a.chat, log: a.log }), ...goalTools({ state: a.state, log: a.log }), runObjectiveTool, searchInTurn, validationInTurn, priceChangeTool(a), overLimitTool(a), ...fxTools(a), approveTool],
     log: a.log,
   });
 
