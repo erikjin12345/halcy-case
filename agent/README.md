@@ -25,3 +25,7 @@ One line per decision, with a date. Open questions live in
 
 - 2026-10-06: Folder renamed from `payment-module/` to `agent/` with
   `payment/` as a subfolder, since the design covers the whole agent.
+- 2026-10-06: Agent state is an in-memory `Store` (`starter/agent/store.ts`)
+  in the 2.9 three-table shape. No sqlite or Docker for the prototype: the
+  hold and browser session die with the run anyway, and evidence is in
+  `RunLog`. A Firestore store implements the same interface later.

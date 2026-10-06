@@ -10,6 +10,7 @@
     "hotel": "node mock-hotel/server.mjs",
     "chat": "tsx starter/chat/server.ts",
     "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test \"starter/**/*.test.ts\"",
     "setup": "playwright install chromium"
   },
   "dependencies": {
