@@ -16,6 +16,9 @@ const SENSITIVE_NAME =
 /** "ending 4242", "ends in 4242", "last four digits: 4242". */
 const LAST_FOUR = /\b(ending(?:\s+in)?|ends\s+in|last\s+(?:4|four)(?:\s+digits)?(?:\s*(?:are|is|:))?)\s*[*•x·\s-]*\d{4}\b/gi;
 
+/** "•••• 4242", "**** **** **** 4242", "xxxx-xxxx-xxxx-4242", "****4242": a masked prefix, then the last four. */
+const MASKED_PREFIX = /(?<![A-Za-z0-9])((?:[*•·]{2,}|[xX]{4,})(?:[\s-]*(?:[*•·]+|[xX]+))*[\s-]*)\d{4}\b/g;
+
 export function isSensitiveField(el: PageElement): boolean {
   if (el.tag !== "input" && el.tag !== "textarea") return false;
   return el.type === "password" || SENSITIVE_NAME.test(el.name) || looksLikeCard(el.value ?? "") || looksLikeCard(el.name);
@@ -23,7 +26,7 @@ export function isSensitiveField(el: PageElement): boolean {
 
 /** Card-like numbers and last-four mentions removed from free text. */
 export function redactText(text: string): string {
-  return redactCardNumbers(text).data.replace(LAST_FOUR, "$1 ••••");
+  return redactCardNumbers(text).data.replace(LAST_FOUR, "$1 ••••").replace(MASKED_PREFIX, "$1••••");
 }
 
 /**

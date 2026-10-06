@@ -9,7 +9,7 @@ import type { PaymentBoundary } from "../tools/boundary.ts";
 import type { PageDriver } from "../tools/driver.ts";
 import { handoffCard, resultMessage, retryCard } from "./messages.ts";
 import { readOutcome, type Classify } from "./outcome.ts";
-import { holdSecondsFrom, missingAmounts, pageText } from "./page-facts.ts";
+import { holdSecondsFrom, missingAmounts, pageText, shownAs } from "./page-facts.ts";
 import { waitForSignal } from "./signals.ts";
 import type { FeatureName, FeatureValue } from "../types.ts";
 import type { PaymentResult, Signal, Terms } from "./types.ts";
@@ -108,6 +108,8 @@ async function sequence(deps: HandoffDeps, progress: { handedOver: boolean }): P
     if (missing.length > 0) {
       return say(notStarted(`the page no longer shows the amounts you agreed to (${missing.join(", ")})`));
     }
+    // The traveller reads the hotel's own figures, currency included, not ours.
+    const shown: Terms = { ...terms, total: shownAs(text, terms.total) ?? terms.total, chargedNow: shownAs(text, terms.chargedNow) ?? terms.chargedNow, dueAtHotel: shownAs(text, terms.dueAtHotel) ?? terms.dueAtHotel };
     const waitSeconds = holdSecondsLeft === undefined ? timing.defaultWaitSeconds : holdSecondsLeft - timing.marginSeconds;
     log.event("handoff.start", { attempt, where: at, terms, holdSecondsLeft, waitSeconds, foreignFrames: seen.text.filter((f) => !boundary.known(f.frameUrl)).length });
 
@@ -122,7 +124,7 @@ async function sequence(deps: HandoffDeps, progress: { handedOver: boolean }): P
         chat,
         log,
         paymentPath: at.path,
-        card: handoffCard(hotel, terms, holdSecondsLeft),
+        card: handoffCard(hotel, shown, holdSecondsLeft),
         deadlineMs: waitSeconds * 1000,
         lastReminderMs: timing.lastReminderMs,
       });

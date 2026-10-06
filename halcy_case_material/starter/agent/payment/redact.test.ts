@@ -32,6 +32,12 @@ test("the last four digits on a confirmation page are masked", () => {
   assert.equal(redactText("€420.00 was charged to the card ending 4242."), "€420.00 was charged to the card ending ••••.");
   assert.equal(redactText("Card ends in 0002, last four digits: 0002"), "Card ends in ••••, last four digits: ••••");
   assert.equal(redactText("Booking CH-424242 for 2026-11-13, 2 guests, room 1204"), "Booking CH-424242 for 2026-11-13, 2 guests, room 1204");
+  // The formats real hotel and payment pages use: a masked prefix, then the digits.
+  assert.equal(redactText("Paid with •••• 4242"), "Paid with •••• ••••");
+  assert.equal(redactText("Card: **** **** **** 4242"), "Card: **** **** **** ••••");
+  assert.equal(redactText("Visa xxxx-xxxx-xxxx-4242"), "Visa xxxx-xxxx-xxxx-••••");
+  assert.equal(redactText("Card ****4242 (Mastercard XXXX XXXX XXXX 0002)"), "Card ****•••• (Mastercard XXXX XXXX XXXX ••••)");
+  for (const kept of ["Total €4242", "Maxx 2024 offer", "2 x 2026 rate", "Ref **A1234"]) assert.equal(redactText(kept), kept);
 });
 
 test("the guarded driver redacts every observation and refuses to act on a sensitive field", async () => {
