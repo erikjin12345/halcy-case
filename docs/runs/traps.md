@@ -31,21 +31,23 @@ booking in Casa Halcy's record, and it passes every check that can be made.
 | `2026-10-06T12-18-19-976Z-booking` | PASS | PASS | PASS | PASS | PASS | PASS | PASS | n/a | n/a | PASS |
 
 
-## The three FAILs on trap 3 are deliberate tests
+## Trap 3 and deliberate short-hold tests
 
 `handoff-path-deadline`, `handoff-path-expired-late` and
 `booking-full-slow-approval-2` ran on a test copy of Casa Halcy on port 4310
-with a one-minute hold and the hand-off's minimum hold lowered, to exercise
-the quiet traveller, the hold running out during payment, and a fresh hold
-after a slow approval. Measured against the production minimum of 300 s
-they correctly fail: the hand-off started with 60, 60 and 49 seconds left.
-The run log does not record which minimum a run used, so the check cannot
-tell a test from a fault; it reports the fact and this note explains it.
+with a one-minute hold and the hand-off's minimum hold lowered. Their run
+logs predate the field `minHoldSeconds` in `handoff.start`, so the check
+measures them against the production minimum of 300 s and they fail (60, 60
+and 49 seconds left). Runs since log the minimum they used, and a lowered
+minimum passes with a note. `expired-late` also fails because a card was
+charged without a booking: that run shows the worst case on purpose.
 
 ## What the checks do not cover
 
-- **Trap 14 (cookie banner)** is n/a everywhere: the run log records which
-  element was clicked, not its label.
+- **Trap 14 (cookie banner)** reads the label of each click, logged since
+  `act` events carry one. It counts a click as a cookie choice only if the
+  label names cookies or consent, or it came before the first room was
+  recorded. Older logs have no labels and stay n/a.
 - **Villa Aurora's record has no creation time**, so on that hotel a missing
   reference is always n/a, never FAIL.
 - **Trap 7** fails extras booked without being asked; it does not fail a
