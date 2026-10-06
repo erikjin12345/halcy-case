@@ -22,7 +22,7 @@ export function handoffCard(hotel: string, terms: Terms, holdSecondsLeft: number
   const now = shown(terms.chargedNow);
   const later = shown(terms.dueAtHotel);
   const lines = [
-    `${hotel}'s payment page is open in the browser window. You pay ${hotel} directly; Halcy never sees your card or your bank code.`,
+    `${hotel}'s booking page is open in the browser window. You pay ${hotel} directly; Halcy never sees your card or your bank code.`,
     terms.room ? `Room: ${terms.room}` : undefined,
     shown(terms.total) ? `Total: ${shown(terms.total)}` : undefined,
     now !== undefined ? `Charged now: ${now}` : undefined,
