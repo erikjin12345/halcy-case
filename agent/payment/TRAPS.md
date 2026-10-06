@@ -218,8 +218,9 @@ evidence is what the hotel site shows.
 
 **Solution:** After the hand-off the module waits for a URL change away from
 the payment page. Then observe resumes (hotel origin) and the model extracts
-the reference, the amount charged, the last four digits and the email the
-confirmation went to. A screenshot of the confirmation page goes in the run
+the reference, the amount charged and the email the confirmation went to.
+The last four digits of the card are masked before the read (decided
+2026-10-06, see `DESIGN.md` P11). A screenshot of the confirmation page goes in the run
 log. The chat card shows the reference and "your contract is with Casa Halcy",
 never Halcy as the seller.
 

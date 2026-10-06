@@ -30,6 +30,9 @@ only. Conventions are in `../CLAUDE.md`, the agent design is in
 
 - `TRAPS.md`: how each trap in the mock hotel affects the module and how we
   can get around it. Read it first.
+- `DESIGN.md`: what we build. The status-only rule, the `PaymentResult`
+  contract, the hand-off sequence, the guards, and the traps `TRAPS.md` does
+  not cover (P1 to P14).
 
 ## Where the code goes later
 

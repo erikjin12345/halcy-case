@@ -12,11 +12,11 @@ closing note), **resolved** (decision taken, see where).
 | # | Concern | Source | Status |
 |---|---------|--------|--------|
 | A1 | The starter's `observe` reads every frame, including the payment provider's iframe. Card numbers would land in `events.jsonl`. | `agent/payment/TRAPS.md` 2 | resolved in code: `tools/boundary.ts` + `tools/browser.ts` filter frames and mask iframes; the hand-off flow itself is still open |
-| A2 | Relaying the traveller's keystrokes through Halcy's process (live view) is close to "Halcy handles card data". | `infrastructure.md` 4 | accepted for the prototype; production answer is the in-app WebView |
-| A3 | Who ticks the terms checkbox decides who proved consent. | `agent/payment/TRAPS.md` 9 | open: traveller ticks (safer) vs agent after logged chat approval (faster) |
-| A4 | The bank approves even after the hotel's hold expired: money taken, no booking. | `agent/payment/TRAPS.md` 3 | open: read timer before hand-off, threshold to decide |
-| A5 | Proving blind mode to a reviewer needs a log shape we have not built yet. | `agent/payment/TRAPS.md` open questions | open |
-| A6 | A hotel that renders card fields on its own page, no iframe, defeats the origin allowlist. | `agent/payment/TRAPS.md` open questions | open: blind mode should cover the whole payment page |
+| A2 | Relaying the traveller's keystrokes through Halcy's process (live view) is close to "Halcy handles card data". | `infrastructure.md` 4 | resolved: the live view is dropped; the traveller types in the visible browser window, no keystroke passes Halcy code (`agent/payment/DESIGN.md` P7). Production trade-off is in `agent/WEBVIEW-PLAN.md` section 6 |
+| A3 | Who ticks the terms checkbox decides who proved consent. | `agent/payment/TRAPS.md` 9 | resolved in the build: the agent never ticks it; the traveller does, in the hotel's window, during the hand-off |
+| A4 | The bank approves even after the hotel's hold expired: money taken, no booking. | `agent/payment/TRAPS.md` 3 | partly: no hand-off with under 5 minutes of hold, the wait ends 60 s before expiry, and the traveller is told to stop before it. The thresholds are guesses and the risk cannot be removed from outside the hotel |
+| A5 | Proving blind mode to a reviewer needs a log shape we have not built yet. | `agent/payment/TRAPS.md` open questions | resolved: `GuardedLog`, `audit:runs`, and the `handoff.*` events; two hand-off runs against the mock pass the audit |
+| A6 | A hotel that renders card fields on its own page, no iframe, defeats the origin allowlist. | `agent/payment/TRAPS.md` open questions | resolved for reading: fields are redacted by label and content on any origin (`payment/redact.ts`, PR #11). Screenshots of such a page are still only prevented by blind mode |
 
 ## B. Scope versus the brief
 
@@ -42,6 +42,6 @@ closing note), **resolved** (decision taken, see where).
 
 | # | Concern | Source | Status |
 |---|---------|--------|--------|
-| D1 | `agent/payment/TRAPS.md` is 333 lines, over the 200-line convention. | `agent/CLAUDE.md` | accepted: the rule targets code; split at sections A to D if asked |
+| D1 | `agent/payment/TRAPS.md` is 333 lines and `agent/payment/DESIGN.md` about 260, over the 200-line convention. | `agent/CLAUDE.md` | accepted: the rule targets code; split at sections A to D if asked |
 | D2 | Time: 8-hour cap, deadline 18:52 HKT. Infra and docs can eat the build time. | `TIME-LOG.md` | ongoing |
 | D3 | The debrief adds an unseen hotel. Anything that only works on Casa Halcy is a hidden failure. | `BRIEF.md` | ongoing: convention in `agent/CLAUDE.md` |
