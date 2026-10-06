@@ -8,6 +8,8 @@ import type { RunLog } from "../../log.ts";
 import type { RunnableTool } from "../llm/client.ts";
 import { budgetNote, maxScore, objectiveHash, scoreCandidates } from "../scoring/objective.ts";
 import { unstated, unstatedNote } from "../scoring/free-text.ts";
+import { roomTypeNote, unmatchedRoomType } from "../scoring/room-type.ts";
+import { missingRates, missingRatesNote } from "../scoring/rates.ts";
 import { estimateNote } from "../scoring/cap-estimate.ts";
 import { loadRates } from "../scoring/fx.ts";
 import { FEATURES, type RunState } from "../types.ts";
@@ -194,9 +196,10 @@ export async function scoreAll(state: RunState, log: StateToolDeps["log"]): Prom
       }
       const budgetNotApplied = [budgetNote(scored), estimateNote(scored.flatMap((s) => s.capsEstimated), rates)].filter(Boolean).join(" ") || null;
       state.budgetNotApplied = budgetNotApplied ?? undefined;
-      const notStated = unstatedNote(unstated(all, o));
+      const notStated = [unstatedNote(unstated(all, o)), roomTypeNote(unmatchedRoomType(all, o))].filter(Boolean).join(" ") || null;
+      const ratesMissing = missingRatesNote(missingRates(all));
       state.notStated = notStated ?? undefined;
-      const out = { threshold: o.threshold, max: maxScore(o), ranking: state.store.ranked(state.objectiveHash), rejected: state.store.rejected(), ...(budgetNotApplied ? { budgetNotApplied } : {}), ...(notStated ? { notStated } : {}) };
+      const out = { threshold: o.threshold, max: maxScore(o), ranking: state.store.ranked(state.objectiveHash), rejected: state.store.rejected(), ...(budgetNotApplied ? { budgetNotApplied } : {}), ...(notStated ? { notStated } : {}), ...(ratesMissing ? { ratesMissing } : {}) };
       log.event("candidates.scored", out);
       return JSON.stringify(out, null, 1);
 }

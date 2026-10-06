@@ -11,8 +11,8 @@ test("the hand-off card shows each amount with a short estimate and the note onc
   assert.ok(lines.includes("Total: 706.24 (≈ 7,947 kr)"));
   assert.ok(lines.includes("Charged now: 658.24 (≈ 7,407 kr)"));
   assert.ok(lines.includes("Paid at the hotel: 48 (≈ 540 kr)"));
-  assert.equal(lines.at(-1), "≈ estimate at the ECB rate of 5 Oct");
-  assert.equal(lines.filter((l) => l.includes("estimate")).length, 1, "the note appears once");
+  assert.equal(lines.at(-1), "≈ ECB rate, 5 Oct");
+  assert.equal(lines.filter((l) => l.includes("ECB")).length, 1, "the note appears once");
 });
 
 test("no traveller currency or the hotel's own currency: no estimate and no note", () => {

@@ -13,14 +13,14 @@ export function pageText(seen: Observation): string {
 }
 
 /** A line that says the room is being held. Only such a line may give the hold's length or its end time. */
-const HOLD_VERB = /\b(hold|holding|held|keeping|kept|set aside)\b|reserved (for|until)/i;
+const HOLD_VERB = /\b(hold|holding|held|keeping|kept|set aside)\b|reserved (for|until)|reserviert|gehalten|r[ée]serv[ée]e?s? (pour|jusqu)|reservad[oa]|reservat[oa]|reserverat|gereserveerd/i;
 /** A line with a running timer. Enough for a countdown, not for a time of day (cancellation deadlines look like that). */
 const TIMER_WORDS = /expire|remaining|time left|minutes? left/i;
 const HOLD_WORDS = new RegExp(`${HOLD_VERB.source}|${TIMER_WORDS.source}|reserv`, "i");
 const CLOCK = /\b(\d{1,2}):([0-5]\d)\b/;
 /** A time of day the hold runs to: "until 15:47", "by 3.47 pm". */
-const UNTIL = /\b(?:until|till|by|before)\s+(\d{1,2})[:.]([0-5]\d)\s*(am|pm)?/i;
-const IN_WORDS = /\b(\d{1,3})\s*(?:minutes?|mins?)\b/i;
+const UNTIL = /\b(?:until|till|by|before|bis|jusqu'?(?:à|a)|hasta|at[ée]|fino alle|tot)\s+(?:um\s+)?(\d{1,2})[:.h]([0-5]\d)\s*(am|pm)?/i;
+const IN_WORDS = /\b(\d{1,3})\s*(?:minutes?|mins?|minuten|minutos|minuti|minuter|minuten)\b/i;
 const GONE = /expired|released|timed out|lapsed|no longer (held|available|reserved)/i;
 
 export interface HoldReading {

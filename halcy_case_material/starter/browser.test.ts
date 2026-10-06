@@ -35,3 +35,22 @@ test("an element that is still there is clicked with the usual timeout", async (
   await act(page, { kind: "click", id: "0:0" });
   assert.deepEqual(clicks, [5000]);
 });
+
+test("a select picks the option by its text, its value or the start of its text, without waiting", async () => {
+  const chosen: unknown[] = [];
+  const options = [{ text: "12.", value: "12" }, { text: "13.", value: "13" }, { text: "October 2026", value: "2026-10" }];
+  const select = {
+    count: async () => 1,
+    locator: () => ({ evaluateAll: async () => options.map((o) => ({ text: o.text.toLowerCase(), value: o.value })) }),
+    selectOption: async (o: unknown) => void chosen.push(o),
+  };
+  const frame = {
+    url: () => "http://localhost:4100/",
+    evaluate: async () => ({ text: "", elements: [{ id: "0:0", tag: "select", role: null, type: null, name: "Day", value: "12", checked: null, disabled: false }] }),
+    locator: () => select,
+  };
+  const page = { frames: () => [frame], url: () => frame.url(), title: async () => "t", waitForLoadState: async () => {} } as unknown as Page;
+  await observe(page);
+  for (const value of ["13", "13.", "October"]) await act(page, { kind: "select", id: "0:0", value });
+  assert.deepEqual(chosen, [{ value: "13" }, { value: "13" }, { value: "2026-10" }]);
+});

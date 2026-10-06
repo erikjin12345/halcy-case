@@ -32,29 +32,27 @@ export function handoffCard(hotel: string, terms: Terms, holdSecondsLeft: number
   const now = shown(terms.chargedNow);
   const later = shown(terms.dueAtHotel);
   const lines = [
-    `${hotel}'s booking page is open in the browser window. You pay ${hotel} directly; Halcy never sees your card or your bank code.`,
+    `Pay ${hotel} in the browser window. Halcy never sees your card or bank code.`,
     terms.room ? `Room: ${terms.room}` : undefined,
     shown(terms.total) ? `Total: ${withEst(terms.total)}` : undefined,
     now !== undefined ? `Charged now: ${withEst(terms.chargedNow)}` : undefined,
     later !== undefined ? `Paid at the hotel: ${withEst(terms.dueAtHotel)}` : undefined,
     terms.cancellable === undefined ? undefined : terms.cancellable ? "Can be cancelled, on the hotel's conditions." : "Cannot be cancelled or refunded.",
-    "In that window: enter your card, read and accept the hotel's booking conditions, and confirm with your bank.",
-    now !== undefined ? `Your bank should ask you to approve ${now} to ${hotel}, or to save your card as a guarantee. If it shows anything else, stop.` : `Your bank should name ${hotel}. If it shows anything else, stop.`,
-    holdSecondsLeft !== undefined ? `The hotel holds the room for about ${minutes(holdSecondsLeft)} more.` : undefined,
-    unknownHoldWait !== undefined ? `${hotel} is holding the room, but its page does not say for how long. I'll wait about ${minutes(unknownHoldWait)}; please don't leave it longer.` : undefined,
-    "Come back here when you are done.",
+    now !== undefined ? `Your bank should ask you to approve ${now} to ${hotel}, or to save the card. Anything else: stop.` : `Your bank should name ${hotel}. Anything else: stop.`,
+    holdSecondsLeft !== undefined ? `Room held for about ${minutes(holdSecondsLeft)}.` : undefined,
+    unknownHoldWait !== undefined ? `Hold time not stated; I'll wait about ${minutes(unknownHoldWait)}.` : undefined,
     anyEstimate && fx?.rates ? estimateNote(fx.rates) : undefined,
   ].filter((l): l is string => Boolean(l));
   return { title: `Over to you: pay at ${hotel}`, lines, buttons: HANDOFF_BUTTONS };
 }
 
-export const reminderHalfway = (secondsLeft: number) => `Still with me? The hotel holds the room for about ${minutes(secondsLeft)} more.`;
+export const reminderHalfway = (secondsLeft: number) => `Room held for about ${minutes(secondsLeft)} more.`;
 
 export const reminderLast = (secondsLeft: number) =>
-  `About ${minutes(secondsLeft)} left on the hotel's hold. If you have not entered your bank code yet, stop now; I'd rather start over than have you pay for a room the hotel has released.`;
+  `About ${minutes(secondsLeft)} left on the hold. If you have not entered your bank code yet, stop now.`;
 
 const CANNOT_SEE = (hotel: string) =>
-  `I can't see your card or your bank, so I can't tell whether anything was approved. If you confirmed a payment or entered a bank code, check with ${hotel} before trying again.`;
+  `If you confirmed a payment or entered a bank code, check with ${hotel} before trying again.`;
 
 /** One message per status. `hotel` is the seller; Halcy is never named as one. */
 export function resultMessage(hotel: string, r: PaymentResult): string {
@@ -86,15 +84,15 @@ export function resultMessage(hotel: string, r: PaymentResult): string {
 export const notSubmitted = (hotel: string, secondsLeft: number) =>
   `${hotel}'s payment page has not been submitted yet: I can't see a confirmation or an error there, so nothing has been paid. ${hotel} holds the room for about ${minutes(secondsLeft)} more. Finish in the browser window, and press "I'm done" once ${hotel} shows your booking.`;
 
-export const freshHoldNote = (hotel: string) => `I'll ask ${hotel} to hold the same room again and check the price once more. This takes a minute.`;
+export const freshHoldNote = (hotel: string) => `Asking ${hotel} to hold the same room again.`;
 
-export const notConfirmedAgain = (hotel: string) => `I could not confirm the same room at ${hotel} again. Nothing is booked and you have not been asked to pay. Tell me if you'd like me to look at the other options.`;
+export const notConfirmedAgain = (hotel: string) => `Could not confirm the same room at ${hotel} again. Nothing is booked and you have not been asked to pay.`;
 
 /** Shown when a fresh hold came back with different figures. Nothing continues without a press. */
 export function changedTermsCard(hotel: string, changes: { label: string; agreed: string; now: string }[]): Card & { buttons: Button[] } {
   return {
     title: `${hotel}'s price has changed`,
-    lines: [...changes.map((c) => `${c.label}: was ${c.agreed}, is now ${c.now}`), `These are ${hotel}'s figures for the same room and dates. Nothing is booked yet.`],
+    lines: [...changes.map((c) => `${c.label}: was ${c.agreed}, is now ${c.now}`), `${hotel}'s figures, same room and dates. Nothing is booked yet.`],
     buttons: [
       { id: "continue", label: "Continue with the new price" },
       { id: "stop", label: "Stop here" },
@@ -106,8 +104,7 @@ export function retryCard(hotel: string, r: PaymentResult): Card & { buttons: Bu
   return {
     title: "Try another card?",
     lines: [
-      r.holdSecondsLeft !== undefined ? `${hotel} still holds the room for about ${minutes(r.holdSecondsLeft)}.` : `${hotel} may still be holding the room.`,
-      "I'll reload the payment page and hand it back to you.",
+      r.holdSecondsLeft !== undefined ? `Room held for about ${minutes(r.holdSecondsLeft)}.` : `${hotel} may still be holding the room.`,
     ],
     buttons: [
       { id: "retry", label: "Try again" },
