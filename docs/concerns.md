@@ -42,6 +42,6 @@ closing note), **resolved** (decision taken, see where).
 
 | # | Concern | Source | Status |
 |---|---------|--------|--------|
-| D1 | `agent/payment/TRAPS.md` is 333 lines, over the 200-line convention. | `agent/CLAUDE.md` | accepted: the rule targets code; split at sections A to D if asked |
+| D1 | `agent/payment/TRAPS.md` is 333 lines and `agent/payment/DESIGN.md` 250, over the 200-line convention. | `agent/CLAUDE.md` | accepted: the rule targets code; split at sections A to D if asked |
 | D2 | Time: 8-hour cap, deadline 18:52 HKT. Infra and docs can eat the build time. | `TIME-LOG.md` | ongoing |
 | D3 | The debrief adds an unseen hotel. Anything that only works on Casa Halcy is a hidden failure. | `BRIEF.md` | ongoing: convention in `agent/CLAUDE.md` |
